@@ -1,0 +1,48 @@
+<!-- web/templates/partials/sidebar.html -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="logo"></div>
+        <h2>Калькулятор отпуска</h2>
+        <p>Управление отпусками</p>
+    </div>
+
+    <nav class="nav-menu">
+        <div class="nav-label">Основное</div>
+        <a href="/" class="nav-item {{if eq .ActivePage "home"}}active{{end}}">
+            Главная
+        </a>
+        <a href="/vacations" class="nav-item {{if eq .ActivePage "vacations"}}active{{end}}">
+            Все отпуска
+            <span class="badge">{{.Count}}</span>
+        </a>
+        <a href="/vacations/new" class="nav-item {{if eq .ActivePage "new"}}active{{end}}">
+            Добавить отпуск
+        </a>
+
+        <!-- <div class="nav-label">Статистика</div>
+        <div class="sidebar-stats">
+            <div class="stat-item">
+                <span class="label">Всего</span>
+                <span class="value total">{{.Count}}</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">Запланировано</span>
+                <span class="value" style="color: #ffc107;">{{.Stats.planned}}</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">Согласовано</span>
+                <span class="value" style="color: #17a2b8;">{{.Stats.approved}}</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">Завершено</span>
+                <span class="value" style="color: #28a745;">{{.Stats.completed}}</span>
+            </div>
+        </div> -->
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="nav-item" style="opacity: 0.6; cursor: default;">
+            <span style="font-size: 0.8rem;">Версия 1.0.0</span>
+        </div>
+    </div>
+</aside>

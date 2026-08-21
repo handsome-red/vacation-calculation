@@ -1,0 +1,64 @@
+<!-- web/templates/index.html -->
+{{define "content"}}
+<div class="page-header">
+    <h1>🏠 {{.Title}}</h1>
+    <p class="subtitle">{{.Message}}</p>
+</div>
+
+<div class="features-grid">
+    <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <h3>Список отпусков</h3>
+        <p>Просмотр всех отпусков</p>
+        <a href="/list" class="btn btn-primary">Перейти</a>
+    </div>
+    <div class="feature-card">
+        <h3>Добавить отпуск</h3>
+        <p>Создание нового отпуска</p>
+        <a href="/add" class="btn btn-success">Перейти</a>
+    </div>
+    <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Статистика</h3>
+        <p>Анализ данных</p>
+        <a href="/api/stats" class="btn btn-secondary" target="_blank">Перейти</a>
+    </div>
+</div>
+{{end}}
+
+{{define "styles"}}
+<style>
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 30px;
+        margin-top: 30px;
+    }
+    .feature-card {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+    }
+    .feature-card h3 {
+        color: #333;
+        margin-bottom: 10px;
+    }
+    .feature-card p {
+        color: #666;
+        margin-bottom: 20px;
+    }
+</style>
+{{end}}
+
+{{template "base.html" .}}
