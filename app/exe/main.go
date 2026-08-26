@@ -1,71 +1,58 @@
 package main
 
 import (
-	"html/template"
+	"context"
+	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"vacation-calculation/internal/handler"
-	"vacation-calculation/internal/repository"
-	"vacation-calculation/internal/service"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"vacation-calculation/internal/app"
+	"vacation-calculation/internal/config"
+	"vacation-calculation/internal/logger"
 )
 
 func main() {
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
-	slog.SetDefault(logger)
-
-	templates, err := loadTemplates()
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		logger.Error("Failed to load templates", "error", err)
+		fmt.Printf("Failed to load config: %v\n", err)
 		os.Exit(1)
 	}
 
-	repo, err := repository.NewSQLiteRepository("./data/vacations.db")
-	if err != nil {
-		logger.Error("Failed to connect to database", "error", err)
-		return
-	}
+	log := logger.New(cfg.LoggerConfig())
+	slog.SetDefault(log)
 
-	serv := service.NewVacationService(repo)
-	hand := handler.NewHandler(serv, templates)
+	log.Info("Starting application",
+		"addr", cfg.Addr,
+		"db_path", cfg.DatabasePath,
+		"log_level", cfg.LogLevel,
+		"log_format", cfg.LogFormat,
+		"shutdown_timeout", cfg.ShutdownTimeout,
+		"timestamp", time.Now().UTC(),
+	)
 
-	mux := chi.NewRouter()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	mux.Use(middleware.Logger)
-	mux.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
-	// HTML страницы
-	mux.Get("/", hand.IndexHandler)              // Главная
-	mux.Get("/vacations", hand.ListHandler)      // Список
-	mux.Get("/add", hand.AddFormHandler)         // Форма добавления
-	mux.Post("/add", hand.CreateHandler)         // Добавление
-	mux.Get("/edit/{id}", hand.EditFormHandler)  // Форма редактирования
-	mux.Post("/edit/{id}", hand.UpdateHandler)   // Обновление
-	mux.Get("/delete/{id}", hand.DeleteHandler)  // Удаление 
-	mux.Get("/view/{id}", hand.ViewHandler)      // Просмотр
+	go func() {
+		sig := <-sigCh
+		log.Info("Received signal", "signal", sig)
+		cancel()
+	}()
 
-	// API
-	mux.Post("/api/calculate", hand.CalculateHandler)
-
-
-	addr := ":8080"
-
-	logger.Info("Server is running", "addr", addr)
-
-	if err := http.ListenAndServe(addr, mux); err != nil {
-		logger.Error("Server failed", "error", err)
+	if err := app.Run(ctx, cfg, log); err != nil {
+		log.Error("Application terminated with error",
+			"error", err,
+			"timestamp", time.Now(),
+		)
 		os.Exit(1)
 	}
-}
 
-// app/exe/main.go
-func loadTemplates() (*template.Template, error) {
-    // Просто загружаем все файлы из одной папки
-    return template.ParseGlob("web/templates/*.html")
+	log.Info("Application finished successfully")
 }

@@ -1,4 +1,18 @@
-.PHONY: all server
+# Makefile
+.PHONY: test test-cover build run
 
-server:
-	go run app/exe/main.go
+test:
+	go test -v ./...
+
+test-cover:
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out
+
+build:
+	go build -o bin/app ./app/exe
+
+run:
+	go run ./app/exe
+
+lint:
+	golangci-lint run

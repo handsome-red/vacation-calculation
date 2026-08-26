@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"encoding/json"
 	"html/template"
 	"net/http"
+	"time"
 	"vacation-calculation/internal/service"
 )
 
@@ -16,6 +18,27 @@ func NewHandler(service service.VacationService, templates *template.Template) *
 		service:   service,
 		templates: templates,
 	}
+}
+
+func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "ok",
+		"time":   time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
+// ReadyHandler проверяет готовность приложения
+func (h *Handler) ReadyHandler(w http.ResponseWriter, r *http.Request) {
+	// Проверяем БД
+	if err := h.service.Ping(); err != nil {
+		http.Error(w, "not ready", http.StatusServiceUnavailable)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
 }
 
 func (h *Handler) IndexHandler(w http.ResponseWriter, r *http.Request) {

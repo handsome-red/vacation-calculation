@@ -8,6 +8,7 @@ import (
 )
 
 type VacationService interface {
+	Ping() error
 	GetAllVacations() ([]model.Vacation, error)
 	GetVacationByID(id int) (*model.Vacation, error)
 	CreateVacation(req model.VacationRequest) (*model.Vacation, error)
@@ -25,6 +26,10 @@ func NewVacationService(repo repository.VacationRepository) VacationService {
 	return &vacationService{
 		repo: repo,
 	}
+}
+
+func (s *vacationService) Ping() error {
+	return s.repo.Ping()
 }
 
 func (s *vacationService) GetAllVacations() ([]model.Vacation, error) {
@@ -85,7 +90,7 @@ func (s *vacationService) UpdateVacation(id int, req model.VacationRequest) (*mo
 	}
 	if req.Days > 0 && req.Days <= 365 {
 		existing.Days = req.Days
-		
+
 		// Пересчитываем дату окончания
 		if req.StartDate != "" {
 			startDate, err := time.Parse("2006-01-02", req.StartDate)

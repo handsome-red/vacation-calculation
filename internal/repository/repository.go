@@ -3,6 +3,7 @@ package repository
 import "vacation-calculation/internal/model"
 
 type VacationRepository interface {
+	Ping() error
 	FindAll() ([]model.Vacation, error)
 	FindByID(id int) (*model.Vacation, error)
 	Create(vacation *model.Vacation) error
