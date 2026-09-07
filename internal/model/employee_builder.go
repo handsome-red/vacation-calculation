@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"vacation-calculation/internal/types"
+
+	"github.com/handsome-red/vacation-calculation/internal/types"
 )
 
 type EmployeeBuilder struct {

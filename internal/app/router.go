@@ -3,8 +3,9 @@ package app
 import (
 	"log/slog"
 	"net/http"
-	"vacation-calculation/internal/handler"
-	"vacation-calculation/internal/httplog"
+
+	"github.com/handsome-red/vacation-calculation/internal/handler"
+	"github.com/handsome-red/vacation-calculation/internal/infrastructure/api/logger"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

@@ -3,7 +3,8 @@ package config
 import (
 	"fmt"
 	"time"
-	"vacation-calculation/internal/logger"
+
+	"github.com/handsome-red/vacation-calculation/internal/logger"
 
 	"github.com/kelseyhightower/envconfig"
 )

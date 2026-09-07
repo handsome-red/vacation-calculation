@@ -1,9 +1,10 @@
 package model
 
 import (
-	"fmt"
+	// "fmt"
 	"time"
-	"vacation-calculation/internal/types"
+
+	"github.com/handsome-red/vacation-calculation/internal/types"
 )
 
 type Employee struct {
@@ -36,30 +37,33 @@ func NewEmployee() *Employee {
 	return &Employee{}
 }
 
-func NewEmployeeFromCreate(req *EmployeeCreate) (*Employee, error) {
-	birthday, err := time.Parse("02.01.2006", req.Birthday)
-	if err != nil {
-		return nil, fmt.Errorf("invalid birthday format (use DD.MM.YYYY): %w", err)
-	}
-
-	hireDate, err := time.Parse("02.01.2006", req.HireDate)
-	if err != nil {
-		return nil, fmt.Errorf("invalid hire_date format (use DD.MM.YYYY): %w", err)
-	}
-
-	return NewEmployeeBuilder().
-		WithStatus(req.Status).
-		WithLastName(req.LastName).
-		WithFirstName(req.FirstName).
-		WithMiddleName(req.MiddleName).
-		WithBirthday(birthday).
-		WithPosition(req.Position).
-		WithHireDate(hireDate).
-		WithTerritorialDepartment(req.TerritorialDepartment).
-		WithDepartment(req.Department).
-		WithWorkDayDuration(req.WorkDayDuration).
-		WithEmail(req.Email).
-		WithIsDisabled(req.IsDisabled).
-		WithTotalServiceDays(req.TotalServiceDays).
-		Build()
+type EmployeeCreate struct {
 }
+
+// func NewEmployeeFromCreate(req *EmployeeCreate) (*Employee, error) {
+// 	birthday, err := time.Parse("02.01.2006", req.Birthday)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("invalid birthday format (use DD.MM.YYYY): %w", err)
+// 	}
+
+// 	hireDate, err := time.Parse("02.01.2006", req.HireDate)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("invalid hire_date format (use DD.MM.YYYY): %w", err)
+// 	}
+
+// 	return NewEmployeeBuilder().
+// 		WithStatus(req.Status).
+// 		WithLastName(req.LastName).
+// 		WithFirstName(req.FirstName).
+// 		WithMiddleName(req.MiddleName).
+// 		WithBirthday(birthday).
+// 		WithPosition(req.Position).
+// 		WithHireDate(hireDate).
+// 		WithTerritorialDepartment(req.TerritorialDepartment).
+// 		WithDepartment(req.Department).
+// 		WithWorkDayDuration(req.WorkDayDuration).
+// 		WithEmail(req.Email).
+// 		WithIsDisabled(req.IsDisabled).
+// 		WithTotalServiceDays(req.TotalServiceDays).
+// 		Build()
+// }

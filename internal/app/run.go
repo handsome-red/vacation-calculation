@@ -7,10 +7,11 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-	"vacation-calculation/internal/config"
-	"vacation-calculation/internal/handler"
-	"vacation-calculation/internal/repository"
-	"vacation-calculation/internal/service"
+
+	"github.com/handsome-red/vacation-calculation/internal/config"
+	"github.com/handsome-red/vacation-calculation/internal/handler"
+	"github.com/handsome-red/vacation-calculation/internal/repository"
+	"github.com/handsome-red/vacation-calculation/internal/service"
 )
 
 func Run(ctx context.Context, cfg config.Config, log *slog.Logger) error {

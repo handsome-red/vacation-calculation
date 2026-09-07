@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"vacation-calculation/internal/app"
-	"vacation-calculation/internal/config"
-	"vacation-calculation/internal/logger"
+	"github.com/handsome-red/vacation-calculation/internal/app"
+	"github.com/handsome-red/vacation-calculation/internal/config"
+	"github.com/handsome-red/vacation-calculation/internal/internal/infrastracture/api/rest/logger"
 )
 
 func main() {

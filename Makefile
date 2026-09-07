@@ -12,7 +12,7 @@ build:
 	go build -o bin/app ./app/exe
 
 run:
-	go run ./app/exe
+	go run ./cmd/api
 
 lint:
 	golangci-lint run

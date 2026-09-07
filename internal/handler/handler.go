@@ -5,7 +5,9 @@ import (
 	"html/template"
 	"net/http"
 	"time"
-	"vacation-calculation/internal/service"
+
+	// "github.com/handsome-red/vacation-calculation/internal/model"
+	"github.com/handsome-red/vacation-calculation/internal/service"
 )
 
 type Handler struct {
@@ -109,4 +111,30 @@ func (h *Handler) ViewHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CalculateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello world"))
+}
+
+type EmployeeCreate struct {
+	// TODO
+}
+
+func (h *Handler) CreateEmployeeHandler(w http.ResponseWriter, r *http.Request) {
+	var req EmployeeCreate
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// employee, err := model.NewEmployeeFromCreate(&req)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusBadRequest)
+	// 	return
+	// }
+
+	// if err := service.CreateEmployee(employee); err != nil {
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
+
+	w.WriteHeader(http.StatusCreated)
 }

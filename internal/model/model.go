@@ -5,7 +5,7 @@ import "time"
 
 type Vacation struct {
 	ID        int       `json:"id"`
-	Employee  string    `json:"employee"`
+	UserID    int       `json:"user_id"`
 	StartDate time.Time `json:"start_date"`
 	EndDate   time.Time `json:"end_date"`
 	Days      int       `json:"days"`
@@ -15,7 +15,7 @@ type Vacation struct {
 }
 
 type VacationRequest struct {
-	Employee  string `json:"employee"`
+	UserID    int    `json:"user_id"`
 	StartDate string `json:"start_date"`
 	Days      int    `json:"days"`
 }

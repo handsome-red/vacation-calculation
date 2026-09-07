@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"time"
 
-	"vacation-calculation/internal/model"
+	"github.com/handsome-red/vacation-calculation/internal/model"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -156,7 +156,7 @@ func createVacationsTable(db *sql.DB) error {
 // FindAll - возвращает все отпуска
 func (r *SQLiteRepository) FindAll() ([]model.Vacation, error) {
 	query := `
-	SELECT id, employee, start_date, end_date, days, status, created_at, updated_at
+	SELECT id, user_id, start_date, end_date, days, status, created_at, updated_at
 	FROM vacations
 	ORDER BY start_date DESC
 	`
@@ -172,7 +172,7 @@ func (r *SQLiteRepository) FindAll() ([]model.Vacation, error) {
 		var v model.Vacation
 		if err := rows.Scan(
 			&v.ID,
-			&v.Employee,
+			&v.UserID,
 			&v.StartDate,
 			&v.EndDate,
 			&v.Days,
@@ -195,7 +195,7 @@ func (r *SQLiteRepository) FindAll() ([]model.Vacation, error) {
 // FindByID - находит отпуск по ID
 func (r *SQLiteRepository) FindByID(id int) (*model.Vacation, error) {
 	query := `
-	SELECT id, employee, start_date, end_date, days, status, created_at, updated_at
+	SELECT id, user_id, start_date, end_date, days, status, created_at, updated_at
 	FROM vacations
 	WHERE id = ?
 	`
@@ -203,7 +203,7 @@ func (r *SQLiteRepository) FindByID(id int) (*model.Vacation, error) {
 	var v model.Vacation
 	err := r.db.QueryRow(query, id).Scan(
 		&v.ID,
-		&v.Employee,
+		&v.UserID,
 		&v.StartDate,
 		&v.EndDate,
 		&v.Days,
@@ -225,7 +225,7 @@ func (r *SQLiteRepository) FindByID(id int) (*model.Vacation, error) {
 // Create - создает новый отпуск
 func (r *SQLiteRepository) Create(vacation *model.Vacation) error {
 	query := `
-	INSERT INTO vacations (employee, start_date, end_date, days, status, created_at, updated_at)
+	INSERT INTO vacations (user_id, start_date, end_date, days, status, created_at, updated_at)
 	VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 
@@ -242,7 +242,7 @@ func (r *SQLiteRepository) Create(vacation *model.Vacation) error {
 
 	result, err := r.db.Exec(
 		query,
-		vacation.Employee,
+		vacation.UserID,
 		vacation.StartDate,
 		vacation.EndDate,
 		vacation.Days,
@@ -273,7 +273,7 @@ func (r *SQLiteRepository) Update(vacation *model.Vacation) error {
 
 	query := `
 	UPDATE vacations
-	SET employee = ?, start_date = ?, end_date = ?, days = ?, status = ?, updated_at = ?
+	SET user_id = ?, start_date = ?, end_date = ?, days = ?, status = ?, updated_at = ?
 	WHERE id = ?
 	`
 
@@ -281,7 +281,7 @@ func (r *SQLiteRepository) Update(vacation *model.Vacation) error {
 
 	result, err := r.db.Exec(
 		query,
-		vacation.Employee,
+		vacation.UserID,
 		vacation.StartDate,
 		vacation.EndDate,
 		vacation.Days,
@@ -332,11 +332,11 @@ func (r *SQLiteRepository) Delete(id int) error {
 }
 
 // FindByEmployee - находит отпуска по сотруднику
-func (r *SQLiteRepository) FindByEmployee(employee string) ([]model.Vacation, error) {
+func (r *SQLiteRepository) FindByUserID(employee string) ([]model.Vacation, error) {
 	query := `
-	SELECT id, employee, start_date, end_date, days, status, created_at, updated_at
+	SELECT id, user_id, start_date, end_date, days, status, created_at, updated_at
 	FROM vacations
-	WHERE employee LIKE ?
+	WHERE user_id LIKE ?
 	ORDER BY start_date DESC
 	`
 
@@ -351,7 +351,7 @@ func (r *SQLiteRepository) FindByEmployee(employee string) ([]model.Vacation, er
 		var v model.Vacation
 		if err := rows.Scan(
 			&v.ID,
-			&v.Employee,
+			&v.UserID,
 			&v.StartDate,
 			&v.EndDate,
 			&v.Days,
@@ -370,7 +370,7 @@ func (r *SQLiteRepository) FindByEmployee(employee string) ([]model.Vacation, er
 // FindByStatus - находит отпуска по статусу
 func (r *SQLiteRepository) FindByStatus(status string) ([]model.Vacation, error) {
 	query := `
-	SELECT id, employee, start_date, end_date, days, status, created_at, updated_at
+	SELECT id, user_id, start_date, end_date, days, status, created_at, updated_at
 	FROM vacations
 	WHERE status = ?
 	ORDER BY start_date DESC
@@ -387,7 +387,7 @@ func (r *SQLiteRepository) FindByStatus(status string) ([]model.Vacation, error)
 		var v model.Vacation
 		if err := rows.Scan(
 			&v.ID,
-			&v.Employee,
+			&v.UserID,
 			&v.StartDate,
 			&v.EndDate,
 			&v.Days,

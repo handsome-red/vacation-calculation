@@ -1,4 +1,4 @@
-package httplog
+package logger
 
 import (
 	"log/slog"

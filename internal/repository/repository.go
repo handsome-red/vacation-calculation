@@ -1,6 +1,6 @@
 package repository
 
-import "vacation-calculation/internal/model"
+import "github.com/handsome-red/vacation-calculation/internal/model"
 
 type VacationRepository interface {
 	Ping() error
@@ -9,5 +9,5 @@ type VacationRepository interface {
 	Create(vacation *model.Vacation) error
 	Update(vacation *model.Vacation) error
 	Delete(id int) error
-	FindByEmployee(employee string) ([]model.Vacation, error)
+	FindByUserID(userID string) ([]model.Vacation, error)
 }

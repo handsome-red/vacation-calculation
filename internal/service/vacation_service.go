@@ -3,8 +3,9 @@ package service
 import (
 	"errors"
 	"time"
-	"vacation-calculation/internal/model"
-	"vacation-calculation/internal/repository"
+
+	"github.com/handsome-red/vacation-calculation/internal/model"
+	"github.com/handsome-red/vacation-calculation/internal/repository"
 )
 
 type VacationService interface {
@@ -45,7 +46,7 @@ func (s *vacationService) GetVacationByID(id int) (*model.Vacation, error) {
 
 func (s *vacationService) CreateVacation(req model.VacationRequest) (*model.Vacation, error) {
 	// Валидация
-	if req.Employee == "" {
+	if req.UserID == 0 {
 		return nil, errors.New("employee name is required")
 	}
 	if req.Days <= 0 || req.Days > 365 {
@@ -63,7 +64,7 @@ func (s *vacationService) CreateVacation(req model.VacationRequest) (*model.Vaca
 
 	// Создаем отпуск
 	vacation := &model.Vacation{
-		Employee:  req.Employee,
+		UserID:    req.UserID,
 		StartDate: startDate,
 		EndDate:   endDate,
 		Days:      req.Days,
@@ -85,8 +86,8 @@ func (s *vacationService) UpdateVacation(id int, req model.VacationRequest) (*mo
 	}
 
 	// Обновляем поля
-	if req.Employee != "" {
-		existing.Employee = req.Employee
+	if req.UserID != 0 {
+		existing.UserID = req.UserID
 	}
 	if req.Days > 0 && req.Days <= 365 {
 		existing.Days = req.Days
@@ -112,8 +113,8 @@ func (s *vacationService) DeleteVacation(id int) error {
 	return s.repo.Delete(id)
 }
 
-func (s *vacationService) GetVacationsByEmployee(employee string) ([]model.Vacation, error) {
-	return s.repo.FindByEmployee(employee)
+func (s *vacationService) GetVacationsByEmployee(userID string) ([]model.Vacation, error) {
+	return s.repo.FindByUserID(userID)
 }
 
 func (s *vacationService) CalculateVacation(days int, startDate string) (time.Time, error) {

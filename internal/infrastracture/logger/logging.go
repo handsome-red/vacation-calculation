@@ -1,4 +1,4 @@
-package httplog
+package logger
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"vacation-calculation/internal/types"
+	"github.com/handsome-red/vacation-calculation/internal/types"
 )
 
 func Logger(log *slog.Logger) func(http.Handler) http.Handler {
