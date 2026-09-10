@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/handsome-red/vacation-calculation/internal/logger"
+	"github.com/handsome-red/vacation-calculation/internal/infrastructure/logger"
 
 	"github.com/kelseyhightower/envconfig"
 )

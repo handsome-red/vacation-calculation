@@ -66,6 +66,6 @@ func calculateDays(startDate, endDate time.Time) int {
 	return int(endDate.Sub(startDate).Hours() / 24)
 }
 
-func (v *Vacation) Approve() error {
+// func (v *Vacation) Approve() error {
 
-}
+// }
