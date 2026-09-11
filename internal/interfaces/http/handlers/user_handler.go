@@ -8,15 +8,18 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/deactivate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_active_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/dto"
 )
 
 type UserHandler struct {
-	registerUseCase   *register_user.Handler
-	getUserUseCase    *get_user.Handler
-	deactivateUseCase *deactivate_user.Handler
-	activateUseCase   *activate_user.Handler
+	registerUseCase       *register_user.Handler
+	getUserUseCase        *get_user.Handler
+	deactivateUseCase     *deactivate_user.Handler
+	activateUseCase       *activate_user.Handler
+	getActiveUsersUseCase *get_active_users.Handler
+	templates             *Templates
 }
 
 func NewUserHandler(
@@ -24,13 +27,22 @@ func NewUserHandler(
 	getUserUseCase *get_user.Handler,
 	deactivateUseCase *deactivate_user.Handler,
 	activateUseCase *activate_user.Handler,
-	getActiveUsersUseCase *get_active_user.GetActiveUsersUseCase,
+	getActiveUsersUseCase *get_active_users.Handler,
+	templates *Templates,
 ) *UserHandler {
 	return &UserHandler{
-		registerUseCase:   registerUseCase,
-		getUserUseCase:    getUserUseCase,
-		deactivateUseCase: deactivateUseCase,
-		activateUseCase:   activateUseCase,
+		registerUseCase:       registerUseCase,
+		getUserUseCase:        getUserUseCase,
+		deactivateUseCase:     deactivateUseCase,
+		activateUseCase:       activateUseCase,
+		getActiveUsersUseCase: getActiveUsersUseCase,
+		templates:             templates,
+	}
+}
+
+func (h *UserHandler) RegisterUserForm(w http.ResponseWriter, r *http.Request) {
+	if err := h.templates.Render(w, "register_user.html", nil); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -77,6 +89,17 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(result)
 }
 
+// func (h *UserHandler) ChangeEmail(w http.ResponseWriter, r *http.Request) {
+// 	userIDStr := r.PathValue("id")
+// 	userID, err := uuid.Parse(userIDStr)
+// 	if err != nil {
+// 		http.Error(w, "invalid user ID", http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	cmd := change_email
+// }
+
 func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 	userIDStr := r.PathValue("id")
 	userID, err := uuid.Parse(userIDStr)
@@ -92,4 +115,37 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *UserHandler) GetActiveUsers(w http.ResponseWriter, r *http.Request) {
+	query := get_active_users.Query{
+		Page: 1,
+		Size: 1,
+	}
+
+	result, err := h.getActiveUsersUseCase.Handle(r.Context(), query)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	resp := make([]dto.UserResponse, 0, len(result.Users))
+	for _, u := range result.Users {
+		resp = append(resp, dto.UserResponse{
+			ID:         u.ID,
+			Email:      u.Email,
+			FirstName:  u.FirstName,
+			LastName:   u.LastName,
+			MiddleName: u.MiddleName,
+			Department: u.Department,
+		})
+	}
+
+	data := map[string]any{
+		"Users": resp,
+	}
+
+	if err := h.templates.Render(w, "users.html", data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

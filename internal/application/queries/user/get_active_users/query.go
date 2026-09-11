@@ -15,6 +15,8 @@ type Result struct {
 type UserListItem struct {
 	ID         string
 	Email      string
-	FullName   string
+	FirstName  string
+	LastName   string
+	MiddleName string
 	Department string
 }

@@ -18,7 +18,8 @@ var (
 
 	ErrNameRequired = errors.New("name is required")
 
-	ErrIDIsEmpty = errors.New("user ID cannot be empty")
+	ErrIDEmpty    = errors.New("user ID cannot be empty")
+	ErrIDRequired = errors.New("ID is required")
 
 	ErrUserNotFound       = errors.New("user not found")
 	ErrUserAlreadyActive  = errors.New("user already active")

@@ -32,7 +32,7 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	}
 
 	// Получаем активных пользователей
-	users, total, err := h.userRepo.FindActive(ctx, query.Page, query.Size)
+	users, err := h.userRepo.FindAll(ctx)
 	if err != nil {
 		h.logger.Error(ctx, "failed to get active users", "error", err)
 		return nil, fmt.Errorf("failed to get users: %w", err)
@@ -41,7 +41,7 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	// Формируем результат
 	result := &Result{
 		Users:      make([]UserListItem, 0, len(users)),
-		TotalCount: total,
+		TotalCount: len(users),
 		Page:       query.Page,
 		PageSize:   query.Size,
 	}
@@ -50,8 +50,10 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		result.Users = append(result.Users, UserListItem{
 			ID:         u.ID().String(),
 			Email:      u.Email().String(),
-			FullName:   u.Name().FullName(),
-			Department: u.Department(),
+			FirstName:  u.Name().FirstName(),
+			LastName:   u.Name().LastName(),
+			MiddleName: u.Name().MiddleName(),
+			Department: u.Department().String(),
 		})
 	}
 

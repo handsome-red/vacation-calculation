@@ -58,6 +58,11 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 		return nil, fmt.Errorf("invalid name: %w", err)
 	}
 
+	department, err := user.NewDepartment(cmd.Department)
+	if err != nil {
+		return nil, fmt.Errorf("invalid department: %w", err)
+	}
+
 	// Генерация UUID (Value Object)
 	userID := user.GenerateUserID()
 
@@ -65,7 +70,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 		userID,
 		email,
 		name,
-		cmd.Department,
+		department,
 		password,
 	)
 	if err != nil {

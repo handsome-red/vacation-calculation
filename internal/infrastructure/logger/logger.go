@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"os"
 )
 
 type Config struct {
@@ -25,21 +26,26 @@ func NewLogger(config Config) *SlogLogger {
 		level = slog.LevelDebug
 	case "error":
 		level = slog.LevelError
-	case "info":
-		level = slog.LevelInfo
-	default:
+	case "warn":
 		level = slog.LevelWarn
+	default:
+		level = slog.LevelInfo
 	}
 
-	var opts *slog.HandlerOptions
+	opts := &slog.HandlerOptions{Level: level}
 	opts.Level = level
 
 	var handler slog.Handler
 
+	out := config.Output
+	if out == nil {
+		out = os.Stdout
+	}
+
 	if config.Format == "json" {
-		handler = slog.NewJSONHandler(config.Output, opts)
+		handler = slog.NewJSONHandler(out, opts)
 	} else {
-		handler = slog.NewTextHandler(config.Output, opts)
+		handler = slog.NewTextHandler(out, opts)
 	}
 
 	return &SlogLogger{l: slog.New(handler)}

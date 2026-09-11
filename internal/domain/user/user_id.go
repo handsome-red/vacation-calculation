@@ -1,6 +1,10 @@
 package user
 
-import "github.com/google/uuid"
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
 
 type UserID struct {
 	value uuid.UUID
@@ -14,7 +18,7 @@ func GenerateUserID() UserID {
 // NewUserID создает новый UserID.
 func NewUserID(id uuid.UUID) (UserID, error) {
 	if id == uuid.Nil {
-		return UserID{}, ErrIDIsEmpty
+		return UserID{}, ErrIDEmpty
 	}
 	return UserID{value: id}, nil
 }
@@ -27,4 +31,14 @@ func (id UserID) String() string {
 // Value возвращает значение ID.
 func (id UserID) UUID() uuid.UUID {
 	return id.value
+}
+
+// ParseUserID парсит ID.
+func ParseUserID(s string) (UserID, error) {
+	uuid, err := uuid.Parse(s)
+	if err != nil {
+		return UserID{}, fmt.Errorf("parse user id: %w", err)
+	}
+
+	return UserID{value: uuid}, nil
 }

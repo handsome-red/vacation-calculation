@@ -21,3 +21,15 @@ func (r RegisterUserRequest) ToCommand() register_user.Command {
 		Department: r.Department,
 	}
 }
+
+type UserResponse struct {
+	ID         string `json:"id"`
+	Email      string `json:"email"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	MiddleName string `json:"middle_name,omitempty"`
+	Department string `json:"department"`
+	IsActive   bool   `json:"is_active"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+}

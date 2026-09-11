@@ -22,7 +22,7 @@ func main() {
 	defer stop()
 
 	// Запускаем приложение
-	if app.Run(ctx, cfg); err != nil {
+	if err := app.Run(ctx, cfg); err != nil {
 		log.Fatalf("application failed: %v", err)
 	}
 }

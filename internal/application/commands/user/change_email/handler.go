@@ -25,7 +25,11 @@ func NewHandler(
 
 func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	// 1. Находим пользователя
-	userID := user.NewUserID(cmd.UserID)
+	userID, err := user.NewUserID(cmd.UserID)
+	if err != nil {
+		return nil, user.ErrIDRequired
+	}
+
 	u, err := h.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)

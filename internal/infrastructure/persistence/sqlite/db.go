@@ -20,13 +20,23 @@ func (c Config) DSN() string {
 	)
 }
 
-func NewDB(ctx context.Context, cfg *Config, log ports.Logger) (*sql.DB, error) {
-	log.Info(ctx, "connecting to database",
-		shared.String("path", cfg.Path))
+func NewDB(ctx context.Context, cfg Config, log ports.Logger) (*sql.DB, error) {
+	log.Info(ctx, "connecting to database", "path", cfg.Path)
 
-	db, err := sql.Open("sqlite3", cfg.Path)
+	db, err := sql.Open("sqlite", cfg.DSN())
 	if err != nil {
-		return nil, fmt.Errorf("opening database: %w", err)
+		return nil, fmt.Errorf("sqlite: open: %w", err)
 	}
 
+	if err := db.PingContext(ctx); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("sqlite: ping: %w", err)
+	}
+
+	log.Info(ctx, "connected to database", "path", cfg.Path)
+
+	return db, nil
+
 }
+
+// func ()

@@ -9,24 +9,27 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
-type UserRepository struct {
+const userColumns = `id, email, password, first_name,
+	last_name, middle_name, department, is_active, created_at, updated_at`
+
+type userRepository struct {
 	db *sql.DB
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(db *sql.DB) *userRepository {
+	return &userRepository{db: db}
 }
 
-var _ user.UserRepository = (*UserRepository)(nil)
+var _ user.UserRepository = (*userRepository)(nil)
 
-func (ur *UserRepository) Save(ctx context.Context, u *user.User) error {
+func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 	if u == nil {
 		return errors.New("user is nil")
 	}
 
 	const query = `
 		INSERT INTO users (id, email, password, first_name, last_name, middle_name, department, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (id) DO UPDATE SET
 			email      = EXCLUDED.email,
             password   = EXCLUDED.password,
@@ -56,7 +59,7 @@ func (ur *UserRepository) Save(ctx context.Context, u *user.User) error {
 	return nil
 }
 
-func (ur *UserRepository) FindByID(ctx context.Context, userID user.UserID) (*user.User, error) {
+func (ur *userRepository) FindByID(ctx context.Context, userID user.UserID) (*user.User, error) {
 	const query = `
 		SELECT
 			id, email, password,
@@ -64,7 +67,7 @@ func (ur *UserRepository) FindByID(ctx context.Context, userID user.UserID) (*us
 			department, is_active,
 			created_at, updated_at
 		FROM users
-		WHERE id = $1
+		WHERE id = ?
 	`
 
 	var row userRow
@@ -81,9 +84,8 @@ func (ur *UserRepository) FindByID(ctx context.Context, userID user.UserID) (*us
 		&row.UpdatedAt,
 	)
 	if err != nil {
-		// sql.ErrNoRows — это НЕ ошибка. Пользователь просто не найден.
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, user.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("finding user by ID: %w", err)
 	}
@@ -91,7 +93,7 @@ func (ur *UserRepository) FindByID(ctx context.Context, userID user.UserID) (*us
 	return row.toDomain()
 }
 
-func (ur *UserRepository) FindByEmail(ctx context.Context, email user.Email) (*user.User, error) {
+func (ur *userRepository) FindByEmail(ctx context.Context, email user.Email) (*user.User, error) {
 	const query = `
 		SELECT
 			id, email, password,
@@ -99,7 +101,7 @@ func (ur *UserRepository) FindByEmail(ctx context.Context, email user.Email) (*u
 			department, is_active,
 			created_at, updated_at
 		FROM users
-		WHERE email = $1
+		WHERE email = ?
 	`
 
 	var row userRow
@@ -125,7 +127,7 @@ func (ur *UserRepository) FindByEmail(ctx context.Context, email user.Email) (*u
 	return row.toDomain()
 }
 
-func (ur *UserRepository) FindActive(ctx context.Context) ([]*user.User, error) {
+func (ur *userRepository) FindActive(ctx context.Context) ([]*user.User, error) {
 	const query = `
 		SELECT
 			id, email, password,
@@ -178,11 +180,11 @@ func (ur *UserRepository) FindActive(ctx context.Context) ([]*user.User, error) 
 	return users, nil
 }
 
-func (ur *UserRepository) Delete(ctx context.Context, userID user.UserID) error {
+func (ur *userRepository) Delete(ctx context.Context, userID user.UserID) error {
 	const query = `
 		UPDATE users
-		SET deleted_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL
+		SET deleted_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND deleted_at IS NULL
 	`
 
 	result, err := ur.db.ExecContext(ctx, query, userID.String())
@@ -199,4 +201,73 @@ func (ur *UserRepository) Delete(ctx context.Context, userID user.UserID) error 
 	}
 
 	return nil
+}
+
+func (ur *userRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
+	const query = `
+		SELECT EXISTS(SELECT 1 FROM users WHERE LOWER(email) = ?) AS email_exists;
+	`
+
+	var exist bool
+	err := ur.db.QueryRowContext(ctx, query, email).Scan(&exist)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("checking email: %w", err)
+	}
+
+	return exist, nil
+}
+
+func (ur *userRepository) FindAll(ctx context.Context) ([]*user.User, error) {
+	const query = `
+		SELECT
+			id, email, password,
+			first_name, last_name, middle_name,
+			department, is_active,
+			created_at, updated_at
+		FROM users
+		ORDER BY created_at DESC
+	`
+
+	rows, err := ur.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("querying users: %w", err)
+	}
+	defer rows.Close()
+
+	users := make([]*user.User, 0, 16)
+
+	for rows.Next() {
+		var row userRow
+		err := rows.Scan(
+			&row.ID,
+			&row.Email,
+			&row.Password,
+			&row.FirstName,
+			&row.LastName,
+			&row.MiddleName,
+			&row.Department,
+			&row.IsActive,
+			&row.CreatedAt,
+			&row.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scanning user row: %w", err)
+		}
+
+		u, err := row.toDomain()
+		if err != nil {
+			return nil, fmt.Errorf("converting user row: %w", err)
+		}
+
+		users = append(users, u)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating users: %w", err)
+	}
+
+	return users, nil
 }

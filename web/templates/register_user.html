@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>New_user</title>
+</head>
+<body>
+    <h1>Добавить нового пользователя</h1>
+    <form method=POST action="/users">
+        <p>
+            <label>Фамилия<br>
+                <input type="text" name="last_name"
+                value="{{.Form.LastName}}">
+            </label>
+        </p>
+        <p>
+            <label>Имя<br>
+                <input type="text" name="first_name"
+                value="{{.Form.FirstName}}">
+            </label>
+        </p>
+        <p>
+            <label>Александрович<br>
+                <input type="text" name="middle_name"
+                value="{{.Form.MiddleName}}">
+            </label>
+        </p>
+        <p>
+            <button type="submit">Сохранить</button>
+            <a href="/users">Отмена</a>
+        </p>
+    </form>
+</body>
+</html>
