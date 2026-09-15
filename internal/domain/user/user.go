@@ -6,14 +6,23 @@ import (
 )
 
 type User struct {
-	id         UserID
-	email      Email
-	password   Password
-	name       Name
-	department Department
-	createdAt  time.Time
-	updatedAt  time.Time
-	isActive   bool
+	id              UserID          // ID
+	status          Status          // Статус
+	lastName        string          // Фамилия
+	firstName       string          // Имя
+	middleName      string          // Отчество
+	birthDate       BirthDate       // Дата рождения
+	position        Position        // Должность
+	hiredAt         HiredDate       // Дата приема на работу
+	department      Department      // Территориальный отдел
+	district        District        // Район/Отдел
+	workdayDuration WorkdayDuration // Продолжительность рабочего дня
+	email           Email           // Почта
+	isInvalid       bool            // Инвалидность
+	totalExperience Experience      // Общий стаж выслуги
+	password        Password
+	createdAt       time.Time
+	updatedAt       time.Time
 }
 
 func NewUser(
@@ -36,6 +45,22 @@ func NewUser(
 		updatedAt:  now,
 		isActive:   true,
 	}, nil
+}
+
+func (u *User) FirstName() string {
+	return u.firstName
+}
+
+func (u *User) LastName() string {
+	return u.lastName
+}
+
+func (u *User) MiddleName() string {
+	return u.middleName
+}
+
+func (u *User) FullName() string {
+	return fmt.Sprintf("%s %s %s", n.lastName, n.firstName, n.middleName)
 }
 
 // ChangeEmail изменение почты пользователя
