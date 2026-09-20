@@ -2,14 +2,7 @@ module github.com/handsome-red/vacation-calculation
 
 go 1.26.0
 
-require github.com/mattn/go-sqlite3 v1.14.52
-
-require (
-	github.com/go-chi/chi/v5 v5.3.2
-	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/stretchr/testify v1.12.1
-	go.uber.org/zap v1.28.0
-)
+require github.com/kelseyhightower/envconfig v1.4.0
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -24,7 +17,6 @@ require (
 
 require (
 	github.com/google/uuid v1.6.0
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.56.0
 	modernc.org/sqlite v1.58.0
 )

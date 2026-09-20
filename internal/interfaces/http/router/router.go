@@ -97,8 +97,8 @@ func (r *Router) registerRoutes() {
 	// ============================================================
 	// User routes
 	// TODO подумать над маршрутом для html
-	r.mux.HandleFunc("GET /api/v1/user", userHandler.RegisterUserForm)
-	r.mux.HandleFunc("POST /api/v1/user", userHandler.RegisterUser)
+	r.mux.HandleFunc("GET /api/v1/user/register", userHandler.RegisterUserForm)
+	r.mux.HandleFunc("POST /api/v1/user/register", userHandler.RegisterUser)
 
 	r.mux.HandleFunc("GET /api/v1/users/{id}", userHandler.GetUser)
 	// r.mux.HandleFunc("PUT /api/v1/users/{id}/email", userHandler.ChangeEmail)

@@ -1,34 +1,42 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <title>New_user</title>
 </head>
+
 <body>
     <h1>Добавить нового пользователя</h1>
-    <form method=POST action="/users">
-        <p>
-            <label>Фамилия<br>
-                <input type="text" name="last_name"
-                value="{{.Form.LastName}}">
-            </label>
-        </p>
-        <p>
-            <label>Имя<br>
-                <input type="text" name="first_name"
-                value="{{.Form.FirstName}}">
-            </label>
-        </p>
-        <p>
-            <label>Александрович<br>
-                <input type="text" name="middle_name"
-                value="{{.Form.MiddleName}}">
-            </label>
-        </p>
-        <p>
-            <button type="submit">Сохранить</button>
-            <a href="/users">Отмена</a>
-        </p>
+    <form method="POST" action="/api/v1/user/register">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <p><label>Фамилия<br>
+                <input type="text" name="last_name" value="{{.Form.LastName}}" required>
+            </label></p>
+
+        <p><label>Имя<br>
+                <input type="text" name="first_name" value="{{.Form.FirstName}}" required>
+            </label></p>
+
+        <p><label>Отчество<br>
+                <input type="text" name="middle_name" value="{{.Form.MiddleName}}">
+            </label></p>
+
+        <p><label>Email<br>
+                <input type="email" name="email" value="{{.Form.Email}}" required>
+            </label></p>
+
+        <p><label>Пароль<br>
+                <input type="password" name="password" required>
+            </label></p>
+
+        <p><label>Отдел<br>
+                <input type="text" name="department" value="{{.Form.Department}}">
+            </label></p>
+
+        <p><button type="submit">Сохранить</button></p>
     </form>
 </body>
+
 </html>

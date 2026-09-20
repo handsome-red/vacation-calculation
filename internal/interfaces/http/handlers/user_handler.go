@@ -41,38 +41,37 @@ func NewUserHandler(
 }
 
 func (h *UserHandler) RegisterUserForm(w http.ResponseWriter, r *http.Request) {
-	if err := h.templates.Render(w, "register_user.html", nil); err != nil {
+
+	data := map[string]any{
+		"Form": register_user.Command{},
+	}
+
+	if err := h.templates.Render(w, "register_user.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
-
-	var req dto.RegisterUserRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
 
 	cmd := register_user.Command{
-		Email:      req.Email,
-		Password:   req.Password,
-		FirstName:  req.FirstName,
-		LastName:   req.LastName,
-		MiddleName: req.MiddleName,
-		Department: req.Department,
+		Email:      r.FormValue("email"),
+		Password:   r.FormValue("password"),
+		FirstName:  r.FormValue("first_name"),
+		LastName:   r.FormValue("last_name"),
+		MiddleName: r.FormValue("middle_name"),
+		Department: r.FormValue("department"),
 	}
 
-	result, err := h.registerUseCase.Handle(r.Context(), cmd)
-	if err != nil {
+	if _, err := h.registerUseCase.Handle(r.Context(), cmd); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(result)
+	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }
 
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {

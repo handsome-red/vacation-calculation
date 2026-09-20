@@ -7,19 +7,19 @@ import (
 )
 
 type User struct {
-	id         UserID     // ID
-	status     Status     // Статус
-	lastName   string     // Фамилия
-	firstName  string     // Имя
-	middleName string     // Отчество
-	birthDate  BirthDate  // Дата рождения
-	position   Position   // Должность
-	hiredAt    HiredDate  // Дата приема на работу
-	department Department // Территориальный отдел
-	// district        District        // Район/Отдел
-	// workdayDuration WorkdayDuration // Продолжительность рабочего дня
-	email     Email // Почта
-	isInvalid bool  // Инвалидность
+	id              UserID          // ID
+	status          Status          // Статус
+	lastName        string          // Фамилия
+	firstName       string          // Имя
+	middleName      string          // Отчество
+	birthDate       BirthDate       // Дата рождения
+	position        Position        // Должность
+	hiredAt         HiredDate       // Дата приема на работу
+	department      Department      // Территориальный отдел
+	district        District        // Район/Отдел
+	workdayDuration WorkdayDuration // Продолжительность рабочего дня
+	email           Email           // Почта
+	isInvalid       bool            // Инвалидность
 	// totalExperience Experience      // Общий стаж выслуги
 	password  Password
 	createdAt time.Time
