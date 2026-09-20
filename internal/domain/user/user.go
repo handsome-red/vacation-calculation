@@ -2,33 +2,36 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
 type User struct {
-	id              UserID          // ID
-	status          Status          // Статус
-	lastName        string          // Фамилия
-	firstName       string          // Имя
-	middleName      string          // Отчество
-	birthDate       BirthDate       // Дата рождения
-	position        Position        // Должность
-	hiredAt         HiredDate       // Дата приема на работу
-	department      Department      // Территориальный отдел
-	district        District        // Район/Отдел
-	workdayDuration WorkdayDuration // Продолжительность рабочего дня
-	email           Email           // Почта
-	isInvalid       bool            // Инвалидность
-	totalExperience Experience      // Общий стаж выслуги
-	password        Password
-	createdAt       time.Time
-	updatedAt       time.Time
+	id         UserID     // ID
+	status     Status     // Статус
+	lastName   string     // Фамилия
+	firstName  string     // Имя
+	middleName string     // Отчество
+	birthDate  BirthDate  // Дата рождения
+	position   Position   // Должность
+	hiredAt    HiredDate  // Дата приема на работу
+	department Department // Территориальный отдел
+	// district        District        // Район/Отдел
+	// workdayDuration WorkdayDuration // Продолжительность рабочего дня
+	email     Email // Почта
+	isInvalid bool  // Инвалидность
+	// totalExperience Experience      // Общий стаж выслуги
+	password  Password
+	createdAt time.Time
+	updatedAt time.Time
 }
 
 func NewUser(
 	id UserID,
 	email Email,
-	name Name,
+	firstName string,
+	lastName string,
+	middleName string,
 	department Department,
 	password Password,
 ) (*User, error) {
@@ -39,11 +42,12 @@ func NewUser(
 		id:         id,
 		email:      email,
 		password:   password,
-		name:       name,
+		firstName:  firstName,
+		lastName:   lastName,
+		middleName: middleName,
 		department: department,
 		createdAt:  now,
 		updatedAt:  now,
-		isActive:   true,
 	}, nil
 }
 
@@ -60,7 +64,7 @@ func (u *User) MiddleName() string {
 }
 
 func (u *User) FullName() string {
-	return fmt.Sprintf("%s %s %s", n.lastName, n.firstName, n.middleName)
+	return fmt.Sprintf("%s %s %s", u.lastName, u.firstName, u.middleName)
 }
 
 // ChangeEmail изменение почты пользователя
@@ -87,45 +91,47 @@ func (u *User) ChangePassword(newPassword Password) error {
 }
 
 // Deactivate деактивирует аккаунт.
-func (u *User) Deactivate() error {
-	if !u.isActive {
-		return errors.New("user is already deactivate")
-	}
+// func (u *User) Deactivate() error {
+// 	if !u.isActive {
+// 		return errors.New("user is already deactivate")
+// 	}
 
-	u.isActive = false
-	u.updatedAt = time.Now().UTC()
+// 	u.isActive = false
+// 	u.updatedAt = time.Now().UTC()
 
-	return nil
-}
+// 	return nil
+// }
 
 // Activate aктивирует аккаунт.
-func (u *User) Activate() error {
-	if u.isActive {
-		return errors.New("user is already activate")
-	}
+// func (u *User) Activate() error {
+// 	if u.isActive {
+// 		return errors.New("user is already activate")
+// 	}
 
-	u.isActive = true
-	u.updatedAt = time.Now().UTC()
+// 	u.isActive = true
+// 	u.updatedAt = time.Now().UTC()
 
-	return nil
-}
+// 	return nil
+// }
 
 func ReconstructUser(
 	id UserID,
 	email Email,
 	password Password,
-	name Name,
+	firstName string,
+	lastName string,
+	middleName string,
 	department Department,
-	isActive bool,
 	createdAt, updatedAt time.Time,
 ) *User {
 	return &User{
 		id:         id,
 		email:      email,
 		password:   password,
-		name:       name,
+		firstName:  firstName,
+		lastName:   lastName,
+		middleName: middleName,
 		department: department,
-		isActive:   isActive,
 		createdAt:  createdAt,
 		updatedAt:  updatedAt,
 	}
@@ -139,9 +145,9 @@ func (u *User) Email() Email {
 	return u.email
 }
 
-func (u *User) Name() Name {
-	return u.name
-}
+// func (u *User) Name() Name {
+// 	return u.name
+// }
 
 func (u *User) Department() Department {
 	return u.department
@@ -157,8 +163,4 @@ func (u *User) CreatedAt() time.Time {
 
 func (u *User) UpdatedAt() time.Time {
 	return u.updatedAt
-}
-
-func (u *User) IsActive() bool {
-	return u.isActive
 }

@@ -37,11 +37,6 @@ func (r *userRow) toDomain() (*user.User, error) {
 		return nil, fmt.Errorf("invalid email %q: %w", r.Email, err)
 	}
 
-	name, err := user.NewName(r.FirstName, r.LastName, r.MiddleName)
-	if err != nil {
-		return nil, fmt.Errorf("invalid name: %w", err)
-	}
-
 	department, err := user.NewDepartment(r.Department)
 	if err != nil {
 		return nil, fmt.Errorf("invalid department %q: %w", r.Department, err)
@@ -53,9 +48,10 @@ func (r *userRow) toDomain() (*user.User, error) {
 		id,
 		email,
 		password,
-		name,
+		r.FirstName,
+		r.LastName,
+		r.MiddleName,
 		department,
-		r.IsActive,
 		r.CreatedAt,
 		r.UpdatedAt,
 	), nil

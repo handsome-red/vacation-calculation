@@ -46,11 +46,10 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 		u.ID().String(),
 		u.Email().Value(),
 		u.Password().String(),
-		u.Name().FirstName(),
-		u.Name().LastName(),
-		u.Name().MiddleName(),
+		u.FirstName(),
+		u.LastName(),
+		u.MiddleName(),
 		u.Department().String(),
-		u.IsActive(),
 	)
 	if err != nil {
 		return fmt.Errorf("saving user: %w", err)

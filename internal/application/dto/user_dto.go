@@ -20,11 +20,10 @@ func NewUserDTOFromDomain(u *user.User) *UserDTO {
 	return &UserDTO{
 		ID:         u.ID().String(),
 		Email:      u.Email().String(),
-		FullName:   u.Name().FullName(),
+		FullName:   u.FullName(),
 		Department: u.Department().String(),
 		CreatedAt:  u.CreatedAt(),
 		UpdatedAt:  u.UpdatedAt(),
-		IsActive:   u.IsActive(),
 	}
 }
 

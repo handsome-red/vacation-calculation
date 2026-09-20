@@ -36,9 +36,9 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) error {
 	}
 
 	// 2. Деактивируем (бизнес-логика в Domain)
-	if err := u.Deactivate(); err != nil {
-		return err
-	}
+	// if err := u.Deactivate(); err != nil {
+	// 	return err
+	// }
 
 	// 3. Сохраняем
 	if err := h.userRepo.Save(ctx, u); err != nil {

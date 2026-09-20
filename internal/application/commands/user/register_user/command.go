@@ -12,6 +12,8 @@ type Command struct {
 type Result struct {
 	UserID    string
 	Email     string
-	FullName  string
+	FirstName  string
+	LastName  string
+	MiddleName  string
 	CreatedAt string
 }

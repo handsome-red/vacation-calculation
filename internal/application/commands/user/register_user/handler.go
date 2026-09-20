@@ -52,12 +52,6 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	// Создаем пароль
 	password := user.NewPasswordFromHash(hashedPassword)
 
-	// Создаем name (Value Object)
-	name, err := user.NewName(cmd.FirstName, cmd.LastName, cmd.MiddleName)
-	if err != nil {
-		return nil, fmt.Errorf("invalid name: %w", err)
-	}
-
 	department, err := user.NewDepartment(cmd.Department)
 	if err != nil {
 		return nil, fmt.Errorf("invalid department: %w", err)
@@ -69,7 +63,9 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	newUser, err := user.NewUser(
 		userID,
 		email,
-		name,
+		cmd.FirstName,
+		cmd.LastName,
+		cmd.MiddleName,
 		department,
 		password,
 	)
@@ -91,7 +87,9 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	return &Result{
 		UserID:    newUser.ID().String(),
 		Email:     newUser.Email().String(),
-		FullName:  newUser.Name().FullName(),
+		FirstName:  newUser.FullName(),
+		LastName: newUser.MiddleName(),
+		MiddleName: newUser.LastName(),
 		CreatedAt: newUser.CreatedAt().String(),
 	}, nil
 }

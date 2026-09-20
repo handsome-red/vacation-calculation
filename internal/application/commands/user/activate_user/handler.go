@@ -35,11 +35,6 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) error {
 		return fmt.Errorf("user not found: %w", err)
 	}
 
-	// 2. Активируем (бизнес-логика в Domain)
-	if err := u.Activate(); err != nil {
-		return err
-	}
-
 	// 3. Сохраняем
 	if err := h.userRepo.Save(ctx, u); err != nil {
 		h.logger.Error(ctx, "failed to update user", "error", err)

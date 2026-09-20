@@ -18,6 +18,12 @@ var (
 
 	ErrNameRequired = errors.New("name is required")
 
+	ErrBirthDateInvalid = errors.New("birth date inlavid")
+
+	ErrPositionInvalid = errors.New("position invalid")
+
+	ErrHiredDateInvalid = errors.New("hired date invalid")
+
 	ErrIDEmpty    = errors.New("user ID cannot be empty")
 	ErrIDRequired = errors.New("ID is required")
 

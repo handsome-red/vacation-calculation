@@ -44,11 +44,10 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	return &Result{
 		ID:         u.ID().String(),
 		Email:      u.Email().String(),
-		FirstName:  u.Name().FirstName(),
-		LastName:   u.Name().LastName(),
-		MiddleName: u.Name().MiddleName(),
+		FirstName:  u.FirstName(),
+		LastName:   u.LastName(),
+		MiddleName: u.MiddleName(),
 		Department: u.Department().String(),
-		IsActive:   u.IsActive(),
 		CreatedAt:  u.CreatedAt().String(),
 		UpdatedAt:  u.UpdatedAt().String(),
 	}, nil
