@@ -9,8 +9,10 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
-const userColumns = `id, email, password, first_name,
-	last_name, middle_name, department, is_active, created_at, updated_at`
+const userColumns = `id, status, last_name, first_name, middle_name,
+	birth_date, position, hired_at, department,
+	email, is_invalid, password, created_at, updated_at,
+	district, workday_duration`
 
 type userRepository struct {
 	db *sql.DB
@@ -28,28 +30,47 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 	}
 
 	const query = `
-		INSERT INTO users (id, email, password, first_name, last_name, middle_name, department, is_active)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO users (
+			id, status, last_name, first_name, middle_name,
+			birth_date, position, hired_at, department,
+			email, is_invalid, password,
+			district, workday_duration
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (id) DO UPDATE SET
-			email      = EXCLUDED.email,
-            password   = EXCLUDED.password,
-            first_name = EXCLUDED.first_name,
-            last_name  = EXCLUDED.last_name,
-			middle_name = EXCLUDED.middle_name,
-			department = EXCLUDED.department,
-			is_acitve = EXCLUDED.is_active
+			status           = EXCLUDED.status,
+			last_name        = EXCLUDED.last_name,
+			first_name       = EXCLUDED.first_name,
+			middle_name      = EXCLUDED.middle_name,
+			birth_date       = EXCLUDED.birth_date,
+			position         = EXCLUDED.position,
+			hired_at         = EXCLUDED.hired_at,
+			department       = EXCLUDED.department,
+			email            = EXCLUDED.email,
+			is_invalid       = EXCLUDED.is_invalid,
+			password         = EXCLUDED.password,
+			district         = EXCLUDED.district,
+			workday_duration = EXCLUDED.workday_duration,
+			updated_at       = datetime('now')
 	`
 
 	_, err := ur.db.ExecContext(
 		ctx,
 		query,
 		u.ID().String(),
-		u.Email().Value(),
-		u.Password().String(),
-		u.FirstName(),
+		u.Status().String(),
 		u.LastName(),
+		u.FirstName(),
 		u.MiddleName(),
+		u.BirthDate().String(),
+		u.Position().String(),
+		u.HiredAt().String(),
 		u.Department().String(),
+		u.Email().Value(),
+		boolToInt(u.IsInvalid()),
+		u.Password().String(),
+		u.District().String(),
+		u.WorkdayDuration().Int(),
 	)
 	if err != nil {
 		return fmt.Errorf("saving user: %w", err)
@@ -58,29 +79,26 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 	return nil
 }
 
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 func (ur *userRepository) FindByID(ctx context.Context, userID user.UserID) (*user.User, error) {
-	const query = `
-		SELECT
-			id, email, password,
-			first_name, last_name, middle_name,
-			department, is_active,
-			created_at, updated_at
-		FROM users
-		WHERE id = ?
-	`
+
+	query := `SELECT ` + userColumns + ` FROM users WHERE id = ?`
 
 	var row userRow
 	err := ur.db.QueryRowContext(ctx, query, userID.String()).Scan(
-		&row.ID,
-		&row.Email,
-		&row.Password,
-		&row.FirstName,
-		&row.LastName,
-		&row.MiddleName,
+		&row.ID, &row.Status,
+		&row.LastName, &row.FirstName, &row.MiddleName,
+		&row.BirthDate, &row.Position, &row.HiredAt,
 		&row.Department,
-		&row.IsActive,
-		&row.CreatedAt,
-		&row.UpdatedAt,
+		&row.Email, &row.IsInvalid, &row.Password,
+		&row.CreatedAt, &row.UpdatedAt,
+		&row.District, &row.WorkdayDuration,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -93,28 +111,17 @@ func (ur *userRepository) FindByID(ctx context.Context, userID user.UserID) (*us
 }
 
 func (ur *userRepository) FindByEmail(ctx context.Context, email user.Email) (*user.User, error) {
-	const query = `
-		SELECT
-			id, email, password,
-			first_name, last_name, middle_name,
-			department, is_active,
-			created_at, updated_at
-		FROM users
-		WHERE email = ?
-	`
+	const query = `SELECT ` + userColumns + `FROM users ORDER BY last_name DESC, first_name DESC, middle_name DESC`
 
 	var row userRow
 	err := ur.db.QueryRowContext(ctx, query, email.Value()).Scan(
-		&row.ID,
-		&row.Email,
-		&row.Password,
-		&row.FirstName,
-		&row.LastName,
-		&row.MiddleName,
+		&row.ID, &row.Status,
+		&row.LastName, &row.FirstName, &row.MiddleName,
+		&row.BirthDate, &row.Position, &row.HiredAt,
 		&row.Department,
-		&row.IsActive,
-		&row.CreatedAt,
-		&row.UpdatedAt,
+		&row.Email, &row.IsInvalid, &row.Password,
+		&row.CreatedAt, &row.UpdatedAt,
+		&row.District, &row.WorkdayDuration,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -127,16 +134,7 @@ func (ur *userRepository) FindByEmail(ctx context.Context, email user.Email) (*u
 }
 
 func (ur *userRepository) FindActive(ctx context.Context) ([]*user.User, error) {
-	const query = `
-		SELECT
-			id, email, password,
-			first_name, last_name, middle_name,
-			department, is_active,
-			created_at, updated_at
-		FROM users
-		WHERE is_active = true
-		ORDER BY created_at DESC
-	`
+	const query = `SELECT ` + userColumns + ` FROM users ORDER BY last_name DESC, first_name DESC, middle_name DESC`
 
 	rows, err := ur.db.QueryContext(ctx, query)
 	if err != nil {
@@ -149,16 +147,13 @@ func (ur *userRepository) FindActive(ctx context.Context) ([]*user.User, error) 
 	for rows.Next() {
 		var row userRow
 		err := rows.Scan(
-			&row.ID,
-			&row.Email,
-			&row.Password,
-			&row.FirstName,
-			&row.LastName,
-			&row.MiddleName,
+			&row.ID, &row.Status,
+			&row.LastName, &row.FirstName, &row.MiddleName,
+			&row.BirthDate, &row.Position, &row.HiredAt,
 			&row.Department,
-			&row.IsActive,
-			&row.CreatedAt,
-			&row.UpdatedAt,
+			&row.Email, &row.IsInvalid, &row.Password,
+			&row.CreatedAt, &row.UpdatedAt,
+			&row.District, &row.WorkdayDuration,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scanning user row: %w", err)
@@ -220,15 +215,7 @@ func (ur *userRepository) ExistsByEmail(ctx context.Context, email string) (bool
 }
 
 func (ur *userRepository) FindAll(ctx context.Context) ([]*user.User, error) {
-	const query = `
-		SELECT
-			id, email, password,
-			first_name, last_name, middle_name,
-			department, is_active,
-			created_at, updated_at
-		FROM users
-		ORDER BY created_at DESC
-	`
+	const query = `SELECT ` + userColumns + ` FROM users ORDER BY last_name DESC, first_name DESC, middle_name DESC`
 
 	rows, err := ur.db.QueryContext(ctx, query)
 	if err != nil {
@@ -241,16 +228,13 @@ func (ur *userRepository) FindAll(ctx context.Context) ([]*user.User, error) {
 	for rows.Next() {
 		var row userRow
 		err := rows.Scan(
-			&row.ID,
-			&row.Email,
-			&row.Password,
-			&row.FirstName,
-			&row.LastName,
-			&row.MiddleName,
+			&row.ID, &row.Status,
+			&row.LastName, &row.FirstName, &row.MiddleName,
+			&row.BirthDate, &row.Position, &row.HiredAt,
 			&row.Department,
-			&row.IsActive,
-			&row.CreatedAt,
-			&row.UpdatedAt,
+			&row.Email, &row.IsInvalid, &row.Password,
+			&row.CreatedAt, &row.UpdatedAt,
+			&row.District, &row.WorkdayDuration,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scanning user row: %w", err)

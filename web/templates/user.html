@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.User.LastName}} {{.User.FirstName}}</title>
+</head>
+
+<body>
+    <h1>{{.User.LastName}} {{.User.FirstName}} {{.User.MiddleName}}</h1>
+
+    <dl>
+        <dt>ID</dt>
+        <dd>{{.User.ID}}</dd>
+        <dt>Email</dt>
+        <dd>{{.User.Email}}</dd>
+        <dt>Фамилия</dt>
+        <dd>{{.User.LastName}}</dd>
+        <dt>Имя</dt>
+        <dd>{{.User.FirstName}}</dd>
+        <dt>Отчество</dt>
+        <dd>{{.User.MiddleName}}</dd>
+        <dt>Отдел</dt>
+        <dd>{{.User.Department}}</dd>
+        <dt>Активен</dt>
+        <dd>{{if .User.IsActive}}да{{else}}нет{{end}}</dd>
+        <dt>Создан</dt>
+        <dd>{{.User.CreatedAt}}</dd>
+        <dt>Обновлён</dt>
+        <dd>{{.User.UpdatedAt}}</dd>
+    </dl>
+
+    <p><a href="/users">К списку</a></p>
+</body>
+
+</html>

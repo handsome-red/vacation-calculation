@@ -8,17 +8,25 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
+const sqliteTimeLayout = "2006-01-02 15:04:05"
+
 type userRow struct {
-	ID         string
-	Email      string
-	Password   string
-	FirstName  string
-	LastName   string
-	MiddleName string
-	Department string
-	IsActive   bool
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID              string
+	Status          string
+	LastName        string
+	FirstName       string
+	MiddleName      string
+	BirthDate       string
+	Position        string
+	HiredAt         string
+	Department      string
+	Email           string
+	IsInvalid       int
+	Password        string
+	CreatedAt       string
+	UpdatedAt       string
+	District        string
+	WorkdayDuration int
 }
 
 func (r *userRow) toDomain() (*user.User, error) {
@@ -42,6 +50,15 @@ func (r *userRow) toDomain() (*user.User, error) {
 		return nil, fmt.Errorf("invalid department %q: %w", r.Department, err)
 	}
 
+	createdAt, err := parseSQLiteTime(r.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid created_at: %w", err)
+	}
+	updatedAt, err := parseSQLiteTime(r.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid updated_at: %w", err)
+	}
+
 	password := user.NewPasswordFromHash(r.Password)
 
 	return user.ReconstructUser(
@@ -52,7 +69,22 @@ func (r *userRow) toDomain() (*user.User, error) {
 		r.LastName,
 		r.MiddleName,
 		department,
-		r.CreatedAt,
-		r.UpdatedAt,
+		createdAt,
+		updatedAt,
 	), nil
+}
+
+func parseSQLiteTime(s string) (time.Time, error) {
+	if s == "" {
+		return time.Time{}, nil
+	}
+	t, err := time.Parse(sqliteTimeLayout, s)
+	if err != nil {
+		// На случай, если формат другой (RFC3339 или с миллисекундами)
+		if t2, err2 := time.Parse(time.RFC3339, s); err2 == nil {
+			return t2.UTC(), nil
+		}
+		return time.Time{}, fmt.Errorf("parse sqlite time %q: %w", s, err)
+	}
+	return t.UTC(), nil
 }

@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
@@ -58,12 +58,19 @@ func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cmd := register_user.Command{
-		Email:      r.FormValue("email"),
-		Password:   r.FormValue("password"),
-		FirstName:  r.FormValue("first_name"),
-		LastName:   r.FormValue("last_name"),
-		MiddleName: r.FormValue("middle_name"),
-		Department: r.FormValue("department"),
+		Email:           r.FormValue("email"),
+		Password:        r.FormValue("password"),
+		FirstName:       r.FormValue("first_name"),
+		LastName:        r.FormValue("last_name"),
+		MiddleName:      r.FormValue("middle_name"),
+		Department:      r.FormValue("department"),
+		Status:          r.FormValue("status"),
+		BirthDate:       r.FormValue("birth_date"),
+		Position:        r.FormValue("position"),
+		HiredAt:         r.FormValue("hired_at"),
+		District:        r.FormValue("district"),
+		WorkdayDuration: atoiSafe(r.FormValue("workday_duration")),
+		IsInvalid:       r.FormValue("is_invalid") == "on",
 	}
 
 	if _, err := h.registerUseCase.Handle(r.Context(), cmd); err != nil {
@@ -84,8 +91,15 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	data := map[string]any{
+		"User": result,
+	}
+
+	if err := h.templates.Render(w, "user.html", data); err != nil {
+		// h.logger.Error(r.Context(), "render user", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 }
 
 // func (h *UserHandler) ChangeEmail(w http.ResponseWriter, r *http.Request) {
@@ -147,4 +161,9 @@ func (h *UserHandler) GetActiveUsers(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.Render(w, "users.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func atoiSafe(s string) int {
+	n, _ := strconv.Atoi(s)
+	return n
 }

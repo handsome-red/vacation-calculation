@@ -1,29 +1,30 @@
 package user
 
-type Position int
+import "strings"
 
-// TODO Какие еще могут быть статусы?
+type Position string
+
 const (
-	PositionDirector  Position = iota
-	PositionSlave
-
-	PositionUnknown
+	PositionUnknown  Position = ""
+	PositionDirector Position = "director"
+	PositionEmployee Position = "employee"
 )
 
-func NewPosition(v int) (Position, error) {
-	p := Position(v)
-	if !isValid(p) {
+func NewPosition(s string) (Position, error) {
+	p := Position(strings.ToLower(strings.TrimSpace(s)))
+	if !p.isValid() {
 		return PositionUnknown, ErrPositionInvalid
 	}
-	
 	return p, nil
 }
 
-func isValid(p Position) bool {
+func (p Position) isValid() bool {
 	switch p {
-	case PositionDirector, PositionSlave:
+	case PositionDirector, PositionEmployee:
 		return true
 	default:
 		return false
 	}
-} 
+}
+
+func (p Position) String() string { return string(p) }

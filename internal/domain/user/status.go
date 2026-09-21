@@ -1,38 +1,35 @@
 package user
 
+import "strings"
+
 // import "fmt"
 
 // Status - статус пользователя
-type Status int
+type Status string
 
-// TODO Какие еще могут быть статусы?
 const (
-	StatusWork  Status = iota // Неизвестный
-	StatusFired               // Работает
+	StatusUnknown Status = ""
+	StatusActive  Status = "active"
+	StatusBlocked Status = "blocked"
+	StatusFired   Status = "fired"
+	StatusDeleted Status = "deleted"
 )
 
-// NewStatus - создаёт Status из int с валидацией
-func NewStatus(v int) (Status, error) {
-	s := Status(v)
-	// if !s.IsValid() {
-		// return StatusUnknown, fmt.Errorf("invalid status: %d", v)
-	// }
-	return s, nil
+func NewStatus(s string) (Status, error) {
+	st := Status(strings.ToLower(strings.TrimSpace(s)))
+	if !st.isValid() {
+		return StatusUnknown, ErrStatusInvalid
+	}
+	return st, nil
 }
 
-// IsActive - активен ли пользователь
-// func (s Status) IsActive() bool { return s == StatusActive }
-
-// String - строковое представление
-func (s Status) String() string {
+func (s Status) isValid() bool {
 	switch s {
-	// case StatusActive:
-	// 	return "active"
-	// case StatusBlocked:
-	// 	return "blocked"
-	// case StatusDeleted:
-	// 	return "deleted"
+	case StatusActive, StatusBlocked, StatusFired, StatusDeleted:
+		return true
 	default:
-		return "unknown"
+		return false
 	}
 }
+
+func (s Status) String() string { return string(s) }

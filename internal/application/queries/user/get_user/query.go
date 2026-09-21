@@ -5,13 +5,20 @@ type Query struct {
 }
 
 type Result struct {
-	ID         string
-	Email      string
-	FirstName  string
-	LastName   string
-	MiddleName string
-	Department string
-	IsActive   bool
-	CreatedAt  string
-	UpdatedAt  string
+	ID              string
+	Status          string
+	IsActive        bool
+	LastName        string
+	FirstName       string
+	MiddleName      string
+	BirthDate       string
+	Position        string
+	HiredAt         string
+	Department      string
+	District        string
+	WorkdayDuration int
+	Email           string
+	IsInvalid       bool
+	CreatedAt       string
+	UpdatedAt       string
 }

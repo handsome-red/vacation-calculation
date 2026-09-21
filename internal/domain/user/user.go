@@ -26,28 +26,70 @@ type User struct {
 	updatedAt time.Time
 }
 
+func (u *User) IsInvalid() bool {
+	return u.isInvalid
+}
+
+func (u *User) District() District {
+	return u.district
+}
+
+func (u *User) WorkdayDuration() WorkdayDuration {
+	return u.workdayDuration
+}
+
+func (u *User) HiredAt() HiredDate {
+	return u.hiredAt
+}
+
+func (u *User) Position() Position {
+	return u.position
+}
+
+func (u *User) BirthDate() BirthDate {
+	return u.birthDate
+}
+
+func (u *User) Status() Status {
+	return u.status
+}
+
 func NewUser(
 	id UserID,
-	email Email,
-	firstName string,
+	status Status,
 	lastName string,
+	firstName string,
 	middleName string,
+	birthDate BirthDate,
+	position Position,
+	hiredAt HiredDate,
 	department Department,
+	district District,
+	workdayDuration WorkdayDuration,
+	email Email,
+	isInvalid bool,
 	password Password,
 ) (*User, error) {
 
 	now := time.Now().UTC()
 
 	return &User{
-		id:         id,
-		email:      email,
-		password:   password,
-		firstName:  firstName,
-		lastName:   lastName,
-		middleName: middleName,
-		department: department,
-		createdAt:  now,
-		updatedAt:  now,
+		id:              id,
+		status:          status,
+		lastName:        lastName,
+		firstName:       firstName,
+		middleName:      middleName,
+		birthDate:       birthDate,
+		position:        position,
+		hiredAt:         hiredAt,
+		department:      department,
+		district:        district,
+		workdayDuration: workdayDuration,
+		email:           email,
+		isInvalid:       isInvalid,
+		password:        password,
+		createdAt:       now,
+		updatedAt:       now,
 	}, nil
 }
 

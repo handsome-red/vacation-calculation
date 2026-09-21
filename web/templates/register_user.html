@@ -3,11 +3,19 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>New_user</title>
 </head>
 
 <body>
     <h1>Добавить нового пользователя</h1>
+
+    {{if .Errors}}
+    <ul style="color:#b00">
+        {{range .Errors}}<li>{{.}}</li>{{end}}
+    </ul>
+    {{end}}
+
     <form method="POST" action="/api/v1/user/register">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
@@ -31,8 +39,49 @@
                 <input type="password" name="password" required>
             </label></p>
 
-        <p><label>Отдел<br>
+        <p><label>Статус<br>
+                <select name="status" required>
+                    <option value="active" {{if eq .Form.Status "active" }}selected{{end}}>Активен</option>
+                    <option value="blocked" {{if eq .Form.Status "blocked" }}selected{{end}}>Заблокирован</option>
+                    <option value="fired" {{if eq .Form.Status "fired" }}selected{{end}}>Уволен</option>
+                </select>
+            </label></p>
+
+        <p><label>Дата рождения<br>
+                <input type="date" name="birth_date" value="{{.Form.BirthDate}}" max="{{.Today}}">
+            </label></p>
+
+        <p><label>Должность<br>
+                <select name="position">
+                    <option value="director" {{if eq .Form.Position "director" }}selected{{end}}>Руководитель</option>
+                    <option value="employee" {{if eq .Form.Position "employee" }}selected{{end}}>Сотрудник</option>
+                </select>
+            </label></p>
+
+        <p><label>Дата приема на работу<br>
+                <input type="date" name="hired_at" value="{{.Form.HiredAt}}" max="{{.Today}}">
+            </label></p>
+
+        <p><label>Территориальный отдел<br>
                 <input type="text" name="department" value="{{.Form.Department}}">
+            </label></p>
+
+        <p><label>Район/Отдел<br>
+                <select name="district">
+                    <option value="">— не указан —</option>
+                    <option value="elabuga" {{if eq .Form.District "elabuga" }}selected{{end}}>Елабуга</option>
+                    <option value="kazan" {{if eq .Form.District "kazan" }}selected{{end}}>Казань</option>
+                </select>
+            </label></p>
+
+        <p><label>Продолжительность рабочего дня<br>
+                <input type="number" name="workday_duration" value="{{.Form.WorkdayDuration}}" min="1" max="1440"
+                    step="1">
+            </label></p>
+
+        <p><label>Инвалид<br>
+                <input type="hidden" name="is_invalid" value="false">
+                <input type="checkbox" name="is_invalid" value="true" {{if .Form.IsInvalid}}checked{{end}}>
             </label></p>
 
         <p><button type="submit">Сохранить</button></p>
