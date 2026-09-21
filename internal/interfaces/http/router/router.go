@@ -84,6 +84,10 @@ func (r *Router) registerRoutes() {
 	// 	r.logger,
 	// )
 
+	// calendarHandler := handlers.NewCalendarHandlers(
+	// 	r.container.
+	// )
+
 	r.mux.HandleFunc("GET /{$}", homeHandler)
 
 	// ============================================================
@@ -106,6 +110,8 @@ func (r *Router) registerRoutes() {
 	// r.mux.HandleFunc("POST /api/v1/users/{id}/activate", userHandler.ActivateUser)
 	r.mux.HandleFunc("GET /api/v1/users", userHandler.GetActiveUsers)
 
+	// Calendar
+	// r.mux.HandleFunc("GET /api/v1/calendar", calendarHandler.GetCalendar)
 	// Vacation routes
 	// r.mux.HandleFunc("POST /api/v1/vacations", vacationHandler.CreateVacation)
 	// r.mux.HandleFunc("GET /api/v1/vacations/{id}", vacationHandler.GetVacation)

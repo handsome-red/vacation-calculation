@@ -13,10 +13,16 @@ type Result struct {
 }
 
 type UserListItem struct {
-	ID         string
-	Email      string
-	FirstName  string
-	LastName   string
-	MiddleName string
-	Department string
+	ID              string
+	FirstName       string
+	LastName        string
+	MiddleName      string
+	BirthDate       string
+	Position        string
+	HiredAt         string
+	Department      string
+	District        string
+	WorkdayDuration int
+	Email           string
+	IsInvalid       bool
 }

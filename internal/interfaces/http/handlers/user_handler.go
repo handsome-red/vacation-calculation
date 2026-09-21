@@ -91,8 +91,11 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// vacation, err := h.countVacation.Hanlde(r.Context())
+
 	data := map[string]any{
 		"User": result,
+		// "Vacation": vacation,
 	}
 
 	if err := h.templates.Render(w, "user.html", data); err != nil {
@@ -145,12 +148,18 @@ func (h *UserHandler) GetActiveUsers(w http.ResponseWriter, r *http.Request) {
 	resp := make([]dto.UserResponse, 0, len(result.Users))
 	for _, u := range result.Users {
 		resp = append(resp, dto.UserResponse{
-			ID:         u.ID,
-			Email:      u.Email,
-			FirstName:  u.FirstName,
-			LastName:   u.LastName,
-			MiddleName: u.MiddleName,
-			Department: u.Department,
+			ID:              u.ID,
+			FirstName:       u.FirstName,
+			LastName:        u.LastName,
+			MiddleName:      u.MiddleName,
+			BirthDate:       u.BirthDate,
+			Position:        u.Position,
+			HiredAt:         u.HiredAt,
+			Department:      u.Department,
+			District:        u.District,
+			WorkdayDuration: u.WorkdayDuration,
+			Email:           u.Email,
+			IsInvalid:       u.IsInvalid,
 		})
 	}
 

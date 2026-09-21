@@ -25,7 +25,6 @@ func (r RegisterUserRequest) ToCommand() register_user.Command {
 type UserResponse struct {
 	ID              string `json:"id"`
 	Status          string `json:"status"`
-	IsActive        bool   `json:"is_active"`
 	LastName        string `json:"last_name"`
 	FirstName       string `json:"first_name"`
 	MiddleName      string `json:"middle_name,omitempty"`
@@ -37,6 +36,5 @@ type UserResponse struct {
 	WorkdayDuration int    `json:"workday_duration"`
 	Email           string `json:"email"`
 	IsInvalid       bool   `json:"is_invalid"`
-	CreatedAt       string `json:"created_at"`
-	UpdatedAt       string `json:"updated_at"`
+	TotalExperience string `json:"total_experience"`
 }

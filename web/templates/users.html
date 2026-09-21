@@ -3,34 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <title>Users</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <table>
     <thead>
         <tr>
-        <th>ID</th>
-        <th>Email</th>
-        <th>First Name</th>
-        <th>Last Name</th>
-        <th>Middle Name</th>
-        <th>Department</th>
-        <th>Is Active</th>
-        <th>Created At</th>
-        <th>Updated At</th>
+        <th>Статус</th>
+        <th>Фамилия</th>
+        <th>Имя</th>
+        <th>Отчество</th>
+        <th>Дата рождения</th>
+        <th>Должность</th>
+        <th>Дата приема на работу</th>
+        <th>Территориальный отдел</th>
+        <th>Район/Отдел</th>
+        <th>Продолжительность рабочего дня</th>
+        <th>E-mail</th>
+        <th>Инвалид</th>
+        <th>Общий стаж выслуги</th>
         </tr>
     </thead>
     <tbody>
         {{range .Users}}
         <tr>
-        <td>{{.ID}}</td>
-        <td>{{.Email}}</td>
-        <td>{{.FirstName}}</td>
-        <td>{{.LastName}}</td>
-        <td>{{.MiddleName}}</td>
-        <td>{{.Department}}</td>
-        <td>{{.IsActive}}</td>
-        <td>{{.CreatedAt}}</td>
-        <td>{{.UpdatedAt}}</td>
+            <td>{{.Status}}</td>            <!-- Статус -->
+            <td>{{.LastName}}</td>          <!-- Фамилия -->
+            <td>{{.FirstName}}</td>         <!-- Имя -->
+            <td>{{.MiddleName}}</td>        <!-- Отчество -->
+            <td>{{.BirthDate}}</td>         <!-- Дата рождения -->
+            <td>{{.Position}}</td>          <!-- Должность -->
+            <td>{{.HiredAt}}</td>           <!-- Дата приема на работу -->
+            <td>{{.Department}}</td>        <!-- Территориальный отдел -->
+            <td>{{.District}}</td>          <!-- Район/Отдел -->
+            <td>{{.WorkdayDuration}}</td>   <!-- Продолжительность рабочего дня -->
+            <td>{{.Email}}</td>             <!-- E-mail -->
+            <td>{{.IsInvalid}}</td>         <!-- Инвалид -->
+            <td>{{.TotalExperience}}</td>   <!-- Общий стаж выслуги -->
         </tr>
         {{end}}
     </tbody>

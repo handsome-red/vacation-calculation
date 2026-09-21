@@ -28,6 +28,10 @@ func NewHiredDate(s string) (HiredDate, error) {
 	return HiredDate{value: t}, nil
 }
 
+func (h HiredDate) Time() time.Time {
+	return h.value
+}
+
 func (h HiredDate) String() string {
 	if h.value.IsZero() {
 		return ""
