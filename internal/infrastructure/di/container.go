@@ -2,7 +2,6 @@ package di
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
@@ -10,15 +9,17 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_active_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
 	"github.com/handsome-red/vacation-calculation/internal/config"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/hasher"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/persistence/sqlite"
+	"github.com/jmoiron/sqlx"
 )
 
 type Container struct {
 	// Infrastructure
-	DB     *sql.DB
+	DB     *sqlx.DB
 	Logger ports.Logger
 	Hasher ports.PasswordHasher
 
@@ -27,9 +28,10 @@ type Container struct {
 	// VacationRepo ports.VacationRepository
 
 	// Use Cases - Commands (User)
-	RegisterUserUseCase   *register_user.Handler
-	DeactivateUserUseCase *deactivate_user.Handler
-	ActivateUserUseCase   *activate_user.Handler
+	RegisterUserUseCase    *register_user.Handler
+	DeactivateUserUseCase  *deactivate_user.Handler
+	ActivateUserUseCase    *activate_user.Handler
+	GetRegisterFormUseCase *register_form.Handler
 
 	// Use Cases - Commands (Vacation)
 	// CreateVacationUseCase  *create_vacation.Handler
@@ -54,6 +56,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	registerUserUseCase := register_user.NewHandler(userRepo, hasher, log)
 	deactivateUserUseCase := deactivate_user.NewHandler(userRepo, log)
 	activateUserUseCase := activate_user.NewHandler(userRepo, log)
+	getRegisterFormUseCase := register_form.NewHandler()
 
 	getUserUseCase := get_user.NewHandler(userRepo, log)
 	getActiveUsersUseCase := get_active_users.NewHandler(userRepo, log)
@@ -68,9 +71,10 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		UserRepo: userRepo,
 
 		// Use Cases - Commands
-		RegisterUserUseCase:   registerUserUseCase,
-		DeactivateUserUseCase: deactivateUserUseCase,
-		ActivateUserUseCase:   activateUserUseCase,
+		RegisterUserUseCase:    registerUserUseCase,
+		DeactivateUserUseCase:  deactivateUserUseCase,
+		ActivateUserUseCase:    activateUserUseCase,
+		GetRegisterFormUseCase: getRegisterFormUseCase,
 
 		// Use Cases - Queries
 		GetUserUseCase:        getUserUseCase,

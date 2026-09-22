@@ -2,10 +2,10 @@ package sqlite
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
+	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 )
 
@@ -20,10 +20,10 @@ func (c Config) DSN() string {
 	)
 }
 
-func NewDB(ctx context.Context, cfg Config, log ports.Logger) (*sql.DB, error) {
+func NewDB(ctx context.Context, cfg Config, log ports.Logger) (*sqlx.DB, error) {
 	log.Info(ctx, "connecting to database", "path", cfg.Path)
 
-	db, err := sql.Open("sqlite", cfg.DSN())
+	db, err := sqlx.Open("sqlite", cfg.DSN())
 	if err != nil {
 		return nil, fmt.Errorf("sqlite: open: %w", err)
 	}

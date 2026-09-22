@@ -42,13 +42,19 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	}
 
 	return &Result{
-		ID:         u.ID().String(),
-		Email:      u.Email().String(),
-		FirstName:  u.FirstName(),
-		LastName:   u.LastName(),
-		MiddleName: u.MiddleName(),
-		Department: u.Department().String(),
-		CreatedAt:  u.CreatedAt().String(),
-		UpdatedAt:  u.UpdatedAt().String(),
+		ID:              u.ID().String(),
+		Status:          u.Status().String(),
+		LastName:        u.LastName(),
+		FirstName:       u.FirstName(),
+		MiddleName:      u.MiddleName(),
+		BirthDate:       u.BirthDate().String(),
+		Position:        u.Position().String(),
+		HiredAt:         u.HiredAt().String(),
+		Department:      u.Department().String(),
+		District:        u.District().String(),
+		WorkdayDuration: u.WorkdayDuration().Int(),
+		Email:           u.Email().String(),
+		IsInvalid:       u.IsInvalid(),
+		Experience:      u.Experience().String(),
 	}, nil
 }

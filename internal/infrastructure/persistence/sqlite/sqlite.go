@@ -2,23 +2,24 @@ package sqlite
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 
+	"database/sql"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
+	"github.com/jmoiron/sqlx"
 )
 
 const userColumns = `id, status, last_name, first_name, middle_name,
-	birth_date, position, hired_at, department,
-	email, is_invalid, password, created_at, updated_at,
-	district, workday_duration`
+	birth_date, position, hired_at, department, district,
+	workday_duration, email, is_invalid, password,
+	created_at, updated_at`
 
 type userRepository struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
-func NewUserRepository(db *sql.DB) *userRepository {
+func NewUserRepository(db *sqlx.DB) *userRepository {
 	return &userRepository{db: db}
 }
 
@@ -87,91 +88,15 @@ func boolToInt(b bool) int {
 }
 
 func (ur *userRepository) FindByID(ctx context.Context, userID user.UserID) (*user.User, error) {
-
-	query := `SELECT ` + userColumns + ` FROM users WHERE id = ?`
-
 	var row userRow
-	err := ur.db.QueryRowContext(ctx, query, userID.String()).Scan(
-		&row.ID, &row.Status,
-		&row.LastName, &row.FirstName, &row.MiddleName,
-		&row.BirthDate, &row.Position, &row.HiredAt,
-		&row.Department,
-		&row.Email, &row.IsInvalid, &row.Password,
-		&row.CreatedAt, &row.UpdatedAt,
-		&row.District, &row.WorkdayDuration,
-	)
+	err := ur.db.GetContext(ctx, &row, `SELECT * FROM users WHERE id = ?`, userID.String())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, user.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("finding user by ID: %w", err)
 	}
-
 	return row.toDomain()
-}
-
-func (ur *userRepository) FindByEmail(ctx context.Context, email user.Email) (*user.User, error) {
-	const query = `SELECT ` + userColumns + `FROM users ORDER BY last_name DESC, first_name DESC, middle_name DESC`
-
-	var row userRow
-	err := ur.db.QueryRowContext(ctx, query, email.Value()).Scan(
-		&row.ID, &row.Status,
-		&row.LastName, &row.FirstName, &row.MiddleName,
-		&row.BirthDate, &row.Position, &row.HiredAt,
-		&row.Department,
-		&row.Email, &row.IsInvalid, &row.Password,
-		&row.CreatedAt, &row.UpdatedAt,
-		&row.District, &row.WorkdayDuration,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("finding user by email: %w", err)
-	}
-
-	return row.toDomain()
-}
-
-func (ur *userRepository) FindActive(ctx context.Context) ([]*user.User, error) {
-	const query = `SELECT ` + userColumns + ` FROM users ORDER BY last_name DESC, first_name DESC, middle_name DESC`
-
-	rows, err := ur.db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("querying active users: %w", err)
-	}
-	defer rows.Close()
-
-	users := make([]*user.User, 0, 16)
-
-	for rows.Next() {
-		var row userRow
-		err := rows.Scan(
-			&row.ID, &row.Status,
-			&row.LastName, &row.FirstName, &row.MiddleName,
-			&row.BirthDate, &row.Position, &row.HiredAt,
-			&row.Department,
-			&row.Email, &row.IsInvalid, &row.Password,
-			&row.CreatedAt, &row.UpdatedAt,
-			&row.District, &row.WorkdayDuration,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("scanning user row: %w", err)
-		}
-
-		u, err := row.toDomain()
-		if err != nil {
-			return nil, fmt.Errorf("converting user row to domain: %w", err)
-		}
-
-		users = append(users, u)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating user rows: %w", err)
-	}
-
-	return users, nil
 }
 
 func (ur *userRepository) Delete(ctx context.Context, userID user.UserID) error {
@@ -215,42 +140,21 @@ func (ur *userRepository) ExistsByEmail(ctx context.Context, email string) (bool
 }
 
 func (ur *userRepository) FindAll(ctx context.Context) ([]*user.User, error) {
-	const query = `SELECT ` + userColumns + ` FROM users ORDER BY last_name DESC, first_name DESC, middle_name DESC`
-
-	rows, err := ur.db.QueryContext(ctx, query)
+	var rows []userRow
+	err := ur.db.SelectContext(ctx, &rows,
+		`SELECT * FROM users
+		 ORDER BY last_name, first_name, middle_name`)
 	if err != nil {
 		return nil, fmt.Errorf("querying users: %w", err)
 	}
-	defer rows.Close()
 
-	users := make([]*user.User, 0, 16)
-
-	for rows.Next() {
-		var row userRow
-		err := rows.Scan(
-			&row.ID, &row.Status,
-			&row.LastName, &row.FirstName, &row.MiddleName,
-			&row.BirthDate, &row.Position, &row.HiredAt,
-			&row.Department,
-			&row.Email, &row.IsInvalid, &row.Password,
-			&row.CreatedAt, &row.UpdatedAt,
-			&row.District, &row.WorkdayDuration,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("scanning user row: %w", err)
-		}
-
+	users := make([]*user.User, 0, len(rows))
+	for _, row := range rows {
 		u, err := row.toDomain()
 		if err != nil {
 			return nil, fmt.Errorf("converting user row: %w", err)
 		}
-
 		users = append(users, u)
 	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating users: %w", err)
-	}
-
 	return users, nil
 }

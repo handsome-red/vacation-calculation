@@ -13,7 +13,6 @@ type UserCommandRepository interface {
 
 type UserQueryRepository interface {
 	FindByID(ctx context.Context, id user.UserID) (*user.User, error)
-	FindByEmail(ctx context.Context, email user.Email) (*user.User, error)
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
 	FindAll(ctx context.Context) ([]*user.User, error)
 }

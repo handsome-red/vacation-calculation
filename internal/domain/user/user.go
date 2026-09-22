@@ -26,32 +26,23 @@ type User struct {
 	updatedAt time.Time
 }
 
-func (u *User) IsInvalid() bool {
-	return u.isInvalid
-}
-
-func (u *User) District() District {
-	return u.district
-}
-
-func (u *User) WorkdayDuration() WorkdayDuration {
-	return u.workdayDuration
-}
-
-func (u *User) HiredAt() HiredDate {
-	return u.hiredAt
-}
-
-func (u *User) Position() Position {
-	return u.position
-}
-
-func (u *User) BirthDate() BirthDate {
-	return u.birthDate
-}
-
-func (u *User) Status() Status {
-	return u.status
+type UserParams struct {
+	ID              UserID
+	Status          Status
+	Email           Email
+	Password        Password
+	FirstName       string
+	LastName        string
+	MiddleName      string
+	BirthDate       BirthDate
+	Position        Position
+	HiredAt         HiredDate
+	Department      Department
+	District        District
+	WorkdayDuration WorkdayDuration
+	IsInvalid       bool
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 func NewUser(
@@ -93,6 +84,106 @@ func NewUser(
 	}, nil
 }
 
+func ReconstructUser(p UserParams) *User {
+	return &User{
+		id:              p.ID,
+		status:          p.Status,
+		email:           p.Email,
+		password:        p.Password,
+		firstName:       p.FirstName,
+		lastName:        p.LastName,
+		middleName:      p.MiddleName,
+		birthDate:       p.BirthDate,
+		position:        p.Position,
+		hiredAt:         p.HiredAt,
+		department:      p.Department,
+		district:        p.District,
+		workdayDuration: p.WorkdayDuration,
+		isInvalid:       p.IsInvalid,
+		createdAt:       p.CreatedAt,
+		updatedAt:       p.UpdatedAt,
+	}
+}
+
+func (u *User) Experience() Experience {
+	from := u.hiredAt.Time()
+	to := time.Now()
+
+	totalDays := daysBetween(from, to)
+	y, m, d := splitExperience(from, to)
+
+	return Experience{
+		Years:     y,
+		Months:    m,
+		Days:      d,
+		TotalDays: totalDays,
+	}
+}
+
+func splitExperience(from, to time.Time) (int, int, int) {
+	if to.Before(from) {
+		return 0, 0, 0
+	}
+
+	years := to.Year() - from.Year()
+	if from.AddDate(years, 0, 0).After(to) {
+		years--
+	}
+
+	base := from.AddDate(years, 0, 0)
+	months := 0
+	for {
+		next := base.AddDate(0, 1, 0)
+		if next.After(to) {
+			break
+		}
+		base = next
+		months++
+	}
+
+	days := daysBetween(base, to)
+
+	return years, months, days
+}
+
+func daysBetween(from, to time.Time) int {
+	f := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, time.UTC)
+	t := time.Date(to.Year(), to.Month(), to.Day(), 0, 0, 0, 0, time.UTC)
+	return int(t.Sub(f) / (24 * time.Hour))
+}
+
+func (u *User) ExperienceLabel() string {
+	return u.Experience().String()
+}
+
+func (u *User) IsInvalid() bool {
+	return u.isInvalid
+}
+
+func (u *User) District() District {
+	return u.district
+}
+
+func (u *User) WorkdayDuration() WorkdayDuration {
+	return u.workdayDuration
+}
+
+func (u *User) HiredAt() HiredDate {
+	return u.hiredAt
+}
+
+func (u *User) Position() Position {
+	return u.position
+}
+
+func (u *User) BirthDate() BirthDate {
+	return u.birthDate
+}
+
+func (u *User) Status() Status {
+	return u.status
+}
+
 func (u *User) FirstName() string {
 	return u.firstName
 }
@@ -130,53 +221,6 @@ func (u *User) ChangePassword(newPassword Password) error {
 	u.updatedAt = time.Now().UTC()
 
 	return nil
-}
-
-// Deactivate деактивирует аккаунт.
-// func (u *User) Deactivate() error {
-// 	if !u.isActive {
-// 		return errors.New("user is already deactivate")
-// 	}
-
-// 	u.isActive = false
-// 	u.updatedAt = time.Now().UTC()
-
-// 	return nil
-// }
-
-// Activate aктивирует аккаунт.
-// func (u *User) Activate() error {
-// 	if u.isActive {
-// 		return errors.New("user is already activate")
-// 	}
-
-// 	u.isActive = true
-// 	u.updatedAt = time.Now().UTC()
-
-// 	return nil
-// }
-
-func ReconstructUser(
-	id UserID,
-	email Email,
-	password Password,
-	firstName string,
-	lastName string,
-	middleName string,
-	department Department,
-	createdAt, updatedAt time.Time,
-) *User {
-	return &User{
-		id:         id,
-		email:      email,
-		password:   password,
-		firstName:  firstName,
-		lastName:   lastName,
-		middleName: middleName,
-		department: department,
-		createdAt:  createdAt,
-		updatedAt:  updatedAt,
-	}
 }
 
 func (u *User) ID() UserID {

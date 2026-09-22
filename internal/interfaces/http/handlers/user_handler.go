@@ -10,16 +10,18 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_active_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
 	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/dto"
 )
 
 type UserHandler struct {
-	registerUseCase       *register_user.Handler
-	getUserUseCase        *get_user.Handler
-	deactivateUseCase     *deactivate_user.Handler
-	activateUseCase       *activate_user.Handler
-	getActiveUsersUseCase *get_active_users.Handler
-	templates             *Templates
+	registerUseCase         *register_user.Handler
+	getUserUseCase          *get_user.Handler
+	deactivateUseCase       *deactivate_user.Handler
+	activateUseCase         *activate_user.Handler
+	getActiveUsersUseCase   *get_active_users.Handler
+	registerFormUserUseCase *register_form.Handler
+	templates               *Templates
 }
 
 func NewUserHandler(
@@ -28,22 +30,31 @@ func NewUserHandler(
 	deactivateUseCase *deactivate_user.Handler,
 	activateUseCase *activate_user.Handler,
 	getActiveUsersUseCase *get_active_users.Handler,
+	registerFormUserUseCase *register_form.Handler,
 	templates *Templates,
 ) *UserHandler {
 	return &UserHandler{
-		registerUseCase:       registerUseCase,
-		getUserUseCase:        getUserUseCase,
-		deactivateUseCase:     deactivateUseCase,
-		activateUseCase:       activateUseCase,
-		getActiveUsersUseCase: getActiveUsersUseCase,
-		templates:             templates,
+		registerUseCase:         registerUseCase,
+		getUserUseCase:          getUserUseCase,
+		deactivateUseCase:       deactivateUseCase,
+		activateUseCase:         activateUseCase,
+		getActiveUsersUseCase:   getActiveUsersUseCase,
+		registerFormUserUseCase: registerFormUserUseCase,
+		templates:               templates,
 	}
 }
 
 func (h *UserHandler) RegisterUserForm(w http.ResponseWriter, r *http.Request) {
 
+	result, err := h.registerFormUserUseCase.Handle(r.Context(), register_form.Query{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	data := map[string]any{
-		"Form": register_user.Command{},
+		"Form":      register_user.Command{},
+		"Positions": result.Positions,
 	}
 
 	if err := h.templates.Render(w, "register_user.html", data); err != nil {

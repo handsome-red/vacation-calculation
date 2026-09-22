@@ -14,10 +14,22 @@ func TestFullYears(t *testing.T) {
 		expected int
 	}{
 		{
-			name:     "base",
+			name:     "base zero year",
 			from:     time.Date(2026, time.April, 21, 0, 0, 0, 0, time.Local),
 			to:       time.Date(2026, time.September, 21, 0, 0, 0, 0, time.Local),
 			expected: 0,
+		},
+		{
+			name:     "base one year",
+			from:     time.Date(2026, time.April, 21, 0, 0, 0, 0, time.Local),
+			to:       time.Date(2027, time.September, 21, 0, 0, 0, 0, time.Local),
+			expected: 1,
+		},
+		{
+			name:     "base",
+			from:     time.Date(2026, time.April, 21, 0, 0, 0, 0, time.Local),
+			to:       time.Date(2027, time.September, 21, 0, 0, 0, 0, time.Local),
+			expected: 1,
 		},
 	}
 

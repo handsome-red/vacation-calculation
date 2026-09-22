@@ -74,6 +74,7 @@ func (r *Router) registerRoutes() {
 		r.container.DeactivateUserUseCase,
 		r.container.ActivateUserUseCase,
 		r.container.GetActiveUsersUseCase,
+		r.container.GetRegisterFormUseCase,
 		// r.logger,
 		templates,
 	)

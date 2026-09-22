@@ -51,12 +51,13 @@
                 <input type="date" name="birth_date" value="{{.Form.BirthDate}}" max="{{.Today}}">
             </label></p>
 
-        <p><label>Должность<br>
-                <select name="position">
-                    <option value="director" {{if eq .Form.Position "director" }}selected{{end}}>Руководитель</option>
-                    <option value="employee" {{if eq .Form.Position "employee" }}selected{{end}}>Сотрудник</option>
-                </select>
-            </label></p>
+        <label for="position">Должность</label>
+        <select id="position" name="position" required>
+            <option value="">- выберите должность -</option>
+            {{range .Positions}}
+            <option value="{{.Value}}">{{.Title}}</option>
+            {{end}}
+        </select>
 
         <p><label>Дата приема на работу<br>
                 <input type="date" name="hired_at" value="{{.Form.HiredAt}}" max="{{.Today}}">

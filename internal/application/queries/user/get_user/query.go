@@ -19,6 +19,7 @@ type Result struct {
 	WorkdayDuration int
 	Email           string
 	IsInvalid       bool
+	Experience      string
 	CreatedAt       string
 	UpdatedAt       string
 }

@@ -9,27 +9,50 @@
 
 <body>
     <h1>{{.User.LastName}} {{.User.FirstName}} {{.User.MiddleName}}</h1>
+    <h2>Общая статистика</h2>
+    <table>
+        <tbody>
+            <tr><th>Статус</th>                             <td>{{.User.Status}}</td></tr>
+            <tr><th>Фамилия</th>                            <td>{{.User.LastName}}</td></tr>
+            <tr><th>Имя</th>                                <td>{{.User.FirstName}}</td></tr>
+            <tr><th>Отчество</th>                           <td>{{.User.MiddleName}}</td></tr>
+            <tr><th>Дата рождения</th>                      <td>{{.User.BirthDate}}</td></tr>
+            <tr><th>Должность</th>                          <td>{{.User.Position}}</td></tr>
+            <tr><th>Дата приема на работу</th>              <td>{{.User.HiredAt}}</td></tr>
+            <tr><th>Территориальный отдел</th>              <td>{{.User.Department}}</td></tr>
+            <tr><th>Район/Отдел</th>                        <td>{{.User.District}}</td></tr>
+            <tr><th>Продолжительность рабочего дня</th>     <td>{{.User.WorkdayDuration}}</td></tr>
+            <tr><th>E-mail</th>                             <td>{{.User.Email}}</td></tr>
+            <tr><th>Инвалид</th>                            <td>{{.User.IsInvalid}}</td></tr>
+            <tr><th>Общий стаж выслуги</th>                 <td>{{.User.Experience}}</td></tr>
+        </tbody>
+    </table>
 
-    <dl>
-        <dt>ID</dt>
-        <dd>{{.User.ID}}</dd>
-        <dt>Email</dt>
-        <dd>{{.User.Email}}</dd>
-        <dt>Фамилия</dt>
-        <dd>{{.User.LastName}}</dd>
-        <dt>Имя</dt>
-        <dd>{{.User.FirstName}}</dd>
-        <dt>Отчество</dt>
-        <dd>{{.User.MiddleName}}</dd>
-        <dt>Отдел</dt>
-        <dd>{{.User.Department}}</dd>
-        <dt>Активен</dt>
-        <dd>{{if .User.IsActive}}да{{else}}нет{{end}}</dd>
-        <dt>Создан</dt>
-        <dd>{{.User.CreatedAt}}</dd>
-        <dt>Обновлён</dt>
-        <dd>{{.User.UpdatedAt}}</dd>
-    </dl>
+    <h2>Статистика</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Год</th>
+                <th>Основной</th>
+                <th>Ненормированный</th>
+                <th>Выслуга лет</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Vacations}}
+            <tr>
+                <td>{{.Year}}</td>
+                <td>{{.Base}}</td>
+                <td>{{.Irregular}}</td>
+                <td>{{.Seniority}}</td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="4">Нет данных</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
 
     <p><a href="/users">К списку</a></p>
 </body>
