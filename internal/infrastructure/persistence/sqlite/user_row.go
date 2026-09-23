@@ -8,8 +8,6 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
-const sqliteTimeLayout = "2006-01-02 15:04:05"
-
 type userRow struct {
 	ID              string `db:"id"`
 	Status          string `db:"status"`
@@ -19,14 +17,16 @@ type userRow struct {
 	BirthDate       string `db:"birth_date"`
 	Position        string `db:"position"`
 	HiredAt         string `db:"hired_at"`
-	Department      string `db:"department"`
+	DepartmentCode  string `db:"department_code"`
+	DepartmentTitle string `db:"department_title"`
+	DistrictCode    string `db:"district_code"`
+	DistrictTitle   string `db:"district_title"`
+	WorkdayDuration int    `db:"workday_duration"`
 	Email           string `db:"email"`
 	IsInvalid       int    `db:"is_invalid"`
 	Password        string `db:"password"`
 	CreatedAt       string `db:"created_at"`
 	UpdatedAt       string `db:"updated_at"`
-	District        string `db:"district"`
-	WorkdayDuration int    `db:"workday_duration"`
 }
 
 func (r *userRow) toDomain() (*user.User, error) {
@@ -34,7 +34,6 @@ func (r *userRow) toDomain() (*user.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid user ID: %w", err)
 	}
-
 	userID, err := user.NewUserID(id)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user ID: %w", err)
@@ -65,16 +64,6 @@ func (r *userRow) toDomain() (*user.User, error) {
 		return nil, fmt.Errorf("invalid hired_at: %w", err)
 	}
 
-	department, err := user.NewDepartment(r.Department)
-	if err != nil {
-		return nil, fmt.Errorf("invalid department: %w", err)
-	}
-
-	district, err := user.NewDistrict(r.District)
-	if err != nil {
-		return nil, fmt.Errorf("invalid district: %w", err)
-	}
-
 	workdayDuration, err := user.NewWorkdayDuration(r.WorkdayDuration)
 	if err != nil {
 		return nil, fmt.Errorf("invalid workday_duration: %w", err)
@@ -89,6 +78,9 @@ func (r *userRow) toDomain() (*user.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid updated_at: %w", err)
 	}
+
+	department := user.NewDepartment(r.DepartmentCode, r.DepartmentTitle)
+	district := user.NewDistrict(r.DistrictCode, r.DistrictTitle) // ← DistrictTitle, не DepartmentTitle
 
 	return user.ReconstructUser(user.UserParams{
 		ID:              userID,
@@ -114,13 +106,11 @@ func parseSQLiteTime(s string) (time.Time, error) {
 	if s == "" {
 		return time.Time{}, nil
 	}
-	t, err := time.Parse(sqliteTimeLayout, s)
-	if err != nil {
-		// На случай, если формат другой (RFC3339 или с миллисекундами)
-		if t2, err2 := time.Parse(time.RFC3339, s); err2 == nil {
-			return t2.UTC(), nil
-		}
-		return time.Time{}, fmt.Errorf("parse sqlite time %q: %w", s, err)
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t.UTC(), nil
 	}
-	return t.UTC(), nil
+	if t, err := time.Parse("2006-01-02 15:04:05", s); err == nil {
+		return t.UTC(), nil
+	}
+	return time.Time{}, fmt.Errorf("parse sqlite time %q", s)
 }

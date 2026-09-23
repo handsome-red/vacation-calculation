@@ -7,4 +7,18 @@ type PositionOption struct {
 	Title string
 }
 
-type Result struct{ Positions []PositionOption }
+type DepartmentOption struct {
+	Value string
+	Title string
+}
+
+type DistrictsOption struct {
+	Value string
+	Title string
+}
+
+type Result struct {
+	Positions   []PositionOption
+	Districts   []DistrictsOption
+	Departments []DepartmentOption
+}

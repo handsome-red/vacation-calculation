@@ -1,22 +1,43 @@
 package user
 
 import (
-	"slices"
+	"sort"
 	"strings"
 )
 
 type Position string
 
-// TODO: Переписать под map
+// TODO: Актуализировать список
 const (
-	PositionUnknown  Position = ""
+	PositionUnknown Position = ""
+
 	PositionDirector Position = "director"
 	PositionEmployee Position = "employee"
+
+	PositionGarageManager    Position = "garage_manager"
+	PositionDriver           Position = "driver"
+	PositionWatchman         Position = "watchman"
+	PositionFacilityManager  Position = "facility_manager"
+	PositionWarehouseManager Position = "warehouse_manager"
+	PositionDocumentClerk    Position = "document_clerk"
+	PositionRecordClerk      Position = "record_clerk"
+	PositionHandyman         Position = "handyman"
+	PositionSoftwareEngineer Position = "software_engineer"
 )
 
-var allPositions = []Position{
-	PositionDirector,
-	PositionEmployee,
+var positionsMap = map[Position]string{
+	PositionDirector: "Директор",
+	PositionEmployee: "Сотрудник",
+
+	PositionGarageManager:    "Начальник гаража",
+	PositionDriver:           "Водитель автомобиля",
+	PositionWatchman:         "Сторож",
+	PositionFacilityManager:  "Заведующий хозяйством",
+	PositionWarehouseManager: "Заведующий складом",
+	PositionDocumentClerk:    "Документовед",
+	PositionRecordClerk:      "Делопроизводитель",
+	PositionHandyman:         "Подсобный рабочий",
+	PositionSoftwareEngineer: "Инженер-программист",
 }
 
 func NewPosition(s string) (Position, error) {
@@ -28,29 +49,30 @@ func NewPosition(s string) (Position, error) {
 }
 
 func (p Position) isValid() bool {
-	for _, valid := range allPositions {
-		if p == valid {
-			return true
-		}
-	}
+	_, ok := positionsMap[p]
 
-	return false
+	return ok
 }
 
 func (p Position) String() string { return string(p) }
 
 // Возвращает название должности на русском
 func (p Position) Title() string {
-	switch p {
-	case PositionDirector:
-		return "Директор"
-	case PositionEmployee:
-		return "Сотрудник"
-	default:
-		return ""
+	if title, ok := positionsMap[p]; ok {
+		return title
 	}
+	return ""
 }
 
 func AllPositions() []Position {
-	return slices.Clone(allPositions)
+	result := make([]Position, 0, len(positionsMap))
+	for p := range positionsMap {
+		result = append(result, p)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i] > result[j]
+	})
+
+	return result
 }

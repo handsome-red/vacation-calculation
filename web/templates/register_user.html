@@ -62,18 +62,23 @@
         <p><label>Дата приема на работу<br>
                 <input type="date" name="hired_at" value="{{.Form.HiredAt}}" max="{{.Today}}">
             </label></p>
+        
+        <label for ="district">Территориальный отдел</label>
+        <select id="district" name="district" required>
+            <option value="">— выберите территориальный отдел —</option>
+            {{range .District}}
+            <option value="{{.Value}}">{{.Title}}</option>
+            {{end}}
+        </select>
 
-        <p><label>Территориальный отдел<br>
-                <input type="text" name="department" value="{{.Form.Department}}">
-            </label></p>
 
-        <p><label>Район/Отдел<br>
-                <select name="district">
-                    <option value="">— не указан —</option>
-                    <option value="elabuga" {{if eq .Form.District "elabuga" }}selected{{end}}>Елабуга</option>
-                    <option value="kazan" {{if eq .Form.District "kazan" }}selected{{end}}>Казань</option>
-                </select>
-            </label></p>
+        <label for ="department">Район/Отдел</label>
+        <select id="department" name="department" required>
+            <option value="">— выберите район/отдел —</option>
+            {{range .Departments}}
+            <option value="{{.Value}}">{{.Title}}</option>
+            {{end}}
+        </select>
 
         <p><label>Продолжительность рабочего дня<br>
                 <input type="number" name="workday_duration" value="{{.Form.WorkdayDuration}}" min="1" max="1440"

@@ -28,15 +28,14 @@ func NewDB(ctx context.Context, cfg Config, log ports.Logger) (*sqlx.DB, error) 
 		return nil, fmt.Errorf("sqlite: open: %w", err)
 	}
 
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+
 	if err := db.PingContext(ctx); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("sqlite: ping: %w", err)
 	}
 
 	log.Info(ctx, "connected to database", "path", cfg.Path)
-
 	return db, nil
-
 }
-
-// func ()

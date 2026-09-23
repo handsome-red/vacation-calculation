@@ -20,10 +20,9 @@ type User struct {
 	workdayDuration WorkdayDuration // Продолжительность рабочего дня
 	email           Email           // Почта
 	isInvalid       bool            // Инвалидность
-	// totalExperience Experience      // Общий стаж выслуги
-	password  Password
-	createdAt time.Time
-	updatedAt time.Time
+	password        Password
+	createdAt       time.Time
+	updatedAt       time.Time
 }
 
 type UserParams struct {
@@ -230,10 +229,6 @@ func (u *User) ID() UserID {
 func (u *User) Email() Email {
 	return u.email
 }
-
-// func (u *User) Name() Name {
-// 	return u.name
-// }
 
 func (u *User) Department() Department {
 	return u.department

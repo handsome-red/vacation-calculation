@@ -32,12 +32,17 @@ func (b BirthDate) String() string {
 	if b.value.IsZero() {
 		return ""
 	}
-	return b.value.UTC().Format("2006-01-02")
+
+	years := fullYears(b.value, time.Now())
+	date := b.value.UTC().Format("2006-01-02")
+
+	return fmt.Sprintf("%s (полных: %dг./л.)", date, years)
 }
 
-// func (b BirthDate) Value() (driver.Value, error) {
-// 	if b.value.IsZero() {
-// 		return nil, nil
-// 	}
-// 	return b.String(), nil
-// }
+func fullYears(from, to time.Time) int {
+	years := to.Year() - from.Year()
+	if from.AddDate(years, 0, 0).After(to) {
+		years--
+	}
+	return years
+}

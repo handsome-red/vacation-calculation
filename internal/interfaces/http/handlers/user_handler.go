@@ -53,8 +53,10 @@ func (h *UserHandler) RegisterUserForm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]any{
-		"Form":      register_user.Command{},
-		"Positions": result.Positions,
+		"Form":        register_user.Command{},
+		"Positions":   result.Positions,
+		"Districts":   result.Districts,
+		"Departments": result.Departments,
 	}
 
 	if err := h.templates.Render(w, "register_user.html", data); err != nil {

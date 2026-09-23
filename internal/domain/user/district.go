@@ -1,33 +1,13 @@
 package user
 
-import "strings"
-
-type District string
-
-const (
-	DistrictUnknown District = ""
-	DistrictElabuga District = "elabuga"
-	DistrictKazan   District = "kazan"
-)
-
-func NewDistrict(s string) (District, error) {
-	d := District(strings.ToLower(strings.TrimSpace(s)))
-	if d == "" {
-		return DistrictUnknown, nil // пусто — допустимо
-	}
-	if !d.isValid() {
-		return DistrictUnknown, ErrDistrictInvalid
-	}
-	return d, nil
+type District struct {
+	code  string
+	title string
 }
 
-func (d District) isValid() bool {
-	switch d {
-	case DistrictElabuga, DistrictKazan:
-		return true
-	default:
-		return false
-	}
+func NewDistrict(code, title string) District {
+	return District{code: code, title: title}
 }
 
-func (d District) String() string { return string(d) }
+func (d District) Code() string  { return d.code }
+func (d District) Title() string { return d.title }

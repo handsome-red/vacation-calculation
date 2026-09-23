@@ -24,6 +24,8 @@ var (
 
 	ErrPositionInvalid = errors.New("position invalid")
 
+	ErrDepartmentInvalid = errors.New("department invalid")
+
 	ErrHiredDateInvalid = errors.New("hired date invalid")
 
 	ErrDistrictInvalid = errors.New("district invalid")

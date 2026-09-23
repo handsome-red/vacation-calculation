@@ -3,8 +3,6 @@ package vacation
 import (
 	"errors"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type Status string
@@ -24,7 +22,7 @@ var (
 )
 
 type Vacation struct {
-	id         string
+	id         VacationID
 	employeeID string
 	startDate  time.Time
 	endDate    time.Time
@@ -36,7 +34,7 @@ type Vacation struct {
 }
 
 // Конструктор - создает валидный отпуск
-func NewVacation(employeeID string, startDate time.Time, endDate time.Time) (*Vacation, error) {
+func NewVacation(vacationID VacationID, employeeID string, startDate time.Time, endDate time.Time) (*Vacation, error) {
 	if employeeID == "" {
 		return nil, ErrInvalidEmployeeID
 	}
@@ -51,7 +49,7 @@ func NewVacation(employeeID string, startDate time.Time, endDate time.Time) (*Va
 	}
 
 	return &Vacation{
-		id:         uuid.New().String(),
+		id:         vacationID,
 		employeeID: employeeID,
 		startDate:  startDate,
 		endDate:    endDate,

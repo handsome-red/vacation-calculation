@@ -1,13 +1,18 @@
 package user
 
 type Department struct {
-	department string
+	code  string
+	title string
 }
 
-func NewDepartment(department string) (Department, error) {
-	return Department{department: department}, nil
+func NewDepartment(code, title string) Department {
+	return Department{
+		code:  code,
+		title: title,
+	}
 }
 
-func (d Department) String() string {
-	return d.department
-}
+// Возвращает название района/отдела на русском
+func (d Department) Title() string { return d.title }
+
+func (d Department) Code() string { return d.code }

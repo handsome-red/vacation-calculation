@@ -14,13 +14,36 @@ func NewHandler() *Handler { return &Handler{} }
 func (h *Handler) Handle(ctx context.Context, _ Query) (*Result, error) {
 
 	positions := user.AllPositions()
+	districts := user.AllDistricts()
+	departments := user.AllDepartments()
 
-	result := make([]PositionOption, 0, len(positions))
+	pos := make([]PositionOption, 0, len(positions))
 	for _, p := range positions {
-		result = append(result, PositionOption{
+		pos = append(pos, PositionOption{
 			Value: p.String(),
 			Title: p.Title(),
 		})
 	}
-	return &Result{Positions: result}, nil
+
+	dis := make([]DistrictsOption, 0, len(districts))
+	for _, d := range districts {
+		dis = append(dis, DistrictsOption{
+			Value: d.String(),
+			Title: d.Title(),
+		})
+	}
+
+	dep := make([]DepartmentOption, 0, len(departments))
+	for _, d := range departments {
+		dep = append(dep, DepartmentOption{
+			Value: d.String(),
+			Title: d.Title(),
+		})
+	}
+
+	return &Result{
+		Positions:   pos,
+		Districts:   dis,
+		Departments: dep,
+	}, nil
 }
