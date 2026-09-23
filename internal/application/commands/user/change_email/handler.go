@@ -42,13 +42,13 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	}
 
 	// 3. Проверяем уникальность нового email
-	// exists, err := h.userRepo.ExistsByEmail(ctx, newEmail.String())
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to verify email: %w", err)
-	// }
-	// if exists {
-	// 	return nil, user.ErrEmailAlreadyExists
-	// }
+	exists, err := h.userRepo.ExistsByEmail(ctx, newEmail.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify email: %w", err)
+	}
+	if exists {
+		return nil, user.ErrEmailAlreadyExists
+	}
 
 	// 4. Меняем email (бизнес-логика в Domain)
 	if err := u.ChangeEmail(newEmail); err != nil {

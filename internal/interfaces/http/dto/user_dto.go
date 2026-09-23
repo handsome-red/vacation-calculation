@@ -8,17 +8,26 @@ type RegisterUserRequest struct {
 	FirstName  string `json:"first_name" validate:"required"`
 	LastName   string `json:"last_name" validate:"required"`
 	MiddleName string `json:"middle_name"`
-	Department string `json:"department" validate:"required"`
+	DepartmentCode string `json:"department_code" validate:"required"`
 }
 
 func (r RegisterUserRequest) ToCommand() register_user.Command {
 	return register_user.Command{
-		Email:      r.Email,
-		Password:   r.Password,
-		FirstName:  r.FirstName,
-		LastName:   r.LastName,
-		MiddleName: r.MiddleName,
-		Department: r.Department,
+		Email:           r.Email,
+		Password:        r.Password,
+		FirstName:       r.FirstName,
+		LastName:        r.LastName,
+		MiddleName:      r.MiddleName,
+		DepartmentCode:  r.DepartmentCode,
+		DepartmentTitle: "",
+		Status:          "",
+		BirthDate:       "",
+		Position:        "",
+		HiredAt:         "",
+		DistrictCode:    "",
+		DistrictTitle:   "",
+		WorkdayDuration: 0,
+		IsInvalid:       false,
 	}
 }
 

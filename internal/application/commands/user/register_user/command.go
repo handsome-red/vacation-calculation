@@ -6,12 +6,14 @@ type Command struct {
 	FirstName       string
 	LastName        string
 	MiddleName      string
-	Department      string
+	DepartmentCode  string
+	DepartmentTitle string
 	Status          string
 	BirthDate       string
 	Position        string
 	HiredAt         string
-	District        string
+	DistrictCode    string
+	DistrictTitle   string
 	WorkdayDuration int
 	IsInvalid       bool
 }

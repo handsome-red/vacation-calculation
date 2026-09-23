@@ -67,10 +67,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	}
 
 	// Валидируем район/отдел
-	district, err := user.NewDistrict(cmd.District)
-	if err != nil {
-		return nil, fmt.Errorf("invalid district: %w", err)
-	}
+	district := user.NewDistrict(cmd.DistrictCode, cmd.DistrictTitle)
 
 	// Валидируем продолжительность рабочего дня
 	workdayDuration, err := user.NewWorkdayDuration(cmd.WorkdayDuration)
@@ -90,10 +87,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	// Создаем пароль
 	password := user.NewPasswordFromHash(hashedPassword)
 
-	department, err := user.NewDepartment(cmd.Department)
-	if err != nil {
-		return nil, fmt.Errorf("invalid department: %w", err)
-	}
+	department := user.NewDepartment(cmd.DepartmentCode, cmd.DepartmentTitle)
 
 	// Генерация UUID (Value Object)
 	userID := user.GenerateUserID()
