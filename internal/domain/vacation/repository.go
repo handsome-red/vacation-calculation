@@ -2,13 +2,15 @@ package vacation
 
 import (
 	"context"
-	"time"
+
+	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
-type Repository interface {
+type VacationRepository interface {
 	Save(ctx context.Context, vacation *Vacation) error
 	// FindByUserID(ctx context.Context, userID UserID) ([]*Vacation, error)
 	// FindByID(ctx context.Context, id VacationID) (*Vacation, error)
-	FindByDateRange(ctx context.Context, startDate, endDate time.Time) ([]*Vacation, error)
+	FindBuUserID(ctx context.Context, userID user.UserID) (*user.User, error)
+	// FindByDateRange(ctx context.Context, startDate, endDate time.Time) ([]*Vacation, error)
 	// Delete(ctx context.Context, id VacationID) error
 }

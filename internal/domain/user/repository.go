@@ -8,3 +8,12 @@ type UserRepository interface {
 	FindAll(ctx context.Context) ([]*User, error)
 	Delete(ctx context.Context, userID UserID) error
 }
+
+type DistrictRepository interface {
+	List(ctx context.Context) ([]District, error)
+}
+
+type DepartmentRepository interface {
+	List(ctx context.Context) ([]Department, error)
+	ListWithDistrict(ctx context.Context) ([]DepartmentWithDistrict, error)
+}

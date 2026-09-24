@@ -245,3 +245,14 @@ func (u *User) CreatedAt() time.Time {
 func (u *User) UpdatedAt() time.Time {
 	return u.updatedAt
 }
+
+func (u *User) Initials() string {
+	lastName := u.LastName()
+	firstName := u.FirstName()
+	middleName := u.MiddleName()
+
+	f := []rune(firstName)
+	m := []rune(middleName)
+
+	return fmt.Sprintf(`%s %c.%c.`, lastName, f[0], m[0])
+}

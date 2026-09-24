@@ -27,6 +27,7 @@ func NewHandler(
 }
 
 func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
+
 	// Валидируем email
 	email, err := user.NewEmail(cmd.Email)
 	if err != nil {
@@ -67,7 +68,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	}
 
 	// Валидируем район/отдел
-	district := user.NewDistrict(cmd.DistrictCode, cmd.DistrictTitle)
+	district := user.NewDistrict(cmd.DistrictCode)
 
 	// Валидируем продолжительность рабочего дня
 	workdayDuration, err := user.NewWorkdayDuration(cmd.WorkdayDuration)
@@ -87,7 +88,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	// Создаем пароль
 	password := user.NewPasswordFromHash(hashedPassword)
 
-	department := user.NewDepartment(cmd.DepartmentCode, cmd.DepartmentTitle)
+	department := user.Department{Code: cmd.DepartmentCode}
 
 	// Генерация UUID (Value Object)
 	userID := user.GenerateUserID()
@@ -118,11 +119,6 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 		h.logger.Error(ctx, "failed to save user", "error", err)
 		return nil, fmt.Errorf("failed to save user: %w", err)
 	}
-
-	h.logger.Info(ctx, "user registered successfully",
-		"user_id", newUser.ID().String(),
-		"email", newUser.Email().String(),
-	)
 
 	return &Result{
 		UserID:     newUser.ID().String(),

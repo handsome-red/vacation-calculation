@@ -8,6 +8,7 @@ import (
 
 // TODO
 type HiredDate struct{ value time.Time }
+type WorkYear struct{ from, to time.Time }
 
 func NewHiredDate(s string) (HiredDate, error) {
 	s = strings.TrimSpace(s)
@@ -39,9 +40,26 @@ func (h HiredDate) String() string {
 	return h.value.UTC().Format("2006-01-02")
 }
 
-// func (h HiredDate) Value() (driver.Value, error) {
-// 	if h.value.IsZero() {
-// 		return nil, nil
-// 	}
-// 	return h.String(), nil
-// }
+// WorkYear - возвращает строковое представление рабочего года сотрудника
+func (h HiredDate) WorkYear(now time.Time) WorkYear {
+	years := now.Year() - h.value.Year()
+
+	from := h.value.AddDate(years, 0, 0)
+	if from.After(now) {
+		from = from.AddDate(-1, 0, 0)
+	}
+
+	to := from.AddDate(1, 0, 0)
+	return WorkYear{
+		from: from,
+		to:   to,
+	}
+}
+
+func (w WorkYear) String() string {
+
+	f := w.from.UTC().Format("02.01.2006")
+	t := w.to.UTC().Format("02.01.2006")
+
+	return fmt.Sprintf("%s - %s", f, t)
+}

@@ -7,13 +7,11 @@ type Command struct {
 	LastName        string
 	MiddleName      string
 	DepartmentCode  string
-	DepartmentTitle string
 	Status          string
 	BirthDate       string
 	Position        string
 	HiredAt         string
 	DistrictCode    string
-	DistrictTitle   string
 	WorkdayDuration int
 	IsInvalid       bool
 }

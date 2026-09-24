@@ -10,6 +10,10 @@ type UserID struct {
 	value uuid.UUID
 }
 
+func (id UserID) IsZero() bool {
+	return id.value == uuid.Nil
+}
+
 // GenerateUserID генерирует новый случайный ID
 func GenerateUserID() UserID {
 	return UserID{value: uuid.New()}

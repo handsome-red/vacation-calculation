@@ -53,7 +53,7 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 			FirstName:  u.FirstName(),
 			LastName:   u.LastName(),
 			MiddleName: u.MiddleName(),
-			Department: u.Department().Title(),
+			Department: u.Department().Title,
 		})
 	}
 

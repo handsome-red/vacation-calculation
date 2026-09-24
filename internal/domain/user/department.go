@@ -1,18 +1,13 @@
 package user
 
+type DepartmentWithDistrict struct {
+	Department   Department
+	DistrictCode string
+}
+
 type Department struct {
-	code  string
-	title string
+	Code  string
+	Title string
 }
 
-func NewDepartment(code, title string) Department {
-	return Department{
-		code:  code,
-		title: title,
-	}
-}
-
-// Возвращает название района/отдела на русском
-func (d Department) Title() string { return d.title }
-
-func (d Department) Code() string { return d.code }
+func (d Department) String() string { return d.Code }

@@ -12,6 +12,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
 	"github.com/handsome-red/vacation-calculation/internal/config"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
+	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/hasher"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/persistence/sqlite"
 	"github.com/jmoiron/sqlx"
@@ -24,7 +25,9 @@ type Container struct {
 	Hasher ports.PasswordHasher
 
 	// Repositories
-	UserRepo ports.UserRepository
+	UserRepo       ports.UserRepository
+	DistrictRepo   user.DistrictRepository
+	DepartmentRepo user.DepartmentRepository
 	// VacationRepo ports.VacationRepository
 
 	// Use Cases - Commands (User)
@@ -32,7 +35,6 @@ type Container struct {
 	DeactivateUserUseCase  *deactivate_user.Handler
 	ActivateUserUseCase    *activate_user.Handler
 	GetRegisterFormUseCase *register_form.Handler
-
 	// Use Cases - Commands (Vacation)
 	// CreateVacationUseCase  *create_vacation.Handler
 	// ApproveVacationUseCase *approve_vacation.Handler
@@ -52,11 +54,13 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	hasher := hasher.NewBcryptHasher(10)
 
 	var userRepo ports.UserRepository = sqlite.NewUserRepository(db)
+	var districtRepo user.DistrictRepository = sqlite.NewDistrictRepository(db)
+	var departmentRepo user.DepartmentRepository = sqlite.NewDepartmentRepository(db)
 
 	registerUserUseCase := register_user.NewHandler(userRepo, hasher, log)
 	deactivateUserUseCase := deactivate_user.NewHandler(userRepo, log)
 	activateUserUseCase := activate_user.NewHandler(userRepo, log)
-	getRegisterFormUseCase := register_form.NewHandler()
+	getRegisterFormUseCase := register_form.NewHandler(districtRepo, departmentRepo)
 
 	getUserUseCase := get_user.NewHandler(userRepo, log)
 	getActiveUsersUseCase := get_active_users.NewHandler(userRepo, log)

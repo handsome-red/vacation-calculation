@@ -75,7 +75,7 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 		u.BirthDate().String(),
 		u.Position().String(),
 		u.HiredAt().String(),
-		u.Department().Code(),
+		u.Department().String(),
 		u.District().Code(),
 		u.Email().Value(),
 		boolToInt(u.IsInvalid()),

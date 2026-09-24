@@ -22,4 +22,8 @@ type Result struct {
 	Experience      string
 	CreatedAt       string
 	UpdatedAt       string
+
+	Initials string
+	Today    string
+	WorkYear string
 }

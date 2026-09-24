@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -76,15 +77,17 @@ func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		FirstName:       r.FormValue("first_name"),
 		LastName:        r.FormValue("last_name"),
 		MiddleName:      r.FormValue("middle_name"),
-		Department:      r.FormValue("department"),
 		Status:          r.FormValue("status"),
 		BirthDate:       r.FormValue("birth_date"),
 		Position:        r.FormValue("position"),
 		HiredAt:         r.FormValue("hired_at"),
-		District:        r.FormValue("district"),
 		WorkdayDuration: atoiSafe(r.FormValue("workday_duration")),
 		IsInvalid:       r.FormValue("is_invalid") == "on",
+		DistrictCode:    r.FormValue("district"),
+		DepartmentCode:  r.FormValue("department"),
 	}
+
+	log.Printf("user registered successfully, %v: ", cmd.Email)
 
 	if _, err := h.registerUseCase.Handle(r.Context(), cmd); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -168,8 +171,8 @@ func (h *UserHandler) GetActiveUsers(w http.ResponseWriter, r *http.Request) {
 			BirthDate:       u.BirthDate,
 			Position:        u.Position,
 			HiredAt:         u.HiredAt,
-			Department:      u.Department,
-			District:        u.District,
+			DepartmentCode:  u.Department,
+			DistrictCode:    u.District,
 			WorkdayDuration: u.WorkdayDuration,
 			Email:           u.Email,
 			IsInvalid:       u.IsInvalid,

@@ -3,6 +3,7 @@ package get_user
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -41,6 +42,8 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
+	now := time.Now()
+
 	return &Result{
 		ID:              u.ID().String(),
 		Status:          u.Status().String(),
@@ -50,11 +53,17 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		BirthDate:       u.BirthDate().String(),
 		Position:        u.Position().String(),
 		HiredAt:         u.HiredAt().String(),
-		Department:      u.Department().Title(),
+		Department:      u.Department().Title,
 		District:        u.District().Title(),
 		WorkdayDuration: u.WorkdayDuration().Int(),
 		Email:           u.Email().String(),
 		IsInvalid:       u.IsInvalid(),
 		Experience:      u.Experience().String(),
+
+		//
+
+		Initials: u.Initials(),
+		Today:    now.UTC().Format("02.01.2006"),
+		WorkYear: u.HiredAt().WorkYear(now).String(),
 	}, nil
 }

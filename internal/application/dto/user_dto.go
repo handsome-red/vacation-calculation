@@ -21,7 +21,7 @@ func NewUserDTOFromDomain(u *user.User) *UserDTO {
 		ID:         u.ID().String(),
 		Email:      u.Email().String(),
 		FullName:   u.FullName(),
-		Department: u.Department().String(),
+		Department: u.Department().Title,
 		CreatedAt:  u.CreatedAt(),
 		UpdatedAt:  u.UpdatedAt(),
 	}

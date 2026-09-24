@@ -3,22 +3,23 @@ package register_form
 type Query struct{}
 
 type PositionOption struct {
-	Value string
+	Code  string
 	Title string
 }
 
 type DepartmentOption struct {
-	Value string
-	Title string
+	Code         string
+	Title        string
+	DistrictCode string
 }
 
-type DistrictsOption struct {
-	Value string
+type DistrictOption struct {
+	Code  string
 	Title string
 }
 
 type Result struct {
 	Positions   []PositionOption
-	Districts   []DistrictsOption
+	Districts   []DistrictOption
 	Departments []DepartmentOption
 }

@@ -79,8 +79,11 @@ func (r *userRow) toDomain() (*user.User, error) {
 		return nil, fmt.Errorf("invalid updated_at: %w", err)
 	}
 
-	department := user.NewDepartment(r.DepartmentCode, r.DepartmentTitle)
-	district := user.NewDistrict(r.DistrictCode, r.DistrictTitle) // ← DistrictTitle, не DepartmentTitle
+	department := user.Department{
+		Code:  r.DepartmentCode,
+		Title: r.DepartmentTitle,
+	}
+	district := user.NewDistrict(r.DistrictCode)
 
 	return user.ReconstructUser(user.UserParams{
 		ID:              userID,

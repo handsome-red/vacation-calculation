@@ -32,6 +32,13 @@ func (b BirthDate) String() string {
 	if b.value.IsZero() {
 		return ""
 	}
+	return b.value.Format("2006-01-02")
+}
+
+func (b BirthDate) HumanRead() string {
+	if b.value.IsZero() {
+		return ""
+	}
 
 	years := fullYears(b.value, time.Now())
 	date := b.value.UTC().Format("2006-01-02")
