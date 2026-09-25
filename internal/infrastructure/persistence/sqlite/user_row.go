@@ -83,7 +83,7 @@ func (r *userRow) toDomain() (*user.User, error) {
 		Code:  r.DepartmentCode,
 		Title: r.DepartmentTitle,
 	}
-	district := user.NewDistrict(r.DistrictCode)
+	district := user.NewDistrict(r.DistrictCode, r.DistrictTitle)
 
 	return user.ReconstructUser(user.UserParams{
 		ID:              userID,

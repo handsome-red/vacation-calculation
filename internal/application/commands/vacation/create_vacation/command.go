@@ -1,10 +1,9 @@
 package create_vacation
 
 type Command struct {
-	Status    string
 	UserID    string
-	startDate string
-	endDate   string
+	StartDate string
+	EndDate   string
 }
 
 type Result struct {

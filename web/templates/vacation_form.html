@@ -1,86 +1,36 @@
-<!-- web/templates/vacation_form.html -->
-{{define "content"}}
-<div class="page-header">
-    <h1>{{.Title}}</h1>
-</div>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<title>Новый отпуск</title>
+</head>
+<body>
+	<h1>Создать отпуск</h1>
 
-<div class="form-container">
-    <form id="vacationForm" action="{{.Action}}" method="{{.Method}}">
-        <div class="form-group">
-            <label for="employee">Сотрудник <span class="required">*</span></label>
-            <input type="text" id="employee" name="employee" value="{{.Vacation.Employee}}" required>
-        </div>
+	{{if .Errors}}
+	<ul style="color:#b00">
+		{{range .Errors}}<li>{{.}}</li>{{end}}
+	</ul>
+	{{end}}
 
-        <div class="form-group">
-            <label for="start_date">Дата начала <span class="required">*</span></label>
-            <input type="date" id="start_date" name="start_date" value="{{.Vacation.StartDate.Format "2006-01-02"}}" required>
-        </div>
+	<form method="POST" action="/api/v1/users/{{.UserID}}/vacations">
+		<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
-        <div class="form-group">
-            <label for="days">Количество дней <span class="required">*</span></label>
-            <input type="number" id="days" name="days" value="{{.Vacation.Days}}" min="1" max="365" required>
-        </div>
+		<p>
+			<label>Дата начала<br>
+				<input type="date" name="start_date" value="{{.Form.StartDate}}" required>
+			</label>
+		</p>
 
-        <div class="form-group">
-            <label for="status">Статус</label>
-            <select id="status" name="status">
-                <option value="planned" {{if eq .Vacation.Status "planned"}}selected{{end}}>Запланирован</option>
-                <option value="approved" {{if eq .Vacation.Status "approved"}}selected{{end}}>Согласован</option>
-                <option value="completed" {{if eq .Vacation.Status "completed"}}selected{{end}}>Завершен</option>
-            </select>
-        </div>
+		<p>
+			<label>Дата окончания<br>
+				<input type="date" name="end_date" value="{{.Form.EndDate}}" required>
+			</label>
+		</p>
 
-        <div class="form-actions">
-            <a href="/vacations" class="btn btn-secondary">Отмена</a>
-            <button type="submit" class="btn btn-primary">
-                {{if .Vacation.ID}}Сохранить{{else}}Добавить{{end}}
-            </button>
-        </div>
-    </form>
-</div>
-{{end}}
-
-{{define "styles"}}
-<style>
-    .form-container {
-        max-width: 600px;
-        background: rgb(255, 255, 255);
-        padding: 30px;
-        border-radius: 15px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    .form-group {
-        margin-bottom: 20px;
-    }
-    .form-group label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: 500;
-        color: #333;
-    }
-    .form-group .required {
-        color: #dc3545;
-    }
-    .form-group input,
-    .form-group select {
-        width: 100%;
-        padding: 10px 12px;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        font-size: 16px;
-        transition: border-color 0.3s;
-    }
-    .form-group input:focus,
-    .form-group select:focus {
-        outline: none;
-        border-color: #667eea;
-    }
-    .form-actions {
-        display: flex;
-        gap: 12px;
-        margin-top: 30px;
-    }
-</style>
-{{end}}
-
-{{template "layouts/base.html" .}}
+		<p>
+			<button type="submit">Создать</button>
+		</p>
+	</form>
+</body>
+</html>

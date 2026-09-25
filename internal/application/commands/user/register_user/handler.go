@@ -68,7 +68,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	}
 
 	// Валидируем район/отдел
-	district := user.NewDistrict(cmd.DistrictCode)
+	district := user.NewDistrict(cmd.DistrictCode, cmd.DistrictCode) // TODO
 
 	// Валидируем продолжительность рабочего дня
 	workdayDuration, err := user.NewWorkdayDuration(cmd.WorkdayDuration)

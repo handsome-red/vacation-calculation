@@ -5,8 +5,11 @@ type District struct {
 	title string
 }
 
-func NewDistrict(code string) District {
-	return District{code: code}
+func NewDistrict(code, title string) District {
+	return District{
+		code:  code,
+		title: title,
+	}
 }
 
 func (d District) Code() string  { return d.code }

@@ -23,24 +23,19 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) CreateVacation(ctx context.Context, cmd Command) (*Result, error) {
+func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 
-	status, err := vacation.NewVacationStatus(cmd.Status)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create vacation status: %w", err)
-	}
-
-	userID, err := user.NewUserID(cmd.UserID)
+	userID, err := user.ParseUserID(cmd.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user id: %w", err)
 	}
 
-	startDate, err := vacation.NewDate()
+	startDate, err := vacation.ParseDate(cmd.StartDate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create start date: %w", err)
 	}
 
-	endDate, err := vacation.NewDate()
+	endDate, err := vacation.ParseDate(cmd.EndDate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create end date: %w", err)
 	}
@@ -51,7 +46,6 @@ func (h *Handler) CreateVacation(ctx context.Context, cmd Command) (*Result, err
 
 	newVacation, err := vacation.NewVacation(
 		vacationID,
-		status,
 		userID,
 		startDate,
 		endDate,

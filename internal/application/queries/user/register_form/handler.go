@@ -3,6 +3,7 @@ package register_form
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
@@ -28,6 +29,11 @@ func (h *Handler) Handle(ctx context.Context, _ Query) (*Result, error) {
 	districts, err := h.districtRepo.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("districts repo: %w", err)
+	}
+
+	log.Printf("DEBUG Handle: districts=%d", len(districts))
+	for _, d := range districts {
+		log.Printf("DEBUG Handle: code=%q title=%q", d.Code(), d.Title())
 	}
 
 	departments, err := h.departmentRepo.ListWithDistrict(ctx)

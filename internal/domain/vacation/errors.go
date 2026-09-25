@@ -13,6 +13,8 @@ var (
 	ErrEndDateBeforeStart = errors.New("end date is before start date")
 	ErrStatusInvalid      = errors.New("status is invalid")
 
+
+
 	ErrVacationNotRejectable = errors.New("vacation is not rejectable")
 	ErrVacationNotEditable   = errors.New("vacation is not editable")
 	ErrVacationNotApprovable = errors.New("vacation is not approvable")

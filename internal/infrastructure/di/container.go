@@ -7,12 +7,15 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/deactivate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/get_vacation_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_active_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
 	"github.com/handsome-red/vacation-calculation/internal/config"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
+	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/hasher"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/persistence/sqlite"
 	"github.com/jmoiron/sqlx"
@@ -39,6 +42,10 @@ type Container struct {
 	// CreateVacationUseCase  *create_vacation.Handler
 	// ApproveVacationUseCase *approve_vacation.Handler
 
+	CreateVacationUseCase *create_vacation.Handler
+	GetUserVacationsUseCase *get_vacation_form.Handler
+	// GetVacationFormUseCase *get_vacation.Hander
+
 	// Use Cases - Queries (User)
 	GetUserUseCase        *get_user.Handler
 	GetActiveUsersUseCase *get_active_users.Handler
@@ -57,6 +64,8 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	var districtRepo user.DistrictRepository = sqlite.NewDistrictRepository(db)
 	var departmentRepo user.DepartmentRepository = sqlite.NewDepartmentRepository(db)
 
+	var vacationRepo vacation.VacationRepository = sqlite.NewVacationRepository(db)
+
 	registerUserUseCase := register_user.NewHandler(userRepo, hasher, log)
 	deactivateUserUseCase := deactivate_user.NewHandler(userRepo, log)
 	activateUserUseCase := activate_user.NewHandler(userRepo, log)
@@ -65,24 +74,28 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	getUserUseCase := get_user.NewHandler(userRepo, log)
 	getActiveUsersUseCase := get_active_users.NewHandler(userRepo, log)
 
+	createVacationUseCase := create_vacation.NewHandler(vacationRepo)
+	getUserVacationsUseCase := get_vacation_form.NewHandler()
+
 	return &Container{
 		// Infrastructure
 		DB:     db,
 		Logger: log,
 		Hasher: hasher,
-
 		// Repositories
 		UserRepo: userRepo,
-
 		// Use Cases - Commands
 		RegisterUserUseCase:    registerUserUseCase,
 		DeactivateUserUseCase:  deactivateUserUseCase,
 		ActivateUserUseCase:    activateUserUseCase,
 		GetRegisterFormUseCase: getRegisterFormUseCase,
-
 		// Use Cases - Queries
-		GetUserUseCase:        getUserUseCase,
-		GetActiveUsersUseCase: getActiveUsersUseCase,
+		GetUserUseCase:          getUserUseCase,
+		GetActiveUsersUseCase:   getActiveUsersUseCase,
+		DistrictRepo:            districtRepo,
+		DepartmentRepo:          departmentRepo,
+		CreateVacationUseCase:   createVacationUseCase,
+		GetUserVacationsUseCase: getUserVacationsUseCase,
 	}, nil
 }
 

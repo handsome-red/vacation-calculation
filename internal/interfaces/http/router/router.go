@@ -68,6 +68,8 @@ func (r *Router) registerRoutes() {
 
 	healthHandler := handlers.NewHealthHandler()
 
+	homeHandler := handlers.NewHomeHandler(templates)
+
 	userHandler := handlers.NewUserHandler(
 		r.container.RegisterUserUseCase,
 		r.container.GetUserUseCase,
@@ -82,15 +84,16 @@ func (r *Router) registerRoutes() {
 	vacationHandler := handlers.NewVacationHandler(
 		r.container.CreateVacationUseCase,
 		r.container.GetUserVacationsUseCase,
-		r.container.GetVacationFormUseCase,
-		r.logger,
+		templates,
+		// r.container.GetVacationFormUseCase,
+		// r.logger,
 	)
 
 	// calendarHandler := handlers.NewCalendarHandlers(
 	// 	r.container.
 	// )
 
-	r.mux.HandleFunc("GET /{$}", homeHandler)
+	r.mux.HandleFunc("GET /{$}", homeHandler.Home)
 
 	// ============================================================
 	// Public Routes (без аутентификации)
@@ -117,8 +120,8 @@ func (r *Router) registerRoutes() {
 
 	// Vacation routes
 	// r.mux.HandleFunc("POST /api/v1/vacations", vacationHandler.CreateVacation)
-	r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations", vacationHandler.GetVacation)
-	r.mux.HandleFunc("POST /api/v1/users/{userId}/vacations", vacationHandler.SetVacation)
+	r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations", vacationHandler.GetVacationForm)
+	r.mux.HandleFunc("POST /api/v1/users/{userId}/vacations", vacationHandler.CreateVacation)
 	// r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations", vacationHandler.GetUserVacations)
 	// r.mux.HandleFunc("POST /api/v1/vacations/{id}/approve", vacationHandler.ApproveVacation)
 	// r.mux.HandleFunc("POST /api/v1/vacations/{id}/reject", vacationHandler.RejectVacation)

@@ -37,7 +37,7 @@ func (r *districtRepository) List(ctx context.Context) ([]user.District, error) 
 
 	result := make([]user.District, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, user.NewDistrict(row.Code))
+		result = append(result, user.NewDistrict(row.Code, row.Title))
 	}
 	return result, nil
 }
