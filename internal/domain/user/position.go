@@ -54,6 +54,16 @@ func (p Position) isValid() bool {
 	return ok
 }
 
+// isIrregular - является ли должность с ненормированным рабочим днем
+func (p Position) isIrregular() bool {
+	switch p {
+	case PositionDirector, PositionEmployee:
+		return true
+	default:
+		return false
+	}
+}
+
 func (p Position) String() string { return string(p) }
 
 // Возвращает название должности на русском

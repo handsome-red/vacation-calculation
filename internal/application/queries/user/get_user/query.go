@@ -4,6 +4,12 @@ type Query struct {
 	UserID string
 }
 
+type Vacations struct {
+	Base int
+	Irregular int
+	Seniority int
+}
+
 type Result struct {
 	ID              string
 	Status          string
@@ -26,4 +32,7 @@ type Result struct {
 	Initials string
 	Today    string
 	WorkYear string
+	Supposed string
+
+	Vacations Vacations
 }

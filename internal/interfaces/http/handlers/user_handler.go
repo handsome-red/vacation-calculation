@@ -111,7 +111,7 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	data := map[string]any{
 		"User": result,
-		// "Vacation": vacation,
+		"Vacation": result.Vacations,
 	}
 
 	if err := h.templates.Render(w, "user.html", data); err != nil {
@@ -165,17 +165,19 @@ func (h *UserHandler) GetActiveUsers(w http.ResponseWriter, r *http.Request) {
 	for _, u := range result.Users {
 		resp = append(resp, dto.UserResponse{
 			ID:              u.ID,
+			Status:          u.Status,
 			FirstName:       u.FirstName,
 			LastName:        u.LastName,
 			MiddleName:      u.MiddleName,
 			BirthDate:       u.BirthDate,
 			Position:        u.Position,
 			HiredAt:         u.HiredAt,
-			DepartmentCode:  u.Department,
-			DistrictCode:    u.District,
 			WorkdayDuration: u.WorkdayDuration,
 			Email:           u.Email,
 			IsInvalid:       u.IsInvalid,
+			DistrictTitle:   u.DistrictTitle,
+			DepartmentTitle: u.DepartmentTitle,
+			TotalExperience: u.TotalExperience,
 		})
 	}
 

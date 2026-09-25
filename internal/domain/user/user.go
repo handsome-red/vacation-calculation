@@ -256,3 +256,61 @@ func (u *User) Initials() string {
 
 	return fmt.Sprintf(`%s %c.%c.`, lastName, f[0], m[0])
 }
+
+type SupposedVacation struct {
+	yearly int
+	seniority int
+	irregular int
+}
+
+func (s SupposedVacation)Yearly() int {
+	return s.yearly
+}
+func (s SupposedVacation)Seniority() int {
+	return s.seniority
+}
+func (s SupposedVacation)Irregular() int{
+	return s.irregular
+}
+
+
+func (u *User) Supposed() SupposedVacation {
+	const yearly int = 30
+	const irregular int = 3
+
+	
+	now := time.Now()
+	
+	seniority := u.HiredAt().WorkYear(now).Year(now)
+	
+	sen := 0
+
+	switch  {
+	case seniority < 1:
+		sen += 0
+	case seniority < 5:
+		sen += 1
+	case seniority < 10:
+		sen += 5
+	case seniority < 15:
+		sen += 7
+	default:
+		sen += 10
+	}
+
+	irr := 0
+	if u.Position().isIrregular() {
+		irr = irregular
+	}
+
+	return SupposedVacation{
+		yearly:    yearly,
+		seniority: seniority,
+		irregular: irr,
+	}
+}
+
+func (s SupposedVacation) HumanRead() string {
+	total := s.yearly + s.seniority + s.irregular
+	return fmt.Sprintf("%d дней (%d + %d выслуга + %d НДС)", total, s.yearly, s.seniority, s.irregular)
+}

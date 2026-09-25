@@ -12,6 +12,8 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_active_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
+
 	"github.com/handsome-red/vacation-calculation/internal/config"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -43,8 +45,8 @@ type Container struct {
 	// ApproveVacationUseCase *approve_vacation.Handler
 
 	CreateVacationUseCase *create_vacation.Handler
-	GetUserVacationsUseCase *get_vacation_form.Handler
-	// GetVacationFormUseCase *get_vacation.Hander
+	GetUserVacationsUseCase  *get_user_vacations.Handler
+	GetVacationFormUseCase *get_vacation_form.Handler
 
 	// Use Cases - Queries (User)
 	GetUserUseCase        *get_user.Handler
@@ -75,7 +77,8 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	getActiveUsersUseCase := get_active_users.NewHandler(userRepo, log)
 
 	createVacationUseCase := create_vacation.NewHandler(vacationRepo)
-	getUserVacationsUseCase := get_vacation_form.NewHandler()
+	getUserVacationsUseCase := get_user_vacations.NewHandler(vacationRepo)
+	getVacationFormUseCase := get_vacation_form.NewHandler()
 
 	return &Container{
 		// Infrastructure
@@ -96,6 +99,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		DepartmentRepo:          departmentRepo,
 		CreateVacationUseCase:   createVacationUseCase,
 		GetUserVacationsUseCase: getUserVacationsUseCase,
+		GetVacationFormUseCase: getVacationFormUseCase,
 	}, nil
 }
 

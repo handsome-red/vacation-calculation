@@ -84,6 +84,7 @@ func (r *Router) registerRoutes() {
 	vacationHandler := handlers.NewVacationHandler(
 		r.container.CreateVacationUseCase,
 		r.container.GetUserVacationsUseCase,
+		r.container.GetVacationFormUseCase,
 		templates,
 		// r.container.GetVacationFormUseCase,
 		// r.logger,
@@ -120,7 +121,8 @@ func (r *Router) registerRoutes() {
 
 	// Vacation routes
 	// r.mux.HandleFunc("POST /api/v1/vacations", vacationHandler.CreateVacation)
-	r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations", vacationHandler.GetVacationForm)
+	r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations", vacationHandler.GetVacations)
+	r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations/new", vacationHandler.GetVacationForm)
 	r.mux.HandleFunc("POST /api/v1/users/{userId}/vacations", vacationHandler.CreateVacation)
 	// r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations", vacationHandler.GetUserVacations)
 	// r.mux.HandleFunc("POST /api/v1/vacations/{id}/approve", vacationHandler.ApproveVacation)

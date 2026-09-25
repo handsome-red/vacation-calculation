@@ -5,25 +5,54 @@ import (
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/get_vacation_form"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
+
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
 type VacationHandler struct {
 	createVacationUseCase *create_vacation.Handler
-	// getUserVacationsUseCase *get_user_vacations.Hanlder
+	getUserVacationsUseCase *get_user_vacations.Handler
 	getVacationFormUseCase  *get_vacation_form.Handler
 	templates *Templates
 }
 
 func NewVacationHandler(
 	createVacationUseCase *create_vacation.Handler,
+	getUserVacationsUseCase *get_user_vacations.Handler,
 	getVacationFormUseCase  *get_vacation_form.Handler,
 	templates               *Templates,
 ) *VacationHandler {
 	return &VacationHandler{
-		createVacationUseCase:  createVacationUseCase,
-		getVacationFormUseCase: getVacationFormUseCase,
-		templates:              templates,
+		createVacationUseCase:   createVacationUseCase,
+		getUserVacationsUseCase: getUserVacationsUseCase,
+		getVacationFormUseCase:  getVacationFormUseCase,
+		templates:               templates,
+	}
+}
+
+func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("user_id")
+	userID, err := user.ParseUserID(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	result, err := h.getUserVacationsUseCase.Handle(r.Context(), get_user_vacations.Query{
+		UserID: userID.String(),
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := map[string]any{
+		"UserID":   userID.String(),
+		"Vacations": result.Items,
+	}
+
+	if err := h.templates.Render(w, "vacations.html", data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 

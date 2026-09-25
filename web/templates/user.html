@@ -39,18 +39,9 @@
             </tr>
         </thead>
         <tbody>
-            {{range .Vacations}}
-            <tr>
-                <td>{{.Year}}</td>
-                <td>{{.Base}}</td>
-                <td>{{.Irregular}}</td>
-                <td>{{.Seniority}}</td>
-            </tr>
-            {{else}}
-            <tr>
-                <td colspan="4">Нет данных</td>
-            </tr>
-            {{end}}
+            <tr><th>Ежегодный отпуск</th>               <td>{{.Vacation.Base}}</td></tr>
+            <tr><th>За выслугу лет</th>                 <td>{{.Vacation.Irregular}}</td></tr>
+            <tr><th>Ненормированный рабочий день</th>   <td>{{.Vacation.Seniority}}</td></tr>
         </tbody>
     </table>
 
@@ -58,14 +49,13 @@
         <tbody>
             <tr><th>Сотрудник</th>                                      <td>{{.User.Initials}}</td></tr>
             <tr><th>Рабочий год</th>                                    <td>{{.User.WorkYear}}</td></tr>
-            <tr><th>Положено за год</th>                                <td>30 дней (30 + 0 выслуга + 0 НДС)</td></tr>
+            <tr><th>Положено за год</th>                                <td>{{.User.Supposed}}</td></tr>
             <tr><th>Заработано на текущую дату ({{.User.Today}})</th>   <td>2.5 дня</td></tr>
             <tr><th>Использовано в этом году</th>                       <td>0 дней</td></tr>
             <tr><th>Остаток</th>                                        <td>2.5 дня</td></tr>
             <tr><th>Предупреждения</th>                                 <td>нет</td></tr>
         </tbody>
     </table>
-
     <p><a href="/users">К списку</a></p>
 </body>
 

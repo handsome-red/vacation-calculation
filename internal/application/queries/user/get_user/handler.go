@@ -65,5 +65,12 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		Initials: u.Initials(),
 		Today:    now.UTC().Format("02.01.2006"),
 		WorkYear: u.HiredAt().WorkYear(now).String(),
+		Supposed: u.Supposed().HumanRead(),
+
+		Vacations : Vacations{
+			Base:      u.Supposed().Yearly(),
+			Irregular: u.Supposed().Irregular(),
+			Seniority: u.Supposed().Seniority(),
+		},
 	}, nil
 }

@@ -15,7 +15,7 @@ func (d Date) IsZero() bool {
 }
 
 func (d Date) Before(start Date) bool {
-	panic("unimplemented")
+	return d.Time().Before(start.Time())
 }
 
 func NewDate(y int, m time.Month, d int) (Date, error) {

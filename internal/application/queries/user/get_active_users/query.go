@@ -14,15 +14,17 @@ type Result struct {
 
 type UserListItem struct {
 	ID              string
+	Status	string
 	FirstName       string
 	LastName        string
 	MiddleName      string
 	BirthDate       string
 	Position        string
 	HiredAt         string
-	Department      string
-	District        string
+	DepartmentTitle string
+	DistrictTitle   string
 	WorkdayDuration int
 	Email           string
 	IsInvalid       bool
+	TotalExperience string
 }

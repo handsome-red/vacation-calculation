@@ -56,6 +56,16 @@ func (h HiredDate) WorkYear(now time.Time) WorkYear {
 	}
 }
 
+// TODO: Реализовать более элегантно
+func (w WorkYear) Year(now time.Time) int {
+	years := w.to.Year() - w.from.Year()
+	if w.from.AddDate(years, 0, 0).After(now) {
+		years--
+	}
+	
+	return years
+}
+
 func (w WorkYear) String() string {
 
 	f := w.from.UTC().Format("02.01.2006")

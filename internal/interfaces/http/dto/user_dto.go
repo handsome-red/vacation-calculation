@@ -49,9 +49,9 @@ type UserResponse struct {
 	Position   string `json:"position"`
 	HiredAt    string `json:"hired_at"`
 
-	DistrictCode    string `json:"district_code"`
+	// DistrictCode    string `json:"district_code"`
 	DistrictTitle   string `json:"district_title"`
-	DepartmentCode  string `json:"department_code"`
+	// DepartmentCode  string `json:"department_code"`
 	DepartmentTitle string `json:"department_title"`
 
 	WorkdayDuration int    `json:"workday_duration"`
