@@ -1,8 +1,11 @@
 package vacation
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
-const dateLayout = "02.01.2006"
+const dateLayout = "2006-01-02"
 
 type Date struct {
 	year  int
@@ -11,11 +14,15 @@ type Date struct {
 }
 
 func (d Date) IsZero() bool {
-	panic("unimplemented")
+	return d.year == 0 && d.month == 0 && d.day == 0
 }
 
 func (d Date) Before(start Date) bool {
 	return d.Time().Before(start.Time())
+}
+
+func (d Date) String() string {
+	return fmt.Sprintf("%d.%d.%d", d.day, d.month, d.year)
 }
 
 func NewDate(y int, m time.Month, d int) (Date, error) {
@@ -48,4 +55,11 @@ func ParseDate(s string) (Date, error) {
 		month: t.Month(),
 		day:   t.Day(),
 	}, nil
+}
+
+func (d Date) ISO() string {
+	if d.IsZero() {
+		return ""
+	}
+	return fmt.Sprintf("%04d-%02d-%02d", d.year, int(d.month), d.day)
 }

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Создать новый праздник</title>
+	<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+	<h1>Создать новый праздник</h1>
+
+	{{if .Errors}}
+	<ul style="color:#b00">
+		{{range .Errors}}<li>{{.}}</li>{{end}}
+	</ul>
+	{{end}}
+
+	<form method="POST" action="/admin/holidays">
+		<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+		<p>
+			<label>Дата праздника<br>
+				<input type="date" name="date" value="{{.Form.Date}}" required>
+			</label>
+		</p>
+
+		<p>
+			<label>Название<br>
+				<input type="text" name="name" value="{{.Form.Name}}" required>
+			</label>
+		</p>
+
+		<p>
+			<button type="submit">Создать</button>
+		</p>
+	</form>
+</body>
+</html>

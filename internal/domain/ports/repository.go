@@ -7,7 +7,6 @@ import (
 
 type UserCommandRepository interface {
 	Save(ctx context.Context, user *user.User) error
-	// Update(ctx context.Context, user *user.User) error
 	Delete(ctx context.Context, id user.UserID) error
 }
 

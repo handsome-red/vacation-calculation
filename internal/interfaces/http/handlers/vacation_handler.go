@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
-	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/get_vacation_form"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -32,7 +32,7 @@ func NewVacationHandler(
 }
 
 func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("user_id")
+	id := r.PathValue("userId")
 	userID, err := user.ParseUserID(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -48,7 +48,7 @@ func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
 
 	data := map[string]any{
 		"UserID":   userID.String(),
-		"Vacations": result.Items,
+		"Vacations": result.Vacations,
 	}
 
 	if err := h.templates.Render(w, "vacations.html", data); err != nil {
@@ -85,7 +85,7 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err := h.getVacationFormUseCase.Handle(r.Context(), get_vacation_form.Query{
+	result, err := h.getVacationFormUseCase.Handle(r.Context(), get_vacation_form.Query{
 		UserID: userID,
 	})
 	if err != nil {
@@ -96,6 +96,7 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 	data := map[string]any{
 		"Form":      create_vacation.Command{UserID: userID},
 		"UserID":    userID,
+		"Calendar": result,
 	}
 
 	if err := h.templates.Render(w, "vacation_form.html", data); err != nil {

@@ -1,5 +1,33 @@
-<!-- web/templates/vacations.html -->
-{{define "content"}}
-{{end}}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Vacations list</title>
+</head>
+<body>
+    <h1>Список отпусокв сотрудника</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Дата начала отпуска</th>
+                <th>Дата конца отпуска</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Vacations}}
+            <tr>
+                <td>{{.StartDate}}</td>
+                <td>{{.EndDate}}</td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="2">Нет отпусков</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</body>
 
-{{template "base.html" .}}
+
+    
+</html>

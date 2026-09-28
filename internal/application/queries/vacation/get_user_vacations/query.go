@@ -6,8 +6,8 @@ type Query struct {
 }
 
 type Vacations struct {
-	startDate string
-	endDate string
+	StartDate string
+	EndDate string
 }
 
 type Result struct {

@@ -13,7 +13,8 @@ var (
 	ErrEndDateBeforeStart = errors.New("end date is before start date")
 	ErrStatusInvalid      = errors.New("status is invalid")
 
-
+	ErrHolidayDateEmpty = errors.New("holiday date is empty")
+	ErrHolidayNameEmpty	= errors.New("holiday name is empty")
 
 	ErrVacationNotRejectable = errors.New("vacation is not rejectable")
 	ErrVacationNotEditable   = errors.New("vacation is not editable")

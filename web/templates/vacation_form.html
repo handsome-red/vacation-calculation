@@ -13,7 +13,7 @@
 	</ul>
 	{{end}}
 
-	<form method="POST" action="/api/v1/users/{{.UserID}}/vacations">
+	<form method="POST" action="/admin/holidays">
 		<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
 		<p>

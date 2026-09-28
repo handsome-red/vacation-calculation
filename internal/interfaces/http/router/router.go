@@ -77,8 +77,8 @@ func (r *Router) registerRoutes() {
 		r.container.ActivateUserUseCase,
 		r.container.GetActiveUsersUseCase,
 		r.container.GetRegisterFormUseCase,
-		// r.logger,
 		templates,
+		// r.logger,
 	)
 
 	vacationHandler := handlers.NewVacationHandler(
@@ -86,12 +86,18 @@ func (r *Router) registerRoutes() {
 		r.container.GetUserVacationsUseCase,
 		r.container.GetVacationFormUseCase,
 		templates,
-		// r.container.GetVacationFormUseCase,
 		// r.logger,
 	)
 
+	calendarHandler := handlers.NewCalendarHandler(
+		r.container.GetCalendarUseCase,
+		r.container.NewHolidayUseCase,
+		r.container.NewHolidayFormUseCase,
+		templates,
+		r.logger,
+	)
 	// calendarHandler := handlers.NewCalendarHandlers(
-	// 	r.container.
+	// 	r.container.д
 	// )
 
 	r.mux.HandleFunc("GET /{$}", homeHandler.Home)
@@ -125,6 +131,13 @@ func (r *Router) registerRoutes() {
 	r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations/new", vacationHandler.GetVacationForm)
 	r.mux.HandleFunc("POST /api/v1/users/{userId}/vacations", vacationHandler.CreateVacation)
 	// r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations", vacationHandler.GetUserVacations)
+
+	// Calendar routes
+	r.mux.HandleFunc("GET /api/v1/calendar", calendarHandler.GetCalendar)
+
+	r.mux.HandleFunc("GET /api/v1/holidays/new", calendarHandler.GetHolidayForm)
+	r.mux.HandleFunc("POST /admin/holidays", calendarHandler.NewHoliday)
+
 	// r.mux.HandleFunc("POST /api/v1/vacations/{id}/approve", vacationHandler.ApproveVacation)
 	// r.mux.HandleFunc("POST /api/v1/vacations/{id}/reject", vacationHandler.RejectVacation)
 	// r.mux.HandleFunc("DELETE /api/v1/vacations/{id}", vacationHandler.CancelVacation)

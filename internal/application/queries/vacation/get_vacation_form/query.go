@@ -4,9 +4,5 @@ type Query struct {
 	UserID string
 }
 
-
-type Command struct {
-}
-
 type Result struct {
 }

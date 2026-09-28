@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Календарь {{.Year}}</title>
+	<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <h1>Календарь {{.Year}}</h1>
+
+    <nav>
+        <a href="/calendar?year={{.PrevYear}}">{{.PrevYear}}</a>
+        <a href="/calendar?year={{.NextYear}}">{{.NextYear}}</a>
+    </nav>
+
+    <div id="calendar"></div>
+
+    <hr>
+
+    <h2>Праздники</h2>
+    <ul id="holidays-list"></ul>
+
+    <script type="application/json" id="calendar-data">
+        {"year": {{.Year}}, "holidays": {{.HolidaysJSON}}}
+    </script>
+    <script src="/static/js/calendar.js" defer></script>
+</body>
+</html>

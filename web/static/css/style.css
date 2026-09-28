@@ -89,3 +89,44 @@ th, td {
   padding: 4px 8px;
   text-align: left;
 }
+
+/* Календарь */
+
+#calendar {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 20px;
+}
+
+.month {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+.month caption {
+	font-weight: bold;
+	padding: 5px;
+	text-align: left;
+}
+
+.month th, .month td {
+	border: 1px solid #ddd;
+	padding: 5px;
+	text-align: center;
+	width: 2em;
+}
+
+.month th {
+	background: #f5f5f5;
+}
+
+.month td.holiday {
+	background: #ffd5d5;
+	color: #b00;
+	font-weight: bold;
+	cursor: help;
+}
+
+#holidays-list {
+	columns: 2;
+}
