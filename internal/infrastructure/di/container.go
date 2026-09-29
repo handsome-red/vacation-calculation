@@ -47,16 +47,16 @@ type Container struct {
 	// CreateVacationUseCase  *create_vacation.Handler
 	// ApproveVacationUseCase *approve_vacation.Handler
 
-	CreateVacationUseCase *create_vacation.Handler
-	GetUserVacationsUseCase  *get_user_vacations.Handler
-	GetVacationFormUseCase *get_vacation_form.Handler
+	CreateVacationUseCase   *create_vacation.Handler
+	GetUserVacationsUseCase *get_user_vacations.Handler
+	GetVacationFormUseCase  *get_vacation_form.Handler
 
 	// Use Cases - Queries (User)
 	GetUserUseCase        *get_user.Handler
 	GetActiveUsersUseCase *get_active_users.Handler
-	GetCalendarUseCase *get_calendar.Handler
+	GetCalendarUseCase    *get_calendar.Handler
 	NewHolidayFormUseCase *new_holiday_form.Handler
-	NewHolidayUseCase *new_holiday.Handler
+	NewHolidayUseCase     *new_holiday.Handler
 }
 
 func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Container, error) {
@@ -110,10 +110,10 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		DepartmentRepo:          departmentRepo,
 		CreateVacationUseCase:   createVacationUseCase,
 		GetUserVacationsUseCase: getUserVacationsUseCase,
-		GetVacationFormUseCase: getVacationFormUseCase,
-		GetCalendarUseCase: getCalendarUseCase,
-		NewHolidayFormUseCase: newHolidayFormUseCase,
-		NewHolidayUseCase: newHolidayUseCase,
+		GetVacationFormUseCase:  getVacationFormUseCase,
+		GetCalendarUseCase:      getCalendarUseCase,
+		NewHolidayFormUseCase:   newHolidayFormUseCase,
+		NewHolidayUseCase:       newHolidayUseCase,
 	}, nil
 }
 

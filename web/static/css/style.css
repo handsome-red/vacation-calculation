@@ -9,7 +9,6 @@ body {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
     padding: 20px;
-    display: flex;           /* Включаем flexbox */
     justify-content: center;  /* Центрируем по горизонтали */
     align-items: center;      /* Центрируем по вертикали */
 }
@@ -129,4 +128,77 @@ th, td {
 
 #holidays-list {
 	columns: 2;
+}
+
+.user-page {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 20px;
+	margin-bottom: 24px;
+}
+
+.card {
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	padding: 16px;
+}
+
+.card h2 {
+	margin-top: 0;
+	margin-bottom: 12px;
+	font-size: 1.1rem;
+}
+
+.card table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.card th, .card td {
+	padding: 6px 8px;
+	text-align: left;
+	border-bottom: 1px solid #eee;
+}
+
+.card th {
+	font-weight: 500;
+	color: #555;
+	width: 40%;
+}
+
+/* Раскладка блоков */
+.card--profile     { grid-column: 1; grid-row: 1; }   /* слева сверху */
+.card--entitlement { grid-column: 2; grid-row: 1; }   /* справа сверху */
+.card--balance     { grid-column: 1 / -1; }           /* на всю ширину снизу */
+
+.card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.btn {
+	display: inline-block;
+	padding: 6px 12px;
+	background: #0a58ca;
+	color: #fff;
+	text-decoration: none;
+	border-radius: 4px;
+	font-size: 0.9rem;
+	white-space: nowrap;
+}
+
+/* Адаптив */
+@media (max-width: 768px) {
+	.user-page {
+		grid-template-columns: 1fr;
+	}
+	.card--profile,
+	.card--entitlement,
+	.card--balance {
+		grid-column: auto;
+		grid-row: auto;
+	}
 }

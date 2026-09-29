@@ -28,11 +28,20 @@ func NewBirthDate(s string) (BirthDate, error) {
 	return BirthDate{value: t}, nil
 }
 
-func (b BirthDate) String() string {
+// Fromat 2006-01-02
+func (b BirthDate) ISO() string {
 	if b.value.IsZero() {
 		return ""
 	}
 	return b.value.Format("2006-01-02")
+}
+
+// Fromat 02.01.2006
+func (b BirthDate) String() string {
+	if b.value.IsZero() {
+		return ""
+	}
+	return b.value.Format("02.01.2006")
 }
 
 func (b BirthDate) HumanRead() string {

@@ -4,10 +4,15 @@ type Query struct {
 	UserID string
 }
 
-type Vacations struct {
-	Base int
+type VacationStat struct {
+	Year      int
+	Base      int
 	Irregular int
 	Seniority int
+}
+
+type VacationBlock struct {
+	Stats []VacationStat
 }
 
 type Result struct {
@@ -33,6 +38,7 @@ type Result struct {
 	Today    string
 	WorkYear string
 	Supposed string
+	Earned   float32
 
-	Vacations Vacations
+	Vacations []VacationStat
 }

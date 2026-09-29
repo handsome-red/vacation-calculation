@@ -28,13 +28,13 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	for _, h := range holidays {
 		items = append(items, holidayItem{
 			Name: h.Name(),
-			Date: h.Date().String(),
+			Date: h.Date().ISO(),
 		})
-	} 
+	}
 
 	raw, err := json.Marshal(items)
 	if err != nil {
-		return nil, fmt.Errorf("marhal holidays: %w", err)
+		return nil, fmt.Errorf("marshal holidays: %w", err)
 	}
 
 	return &Result{

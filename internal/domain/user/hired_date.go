@@ -37,7 +37,7 @@ func (h HiredDate) String() string {
 	if h.value.IsZero() {
 		return ""
 	}
-	return h.value.UTC().Format("2006-01-02")
+	return h.value.UTC().Format("02.01.2006")
 }
 
 // WorkYear - возвращает строковое представление рабочего года сотрудника
@@ -62,7 +62,7 @@ func (w WorkYear) Year(now time.Time) int {
 	if w.from.AddDate(years, 0, 0).After(now) {
 		years--
 	}
-	
+
 	return years
 }
 
