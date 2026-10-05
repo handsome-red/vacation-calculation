@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
-	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
+	// "github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type UserCommandRepository interface {
@@ -22,6 +22,4 @@ type UserRepository interface {
 	UserQueryRepository
 }
 
-type ShiftRepository interface {
-	ListByUser(id user.UserID) ([]vacation.Shift, error)
-}
+

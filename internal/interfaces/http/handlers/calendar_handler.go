@@ -58,7 +58,7 @@ func (h *CalendarHandler) GetCalendar(w http.ResponseWriter, r *http.Request) {
 		"NextYear":     year + 1,
 		"HolidaysJSON": template.JS(result.HolidaysJSON),
 	}
-	if err := h.templates.Render(w, "calendar.html", data); err != nil {
+	if err := h.templates.Render(w, "base.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

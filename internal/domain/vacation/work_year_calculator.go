@@ -4,16 +4,7 @@ import "time"
 
 type WorkYearCalculator struct{}
 
-type Shift struct {
-	from, to time.Time
-	reason   string
-}
-
 func NewWorkYearCalculator() *WorkYearCalculator { return &WorkYearCalculator{} }
-
-func (s Shift) Days() int {
-	return s.to.Day() - s.from.Day()
-}
 
 type YearStat struct {
 	Year      int
@@ -34,23 +25,25 @@ func FindYearStat(start, end time.Time, experience int) []YearStat {
 	return result
 }
 
+type Interval struct{
+	from, to time.Time
+}
+
 func (c WorkYearCalculator) Calculate(
-	start time.Time,
-	end time.Time,
-	shifts []Shift,
-) (from, to time.Time) {
-	from = start
-	for !end.Before(from.AddDate(1, 0, 0)) {
-		from = from.AddDate(1, 0, 0)
+	hiredAt time.Time,
+	now time.Time,
+	interval []Interval,
+) []Interval {
+	if !hiredAt.Before(now) {
+		return nil
 	}
 
-	to = from.AddDate(1, 0, 0)
-	for _, shift := range shifts {
-		if !shift.from.Before(from) && !shift.to.After(to) {
-			diff := to.Sub(from)
-			to = to.Add(diff)
-		}
-	}
+	result := make([]Interval, 0)
+	// for start := hiredAt; start.Before(now); {
+	// 	end := start.AddDate(1, 0, 0)
 
-	return from, to
+	// 	if 
+	// }
+
+	return result
 }

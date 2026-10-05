@@ -22,6 +22,11 @@ body {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
+юcontent {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 20px 32px;
+}
 label {
     color: #555;
     margin-bottom: 8px;
@@ -58,7 +63,7 @@ input, select {
 }
 
 .sidebar {
-    width: 280px;
+    width: 200px;
     background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     color: white;
     padding: 30px 20px;

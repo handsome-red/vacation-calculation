@@ -185,7 +185,7 @@ func (h *UserHandler) GetActiveUsers(w http.ResponseWriter, r *http.Request) {
 		"Users": resp,
 	}
 
-	if err := h.templates.Render(w, "users.html", data); err != nil {
+	if err := h.templates.Render(w, "base.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

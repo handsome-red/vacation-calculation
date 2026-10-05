@@ -1,12 +1,6 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Календарь {{.Year}}</title>
-	<link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
+{{define "title"}}Календарь{{end}}
+
+{{define "content"}}
     <h1>Календарь {{.Year}}</h1>
 
     <nav>
@@ -25,5 +19,4 @@
         {"year": {{.Year}}, "holidays": {{.HolidaysJSON}}}
     </script>
     <script src="/static/js/calendar.js" defer></script>
-</body>
-</html>
+{{end}}

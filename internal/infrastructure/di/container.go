@@ -71,6 +71,8 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	var userRepo ports.UserRepository = sqlite.NewUserRepository(db)
 	var districtRepo user.DistrictRepository = sqlite.NewDistrictRepository(db)
 	var departmentRepo user.DepartmentRepository = sqlite.NewDepartmentRepository(db)
+	var shiftRepo vacation.ShiftRepository = sqlite.NewShiftRepository(db)
+
 
 	var vacationRepo vacation.VacationRepository = sqlite.NewVacationRepository(db)
 	var holidayRepo vacation.HolidayRepository = sqlite.NewHolidayRepository(db)
@@ -80,7 +82,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	activateUserUseCase := activate_user.NewHandler(userRepo, log)
 	getRegisterFormUseCase := register_form.NewHandler(districtRepo, departmentRepo)
 
-	getUserUseCase := get_user.NewHandler(userRepo, log)
+	getUserUseCase := get_user.NewHandler(userRepo, shiftRepo, log)
 	getActiveUsersUseCase := get_active_users.NewHandler(userRepo, log)
 
 	createVacationUseCase := create_vacation.NewHandler(vacationRepo)
