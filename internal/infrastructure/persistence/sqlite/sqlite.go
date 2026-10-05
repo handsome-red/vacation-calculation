@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/jmoiron/sqlx"
 )
@@ -18,7 +20,7 @@ func NewUserRepository(db *sqlx.DB) *userRepository {
 	return &userRepository{db: db}
 }
 
-var _ user.UserRepository = (*userRepository)(nil)
+var _ ports.UserRepository = (*userRepository)(nil)
 
 const userColumns = `
 	u.id, u.status, u.last_name, u.first_name, u.middle_name,
@@ -101,23 +103,38 @@ func (ur *userRepository) FindByID(ctx context.Context, userID user.UserID) (*us
 	return row.toDomain()
 }
 
-func (ur *userRepository) FindAll(ctx context.Context) ([]*user.User, error) {
-	var rows []userRow
-	query := `SELECT ` + userColumns + userFrom + ` ORDER BY u.last_name, u.first_name, u.middle_name`
+func (ur *userRepository) FindUsers(ctx context.Context, q ports.Query) ([]*user.User, int, error) {
+	where, args := buildWhere(q.Filters)
 
-	if err := ur.db.SelectContext(ctx, &rows, query); err != nil {
-		return nil, fmt.Errorf("querying users: %w", err)
+	var total int
+	countSQL := "SELECT COUNT(*)" + userFrom + where
+	if err := ur.db.GetContext(ctx, &total, countSQL, args...); err != nil {
+		return nil, 0, fmt.Errorf("count: %w", err)
+	}
+
+	dataArgs := append([]any{}, args...)
+	dataArgs = append(dataArgs, q.Size, (q.Page-1)*q.Size)
+
+	dataSQL := "SELECT " + userColumns + userFrom + where + `
+        ORDER BY u.last_name, u.first_name, u.middle_name
+        LIMIT ? OFFSET ?
+    `
+
+	var rows []userRow
+	if err := ur.db.SelectContext(ctx, &rows, dataSQL, dataArgs...); err != nil {
+		return nil, 0, fmt.Errorf("querying users: %w", err)
 	}
 
 	users := make([]*user.User, 0, len(rows))
-	for _, row := range rows {
-		u, err := row.toDomain()
+	for _, r := range rows {
+		u, err := r.toDomain()
 		if err != nil {
-			return nil, fmt.Errorf("converting user row %q: %w", row.ID, err)
+			return nil, 0, fmt.Errorf("converting user row %q: %w", r.ID, err)
 		}
 		users = append(users, u)
 	}
-	return users, nil
+
+	return users, total, nil
 }
 
 func (ur *userRepository) Delete(ctx context.Context, userID user.UserID) error {
@@ -145,6 +162,45 @@ func (ur *userRepository) ExistsByEmail(ctx context.Context, email string) (bool
 		return false, fmt.Errorf("checking email: %w", err)
 	}
 	return exists, nil
+}
+
+func buildWhere(f ports.UserFilter) (string, []any) {
+	var (
+		conditions []string
+		args       []any
+	)
+
+	add := func(cond string, val any) {
+		conditions = append(conditions, cond)
+		args = append(args, val)
+	}
+
+	if f.Status != "" {
+		add("status = ?", f.Status)
+	}
+	if f.LastName != "" {
+		add("LOWER(last_name) LIKE LOWER(?)", "%"+f.LastName+"%")
+	}
+	if f.FirstName != "" {
+		add("LOWER(first_name) LIKE LOWER(?)", "%"+f.FirstName+"%")
+	}
+	if f.MiddleName != "" {
+		add("LOWER(middle_name) LIKE LOWER(?)", "%"+f.MiddleName+"%")
+	}
+	if f.Email != "" {
+		add("LOWER(email) LIKE LOWER(?)", "%"+f.Email+"%")
+	}
+	if f.DistrictTitle != "" {
+		add("district_title = ?", f.DistrictTitle)
+	}
+	if f.DepartmentTitle != "" {
+		add("department_title = ?", f.DepartmentTitle)
+	}
+
+	if len(conditions) == 0 {
+		return "", nil
+	}
+	return " WHERE " + strings.Join(conditions, " AND "), args
 }
 
 func boolToInt(b bool) int {

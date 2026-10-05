@@ -8,7 +8,7 @@ import (
 
 const (
 	BaseAnnualDays = 30
-	IggerularDays  = 3
+	IrregularDays  = 3
 )
 
 // Количество дней отпуска за выслугу лет
@@ -21,15 +21,14 @@ func baseAllowance() int {
 func seniorityAllowance(hired user.HiredDate, now time.Time) int {
 
 	years := fullYears(hired.Time(), now)
-
 	switch {
 	case years < 1:
 		return 0
-	case years > 0 && years < 5:
+	case years < 5:
 		return 1
-	case years > 5 && years < 10:
+	case years < 10:
 		return 5
-	case years > 10 && years < 15:
+	case years < 15:
 		return 7
 	default:
 		return 10

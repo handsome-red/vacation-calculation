@@ -1,33 +1,31 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Vacations list</title>
-</head>
-<body>
-    <h1>Список отпусокв сотрудника</h1>
+{{define "title"}}Список отпусков{{end}}
+
+{{define "content"}}
+<div class="container">
+    <h1>Список отпусков сотрудника</h1>
     <table>
         <thead>
             <tr>
+                <th>Индикатор</th>
                 <th>Дата начала отпуска</th>
                 <th>Дата конца отпуска</th>
+                <th>Статус</th>
             </tr>
         </thead>
         <tbody>
             {{range .Vacations}}
             <tr>
+                <td>{{.Color}}</td>
                 <td>{{.StartDate}}</td>
                 <td>{{.EndDate}}</td>
+                <td>{{.Status}}</td>
             </tr>
             {{else}}
             <tr>
-                <td colspan="2">Нет отпусков</td>
+                <td colspan="4">Нет отпусков</td>
             </tr>
             {{end}}
         </tbody>
     </table>
-</body>
-
-
-    
-</html>
+</div>
+{{end}}

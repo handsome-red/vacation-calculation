@@ -9,9 +9,10 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/deactivate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
-	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_active_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/list_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
+	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/dto"
 )
 
@@ -20,7 +21,7 @@ type UserHandler struct {
 	getUserUseCase          *get_user.Handler
 	deactivateUseCase       *deactivate_user.Handler
 	activateUseCase         *activate_user.Handler
-	getActiveUsersUseCase   *get_active_users.Handler
+	getActiveUsersUseCase   *list_users.Handler
 	registerFormUserUseCase *register_form.Handler
 	templates               *Templates
 }
@@ -30,7 +31,7 @@ func NewUserHandler(
 	getUserUseCase *get_user.Handler,
 	deactivateUseCase *deactivate_user.Handler,
 	activateUseCase *activate_user.Handler,
-	getActiveUsersUseCase *get_active_users.Handler,
+	getActiveUsersUseCase *list_users.Handler,
 	registerFormUserUseCase *register_form.Handler,
 	templates *Templates,
 ) *UserHandler {
@@ -77,7 +78,6 @@ func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		FirstName:       r.FormValue("first_name"),
 		LastName:        r.FormValue("last_name"),
 		MiddleName:      r.FormValue("middle_name"),
-		Status:          r.FormValue("status"),
 		BirthDate:       r.FormValue("birth_date"),
 		Position:        r.FormValue("position"),
 		HiredAt:         r.FormValue("hired_at"),
@@ -110,7 +110,7 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	// vacation, err := h.countVacation.Hanlde(r.Context())
 
 	data := map[string]any{
-		"User": result,
+		"User":     result,
 		"Vacation": result.Vacations,
 	}
 
@@ -149,10 +149,31 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *UserHandler) GetActiveUsers(w http.ResponseWriter, r *http.Request) {
-	query := get_active_users.Query{
-		Page: 1,
-		Size: 1,
+func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	filters := ports.UserFilter{
+		Status:          q.Get("status"),
+		FirstName:       q.Get("first_name"),
+		LastName:        q.Get("last_name"),
+		MiddleName:      q.Get("middle_name"),
+		BirthDate:       q.Get("birth_date"),
+		Position:        q.Get("position"),
+		HiredAt:         q.Get("hired_at"),
+		Email:           q.Get("email"),
+		DistrictTitle:   q.Get("district_title"),
+		DepartmentTitle: q.Get("department_title"),
+		TotalExperience: q.Get("total_experience"),
+	}
+
+	page, _ := strconv.Atoi(q.Get("page"))
+
+	size, _ := strconv.Atoi(q.Get("size"))
+
+	query := ports.Query{
+		Page:    page,
+		Size:    size,
+		Filters: filters,
 	}
 
 	result, err := h.getActiveUsersUseCase.Handle(r.Context(), query)
@@ -172,9 +193,7 @@ func (h *UserHandler) GetActiveUsers(w http.ResponseWriter, r *http.Request) {
 			BirthDate:       u.BirthDate,
 			Position:        u.Position,
 			HiredAt:         u.HiredAt,
-			WorkdayDuration: u.WorkdayDuration,
 			Email:           u.Email,
-			IsInvalid:       u.IsInvalid,
 			DistrictTitle:   u.DistrictTitle,
 			DepartmentTitle: u.DepartmentTitle,
 			TotalExperience: u.TotalExperience,
@@ -182,7 +201,11 @@ func (h *UserHandler) GetActiveUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]any{
-		"Users": resp,
+		"Users":   resp,
+		"Filters": filters,
+		"Page":    result.Page,
+		"Size":    result.Size,
+		"Total":   result.Total,
 	}
 
 	if err := h.templates.Render(w, "base.html", data); err != nil {

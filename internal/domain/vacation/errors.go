@@ -14,7 +14,9 @@ var (
 	ErrStatusInvalid      = errors.New("status is invalid")
 
 	ErrHolidayDateEmpty = errors.New("holiday date is empty")
-	ErrHolidayNameEmpty	= errors.New("holiday name is empty")
+	ErrHolidayNameEmpty = errors.New("holiday name is empty")
+
+	ErrStatusNotFound = errors.New("status not found")
 
 	ErrVacationNotRejectable = errors.New("vacation is not rejectable")
 	ErrVacationNotEditable   = errors.New("vacation is not editable")

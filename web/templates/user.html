@@ -12,7 +12,11 @@
     <h1>{{.User.LastName}} {{.User.FirstName}} {{.User.MiddleName}}</h1>
     <div class="user-page">
         <section class="card card--profile">
-            <h2>Общая статистика</h2>
+            <div class="card-header">
+                <h2>Общая статистика</h2>
+                <a class="btn" href="/api/v1/users/{{.User.ID}}/vacations/new">Редактировать</a>
+            </div>
+
             <table>
                 <tbody>
                     <tr><th>Статус</th>                             <td>{{.User.Status}}</td></tr>
@@ -47,13 +51,15 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{range .Vacation.Stats}}
+                    {{range .Vacation}}
                     <tr>
                         <td>{{.Year}}</td>
                         <td>{{.Base}}</td>
                         <td>{{.Irregular}}</td>
                         <td>{{.Seniority}}</td>
                     </tr>
+                    {{else}}
+                    <tr><td colspan="4">Отпусков пока нет</td></tr>
                     {{end}}
                 </tbody>
             </table>
@@ -71,6 +77,9 @@
                 </tbody>
             </table>
         </section>
+    </div>
+    <div class="container">
+        <a class="btn" href="/api/v1/users/{{.User.ID}}/vacations">Посмотреть отпуска</a>
     </div>
     <p><a href="/users">К списку</a></p>
 </body>

@@ -75,7 +75,7 @@ func (r *Router) registerRoutes() {
 		r.container.GetUserUseCase,
 		r.container.DeactivateUserUseCase,
 		r.container.ActivateUserUseCase,
-		r.container.GetActiveUsersUseCase,
+		r.container.ListUsersUseCase,
 		r.container.GetRegisterFormUseCase,
 		templates,
 		// r.logger,
@@ -86,7 +86,7 @@ func (r *Router) registerRoutes() {
 		r.container.GetUserVacationsUseCase,
 		r.container.GetVacationFormUseCase,
 		templates,
-		// r.logger,
+		r.logger,
 	)
 
 	calendarHandler := handlers.NewCalendarHandler(
@@ -120,7 +120,7 @@ func (r *Router) registerRoutes() {
 	// r.mux.HandleFunc("PUT /api/v1/users/{id}/email", userHandler.ChangeEmail)
 	r.mux.HandleFunc("DELETE /api/v1/users/{id}", userHandler.DeactivateUser)
 	// r.mux.HandleFunc("POST /api/v1/users/{id}/activate", userHandler.ActivateUser)
-	r.mux.HandleFunc("GET /api/v1/users", userHandler.GetActiveUsers)
+	r.mux.HandleFunc("GET /api/v1/users", userHandler.ListUsers)
 
 	// Calendar
 	// r.mux.HandleFunc("GET /api/v1/calendar", calendarHandler.GetCalendar)

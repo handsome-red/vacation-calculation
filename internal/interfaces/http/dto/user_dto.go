@@ -16,26 +16,20 @@ type RegisterUserRequest struct {
 
 	DistrictCode   string `json:"district_code"   validate:"required"`
 	DepartmentCode string `json:"department_code" validate:"required"`
-
-	WorkdayDuration int  `json:"workday_duration" validate:"required,min=1,max=1440"`
-	IsInvalid       bool `json:"is_invalid"`
 }
 
 func (r RegisterUserRequest) ToCommand() register_user.Command {
 	return register_user.Command{
-		Email:           r.Email,
-		Password:        r.Password,
-		FirstName:       r.FirstName,
-		LastName:        r.LastName,
-		MiddleName:      r.MiddleName,
-		Status:          r.Status,
-		BirthDate:       r.BirthDate,
-		Position:        r.Position,
-		HiredAt:         r.HiredAt,
-		DistrictCode:    r.DistrictCode,
-		DepartmentCode:  r.DepartmentCode,
-		WorkdayDuration: r.WorkdayDuration,
-		IsInvalid:       r.IsInvalid,
+		Email:          r.Email,
+		Password:       r.Password,
+		FirstName:      r.FirstName,
+		LastName:       r.LastName,
+		MiddleName:     r.MiddleName,
+		BirthDate:      r.BirthDate,
+		Position:       r.Position,
+		HiredAt:        r.HiredAt,
+		DistrictCode:   r.DistrictCode,
+		DepartmentCode: r.DepartmentCode,
 	}
 }
 
@@ -50,12 +44,10 @@ type UserResponse struct {
 	HiredAt    string `json:"hired_at"`
 
 	// DistrictCode    string `json:"district_code"`
-	DistrictTitle   string `json:"district_title"`
+	DistrictTitle string `json:"district_title"`
 	// DepartmentCode  string `json:"department_code"`
 	DepartmentTitle string `json:"department_title"`
 
-	WorkdayDuration int    `json:"workday_duration"`
 	Email           string `json:"email"`
-	IsInvalid       bool   `json:"is_invalid"`
 	TotalExperience string `json:"total_experience,omitempty"`
 }

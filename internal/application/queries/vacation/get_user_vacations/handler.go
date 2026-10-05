@@ -9,11 +9,11 @@ import (
 )
 
 type Handler struct {
-	vacationRepo  vacation.VacationRepository
+	vacationRepo vacation.VacationRepository
 }
 
 func NewHandler(
-	vacationRepo  vacation.VacationRepository,
+	vacationRepo vacation.VacationRepository,
 ) *Handler {
 
 	return &Handler{
@@ -27,17 +27,19 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse userID: %w", err)
 	}
-	
+
 	vacations, err := h.vacationRepo.FindByUserID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("find by userID: %w", err)
 	}
 
-	result := make([]Vacations, 0 ,len(vacations))
+	result := make([]Vacations, 0, len(vacations))
 	for _, v := range vacations {
 		result = append(result, Vacations{
-			StartDate: v.StartDate().Time().GoString(), // TODO
-			EndDate: v.EndDate().Time().GoString(), // TODO
+			Color:     0,
+			StartDate: v.StartDate().String(),
+			EndDate:   v.EndDate().String(),
+			Status:    v.Status().String(),
 		})
 	}
 

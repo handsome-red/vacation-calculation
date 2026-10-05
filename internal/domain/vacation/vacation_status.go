@@ -22,13 +22,22 @@ var vacationStatusMap = map[VacationStatus]string{
 	StatusDraft:     "Черновик",
 	StatusApproved:  "Принято",
 	StatusRejected:  "Отказано",
-	StatusCancelled: "Подтвержден",
+	StatusCancelled: "Отменён",
+	StatusRequested: "Запрошен",
 }
 
 func NewVacationStatus(s string) (VacationStatus, error) {
-	v := VacationStatus(strings.ToLower(strings.TrimSpace(s)))
+	v := VacationStatus(strings.ToUpper(strings.TrimSpace(s)))
 	if !v.isValid() {
 		return StatusUnknown, ErrStatusInvalid
+	}
+	return v, nil
+}
+
+func ParseStatus(s string) (VacationStatus, error) {
+	v := VacationStatus(strings.ToUpper(strings.TrimSpace(s)))
+	if !v.isValid() {
+		return StatusUnknown, ErrStatusNotFound
 	}
 	return v, nil
 }
@@ -40,4 +49,8 @@ func (v VacationStatus) isValid() bool {
 
 func (v VacationStatus) String() string {
 	return vacationStatusMap[v]
+}
+
+func (v VacationStatus) ISO() string {
+	return string(v)
 }

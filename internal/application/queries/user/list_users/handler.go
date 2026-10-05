@@ -1,4 +1,4 @@
-package get_active_users
+package list_users
 
 import (
 	"context"
@@ -22,7 +22,7 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
+func (h *Handler) Handle(ctx context.Context, query ports.Query) (*Result, error) {
 	// Дефолтные значения
 	if query.Page < 1 {
 		query.Page = 1
@@ -32,18 +32,18 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	}
 
 	// Получаем активных пользователей
-	users, err := h.userRepo.FindAll(ctx)
+	users, total, err := h.userRepo.FindUsers(ctx, query)
 	if err != nil {
-		h.logger.Error(ctx, "failed to get active users", "error", err)
+		h.logger.Error(ctx, "failed to get users", "error", err)
 		return nil, fmt.Errorf("failed to get users: %w", err)
 	}
 
 	// Формируем результат
 	result := &Result{
-		Users:      make([]UserListItem, 0, len(users)),
-		TotalCount: len(users),
-		Page:       query.Page,
-		PageSize:   query.Size,
+		Users: make([]UserListItem, 0, len(users)),
+		Total: total,
+		Page:  query.Page,
+		Size:  query.Size,
 	}
 
 	for _, u := range users {
@@ -54,7 +54,7 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 			FirstName:       u.FirstName(),
 			LastName:        u.LastName(),
 			MiddleName:      u.MiddleName(),
-			BirthDate:       u.BirthDate().HumanRead(),
+			BirthDate:       u.BirthDate().String(),
 			Position:        u.Position().Title(),
 			HiredAt:         u.HiredAt().String(),
 			DepartmentTitle: u.Department().Title,

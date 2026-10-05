@@ -46,7 +46,6 @@ type UserParams struct {
 
 func NewUser(
 	id UserID,
-	status Status,
 	lastName string,
 	firstName string,
 	middleName string,
@@ -65,7 +64,6 @@ func NewUser(
 
 	return &User{
 		id:              id,
-		status:          status,
 		lastName:        lastName,
 		firstName:       firstName,
 		middleName:      middleName,
@@ -258,34 +256,32 @@ func (u *User) Initials() string {
 }
 
 type SupposedVacation struct {
-	yearly int
+	yearly    int
 	seniority int
 	irregular int
 }
 
-func (s SupposedVacation)Yearly() int {
+func (s SupposedVacation) Yearly() int {
 	return s.yearly
 }
-func (s SupposedVacation)Seniority() int {
+func (s SupposedVacation) Seniority() int {
 	return s.seniority
 }
-func (s SupposedVacation)Irregular() int{
+func (s SupposedVacation) Irregular() int {
 	return s.irregular
 }
-
 
 func (u *User) Supposed() SupposedVacation {
 	const yearly int = 30
 	const irregular int = 3
 
-	
 	now := time.Now()
-	
+
 	seniority := u.HiredAt().WorkYear(now).Year(now)
-	
+
 	sen := 0
 
-	switch  {
+	switch {
 	case seniority < 1:
 		sen += 0
 	case seniority < 5:

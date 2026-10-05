@@ -1,6 +1,5 @@
 package auth
 
-
 type Status struct {
 	value string
 }

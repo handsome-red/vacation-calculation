@@ -4,30 +4,34 @@ import (
 	"net/http"
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
-	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
 type VacationHandler struct {
-	createVacationUseCase *create_vacation.Handler
+	createVacationUseCase   *create_vacation.Handler
 	getUserVacationsUseCase *get_user_vacations.Handler
 	getVacationFormUseCase  *get_vacation_form.Handler
-	templates *Templates
+	templates               *Templates
+	logger                  ports.Logger
 }
 
 func NewVacationHandler(
 	createVacationUseCase *create_vacation.Handler,
 	getUserVacationsUseCase *get_user_vacations.Handler,
-	getVacationFormUseCase  *get_vacation_form.Handler,
-	templates               *Templates,
+	getVacationFormUseCase *get_vacation_form.Handler,
+	templates *Templates,
+	logger ports.Logger,
 ) *VacationHandler {
 	return &VacationHandler{
 		createVacationUseCase:   createVacationUseCase,
 		getUserVacationsUseCase: getUserVacationsUseCase,
 		getVacationFormUseCase:  getVacationFormUseCase,
 		templates:               templates,
+		logger:                  logger,
 	}
 }
 
@@ -47,11 +51,11 @@ func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]any{
-		"UserID":   userID.String(),
+		"UserID":    userID.String(),
 		"Vacations": result.Vacations,
 	}
 
-	if err := h.templates.Render(w, "vacations.html", data); err != nil {
+	if err := h.templates.Render(w, "base.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -74,11 +78,13 @@ func (h *VacationHandler) CreateVacation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	http.Redirect(w, r, "/vacations", http.StatusSeeOther)
+	h.logger.Info(r.Context(), "vacation create successfuly")
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request) {
-	
+
 	userID := r.PathValue("userId")
 	if _, err := user.ParseUserID(userID); err != nil {
 		http.Error(w, "invalid user id", http.StatusBadRequest)
@@ -94,8 +100,8 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 	}
 
 	data := map[string]any{
-		"Form":      create_vacation.Command{UserID: userID},
-		"UserID":    userID,
+		"Form":     create_vacation.Command{UserID: userID},
+		"UserID":   userID,
 		"Calendar": result,
 	}
 

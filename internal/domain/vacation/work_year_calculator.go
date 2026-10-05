@@ -1,6 +1,10 @@
 package vacation
 
-import "time"
+import (
+	"time"
+
+	"github.com/handsome-red/vacation-calculation/internal/domain/user"
+)
 
 type WorkYearCalculator struct{}
 
@@ -9,23 +13,24 @@ func NewWorkYearCalculator() *WorkYearCalculator { return &WorkYearCalculator{} 
 type YearStat struct {
 	Year      int
 	Base      int
-	Seniotiry int
+	Seniority int
 	Irregular int
 }
 
-func FindYearStat(start, end time.Time, experience int) []YearStat {
+func FindYearStat(start, end time.Time, experience int, irregular bool) []YearStat {
 	result := make([]YearStat, 0)
-	for start.Before(end) {
+	for cursor := start; cursor.Before(end); cursor = cursor.AddDate(1, 0, 0) {
 		result = append(result, YearStat{
-			Year: start.Year(),
+			Year:      cursor.Year(),
+			Base:      BaseAnnualDays,
+			Seniority: seniorityForExperience(experience),
+			Irregular: irregularDays(irregular),
 		})
-
-		start = start.AddDate(1, 0, 0)
 	}
 	return result
 }
 
-type Interval struct{
+type Interval struct {
 	from, to time.Time
 }
 
@@ -42,8 +47,16 @@ func (c WorkYearCalculator) Calculate(
 	// for start := hiredAt; start.Before(now); {
 	// 	end := start.AddDate(1, 0, 0)
 
-	// 	if 
+	// 	if
 	// }
 
 	return result
+}
+
+func AnnualEntitlement(hired user.HiredDate, irregular bool, now time.Time) int {
+	total := baseAllowance() + seniorityAllowance(hired, now)
+	if irregular {
+		total += IrregularDays
+	}
+	return total
 }

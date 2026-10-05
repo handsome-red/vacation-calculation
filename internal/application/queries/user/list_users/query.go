@@ -1,20 +1,15 @@
-package get_active_users
-
-type Query struct {
-	Page int
-	Size int
-}
+package list_users
 
 type Result struct {
-	Users      []UserListItem
-	TotalCount int
-	Page       int
-	PageSize   int
+	Users []UserListItem
+	Page  int
+	Size  int
+	Total int
 }
 
 type UserListItem struct {
 	ID              string
-	Status	string
+	Status          string
 	FirstName       string
 	LastName        string
 	MiddleName      string

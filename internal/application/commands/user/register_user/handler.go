@@ -43,12 +43,6 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 		return nil, user.ErrEmailAlreadyExists
 	}
 
-	// Валидируем Status
-	status, err := user.NewStatus(cmd.Status)
-	if err != nil {
-		return nil, fmt.Errorf("invalid status: %w", err)
-	}
-
 	// Валидируем дату рождения
 	birthDate, err := user.NewBirthDate(cmd.BirthDate)
 	if err != nil {
@@ -95,7 +89,6 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 
 	newUser, err := user.NewUser(
 		userID,
-		status,
 		cmd.LastName,
 		cmd.FirstName,
 		cmd.MiddleName,

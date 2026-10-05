@@ -1,4 +1,5 @@
 package handlers
+
 import (
 	"html/template"
 	"net/http"
@@ -12,11 +13,11 @@ import (
 )
 
 type CalendarHandler struct {
-	getCalendarUseCase *get_calendar.Handler
-	newHolidayUseCase *new_holiday.Handler
+	getCalendarUseCase    *get_calendar.Handler
+	newHolidayUseCase     *new_holiday.Handler
 	newHolidayFormUseCase *new_holiday_form.Handler
-	templates *Templates
-	logger ports.Logger
+	templates             *Templates
+	logger                ports.Logger
 }
 
 func NewCalendarHandler(
@@ -28,10 +29,10 @@ func NewCalendarHandler(
 ) *CalendarHandler {
 	return &CalendarHandler{
 		getCalendarUseCase:    getCalendarUseCase,
-		newHolidayUseCase: newHolidayUseCase,
+		newHolidayUseCase:     newHolidayUseCase,
 		newHolidayFormUseCase: newHolidayFormUseCase,
 		templates:             templates,
-		logger: logger,
+		logger:                logger,
 	}
 }
 
@@ -58,7 +59,7 @@ func (h *CalendarHandler) GetCalendar(w http.ResponseWriter, r *http.Request) {
 		"NextYear":     year + 1,
 		"HolidaysJSON": template.JS(result.HolidaysJSON),
 	}
-	if err := h.templates.Render(w, "base.html", data); err != nil {
+	if err := h.templates.Render(w, "calendar.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -84,7 +85,7 @@ func (h *CalendarHandler) NewHoliday(w http.ResponseWriter, r *http.Request) {
 
 	dateStr := r.FormValue("date")
 	name := r.FormValue("name")
-	
+
 	cmd := new_holiday.Command{
 		Date: dateStr,
 		Name: name,
@@ -93,9 +94,8 @@ func (h *CalendarHandler) NewHoliday(w http.ResponseWriter, r *http.Request) {
 	result, err := h.newHolidayUseCase.Handle(r.Context(), cmd)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return	
+		return
 	}
 
 	_ = result
-	h.logger.Info(r.Context(), "create new holiday", result)
 }

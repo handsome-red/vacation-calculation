@@ -2,6 +2,7 @@ package vacation
 
 import (
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -48,6 +49,7 @@ func (d Date) Time() time.Time {
 func ParseDate(s string) (Date, error) {
 	t, err := time.Parse(dateLayout, s)
 	if err != nil {
+		log.Printf("ParseDate: input=%q err=%v", s, err)
 		return Date{}, ErrInvalidDate
 	}
 	return Date{

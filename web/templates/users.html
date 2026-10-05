@@ -1,43 +1,97 @@
-{{define "title"}}Календарь{{end}}
+{{define "title"}}Пользователи{{end}}
 
 {{define "content"}}
-    <!-- <h2>Список сотрудников</h2> -->
+
+<div class="container">
+    <form method="GET" action="/api/v1/users" class="filters">
+        <input type="text" name="last_name"
+            value="{{.Filters.LastName}}" placeholder="Фамилия">
+
+        <input type="text" name="first_name"
+            value="{{.Filters.FirstName}}" placeholder="Имя">
+
+        <input type="text" name="middle_name"
+            value="{{.Filters.MiddleName}}" placeholder="Отчество">
+
+        <input type="email" name="email"
+            value="{{.Filters.Email}}" placeholder="Email">
+
+        <select name="status">
+            <option value="">Все статусы</option>
+            <option value="active"  {{if eq .Filters.Status "active"}}selected{{end}}>Активные</option>
+            <option value="blocked" {{if eq .Filters.Status "blocked"}}selected{{end}}>Заблокированные</option>
+            <option value="fired"   {{if eq .Filters.Status "fired"}}selected{{end}}>Уволенные</option>
+        </select>
+
+        <input type="date" name="birth_date" value="{{.Filters.BirthDate}}">
+        <input type="date" name="hired_at"   value="{{.Filters.HiredAt}}">
+
+        <input type="hidden" name="size" value="{{.Size}}">
+        <input type="hidden" name="page" value="1">   <!-- сбрасываем на 1-ю страницу при новом фильтре -->
+
+        <button type="submit">Применить</button>
+        <a href="/api/v1/users">Сбросить</a>
+    </form>
+</div>
+
+<div class="container">
     <table>
-    <thead>
-        <tr>
-        <th>Статус</th>
-        <th>Фамилия</th>
-        <th>Имя</th>
-        <th>Отчество</th>
-        <th>Дата рождения</th>
-        <th>Должность</th>
-        <th>Дата приема на работу</th>
-        <th>Территориальный отдел</th>
-        <th>Район/Отдел</th>
-        <th>Продолжительность рабочего дня</th>
-        <th>E-mail</th>
-        <th>Инвалид</th>
-        <th>Общий стаж выслуги</th>
-        </tr>
-    </thead>
-    <tbody>
-        {{range .Users}}
-        <tr>
-            <td>{{.Status}}</td>            <!-- Статус -->
-            <td>{{.LastName}}</td>          <!-- Фамилия -->
-            <td>{{.FirstName}}</td>         <!-- Имя -->
-            <td>{{.MiddleName}}</td>        <!-- Отчество -->
-            <td>{{.BirthDate}}</td>         <!-- Дата рождения -->
-            <td>{{.Position}}</td>          <!-- Должность -->
-            <td>{{.HiredAt}}</td>           <!-- Дата приема на работу -->
-            <td>{{.DistrictTitle}}</td>     <!-- Территориальный отдел -->
-            <td>{{.DepartmentTitle}}</td>   <!-- Район/Отдел -->
-            <td>{{.WorkdayDuration}}</td>   <!-- Продолжительность рабочего дня -->
-            <td>{{.Email}}</td>             <!-- E-mail -->
-            <td>{{.IsInvalid}}</td>         <!-- Инвалид -->
-            <td>{{.TotalExperience}}</td>   <!-- Общий стаж выслуги -->
-        </tr>
-        {{end}}
-    </tbody>
+        <thead>
+            <tr>
+                <th>Статус</th>
+                <th>Фамилия</th>
+                <th>Имя</th>
+                <th>Отчество</th>
+                <th>Дата рождения</th>
+                <th>Должность</th>
+                <th>Дата приема на работу</th>
+                <th>Территориальный отдел</th>
+                <th>Район/Отдел</th>
+                <th>E-mail</th>
+                <th>Общий стаж выслуги</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Users}}
+            <tr data-href="/api/v1/users/{{.ID}}">
+                <td>{{.Status}}</td>
+                <td>
+                    <a href="/api/v1/users/{{.ID}}" class="user-link">{{.LastName}}</a>
+                </td>
+                <td>{{.FirstName}}</td>
+                <td>{{.MiddleName}}</td>
+                <td>{{.BirthDate}}</td>
+                <td>{{.Position}}</td>
+                <td>{{.HiredAt}}</td>
+                <td>{{.DistrictTitle}}</td>
+                <td>{{.DepartmentTitle}}</td>
+                <td>{{.Email}}</td>
+                <td>{{.TotalExperience}}</td>
+            </tr>
+            {{else}}
+            <tr><td colspan="11">Ничего не найдено</td></tr>
+            {{end}}
+        </tbody>
     </table>
+
+    <p>Всего: {{.Total}} · Страница {{.Page}} из ... </p>
+</div>
+
+<script>
+(function () {
+    document.querySelectorAll('tr[data-href]').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+            // Не мешаем настоящим ссылкам и кнопкам
+            if (e.target.closest('a, button')) return;
+
+            // Ctrl/Cmd + клик → новая вкладка
+            if (e.ctrlKey || e.metaKey) {
+                window.open(tr.dataset.href, '_blank');
+            } else {
+                window.location.href = tr.dataset.href;
+            }
+        });
+    });
+})();
+</script>
 {{end}}

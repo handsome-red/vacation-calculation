@@ -15,6 +15,7 @@ type vacationRow struct {
 	UserID    string `db:"user_id"`
 	StartDate string `db:"start_date"`
 	EndDate   string `db:"end_date"`
+	Status    string `db:"status"`
 	CreatedAt string `db:"created_at"`
 	UpdatedAt string `db:"updated_at"`
 }
@@ -45,6 +46,11 @@ func (r vacationRow) toDomain() (*vacation.Vacation, error) {
 		return nil, fmt.Errorf("invalid end date: %w", err)
 	}
 
+	status, err := vacation.ParseStatus(r.Status)
+	if err != nil {
+		return nil, fmt.Errorf("invalid status: %w", err)
+	}
+
 	createdAt, err := time.Parse(time.RFC3339, r.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("invalid created_at: %w", err)
@@ -56,11 +62,12 @@ func (r vacationRow) toDomain() (*vacation.Vacation, error) {
 	}
 
 	return vacation.ReconstructVacation(vacation.VacationParams{
-		ID:        vacationID,
-		UserID:    userID,
-		StartDate: startDate,
-		EndDate:   endDate,
-		CreatedAt: createdAt.UTC(),
-		UpdatedAt: updatedAt.UTC(),
+		ID:             vacationID,
+		UserID:         userID,
+		StartDate:      startDate,
+		EndDate:        endDate,
+		VacationStatus: status,
+		CreatedAt:      createdAt.UTC(),
+		UpdatedAt:      updatedAt.UTC(),
 	}), nil
 }

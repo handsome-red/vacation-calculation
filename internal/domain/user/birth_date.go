@@ -50,7 +50,7 @@ func (b BirthDate) HumanRead() string {
 	}
 
 	years := fullYears(b.value, time.Now())
-	date := b.value.UTC().Format("2006-01-02")
+	date := b.value.UTC().Format("02.01.2006")
 
 	return fmt.Sprintf("%s (полных: %dг./л.)", date, years)
 }

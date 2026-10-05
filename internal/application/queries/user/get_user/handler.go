@@ -12,10 +12,10 @@ import (
 )
 
 type Handler struct {
-	userRepo  ports.UserRepository
-	shiftRepo vacation.ShiftRepository
+	userRepo     ports.UserRepository
+	shiftRepo    vacation.ShiftRepository
 	workYearCalc vacation.WorkYearCalculator
-	logger ports.Logger
+	logger       ports.Logger
 }
 
 func NewHandler(
@@ -25,10 +25,10 @@ func NewHandler(
 	logger ports.Logger,
 ) *Handler {
 	return &Handler{
-		userRepo:     userRepo,
-		shiftRepo:    shiftRepo,
+		userRepo:  userRepo,
+		shiftRepo: shiftRepo,
 		// workYearCalc: workYearCalc,
-		logger:       logger,
+		logger: logger,
 	}
 }
 
@@ -57,7 +57,6 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 
 	now := time.Now()
 
-
 	// _, _ = h.workYearCalc.Calculate(u.HiredAt().Time(), now, shifts)
 
 	// vacationStats := make([]VacationStat, 0, len(0))
@@ -68,7 +67,7 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		LastName:        u.LastName(),
 		FirstName:       u.FirstName(),
 		MiddleName:      u.MiddleName(),
-		BirthDate:       u.BirthDate().String(),
+		BirthDate:       u.BirthDate().HumanRead(),
 		Position:        u.Position().Title(),
 		HiredAt:         u.HiredAt().String(),
 		Department:      u.Department().Title,

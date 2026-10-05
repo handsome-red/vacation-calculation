@@ -7,7 +7,6 @@ type Command struct {
 	LastName        string
 	MiddleName      string
 	DepartmentCode  string
-	Status          string
 	BirthDate       string
 	Position        string
 	HiredAt         string

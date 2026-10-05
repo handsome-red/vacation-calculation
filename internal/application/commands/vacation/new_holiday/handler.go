@@ -8,18 +8,17 @@ import (
 )
 
 type Handler struct {
-	holidayRepo vacation.HolidayRepository	
+	holidayRepo vacation.HolidayRepository
 }
 
-func NewHandler(holidayRepo vacation.HolidayRepository	)*Handler {
+func NewHandler(holidayRepo vacation.HolidayRepository) *Handler {
 	return &Handler{
 		holidayRepo: holidayRepo,
 	}
 }
 
+func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 
-func (h *Handler)Handle(ctx context.Context, cmd Command) (*Result, error) {
-	
 	date, err := vacation.ParseDate(cmd.Date)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse date %s: %w", cmd.Date, err)

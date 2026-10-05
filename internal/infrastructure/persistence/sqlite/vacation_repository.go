@@ -13,7 +13,7 @@ type vacationRepository struct {
 	db *sqlx.DB
 }
 
-func NewVacationRepository(db *sqlx.DB) *vacationRepository{
+func NewVacationRepository(db *sqlx.DB) *vacationRepository {
 	return &vacationRepository{
 		db: db,
 	}
@@ -22,13 +22,18 @@ func NewVacationRepository(db *sqlx.DB) *vacationRepository{
 func (r *vacationRepository) Save(ctx context.Context, v *vacation.Vacation) error {
 	const q = `
 		INSERT INTO vacations (
-			id, user_id, start_date, end_date
+			id, user_id, start_date, end_date,
+			status, created_at, updated_at
 		)
-		VALUES (?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?,
+				strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
+				strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 		ON CONFLICT (id) DO UPDATE SET
 			user_id    = EXCLUDED.user_id,
 			start_date = EXCLUDED.start_date,
-			end_date   = EXCLUDED.end_date
+			end_date   = EXCLUDED.end_date,
+			status     = EXCLUDED.status,
+			updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 	`
 
 	_, err := r.db.ExecContext(
@@ -38,6 +43,7 @@ func (r *vacationRepository) Save(ctx context.Context, v *vacation.Vacation) err
 		v.UserID().String(),
 		v.StartDate().Time().Format("2006-01-02"),
 		v.EndDate().Time().Format("2006-01-02"),
+		v.Status().ISO(),
 	)
 	if err != nil {
 		return fmt.Errorf("save vacation: %w", err)
@@ -48,7 +54,7 @@ func (r *vacationRepository) Save(ctx context.Context, v *vacation.Vacation) err
 
 func (r *vacationRepository) FindByUserID(ctx context.Context, userID user.UserID) ([]*vacation.Vacation, error) {
 	const q = `
-		SELECT id, user_id, start_date, end_date, created_at, updated_at
+		SELECT id, user_id, start_date, end_date, status, created_at, updated_at
 		FROM vacations
 		WHERE user_id = ?
 		ORDER BY start_date
@@ -70,6 +76,5 @@ func (r *vacationRepository) FindByUserID(ctx context.Context, userID user.UserI
 
 	return result, nil
 }
-
 
 // func(r *vacationRepository) NewVacationRepository()

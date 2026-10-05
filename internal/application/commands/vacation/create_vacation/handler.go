@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
@@ -12,7 +13,7 @@ import (
 // TODO: Убрать прямой импорт пакета user
 type Handler struct {
 	vacationRepo vacation.VacationRepository
-	userRepo     user.UserRepository
+	userRepo     ports.UserRepository
 }
 
 func NewHandler(

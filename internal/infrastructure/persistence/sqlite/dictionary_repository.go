@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/jmoiron/sqlx"
 )
@@ -17,11 +18,11 @@ type departmentRepository struct {
 	db *sqlx.DB
 }
 
-func NewDistrictRepository(db *sqlx.DB) user.DistrictRepository {
+func NewDistrictRepository(db *sqlx.DB) ports.DistrictRepository {
 	return &districtRepository{db: db}
 }
 
-func NewDepartmentRepository(db *sqlx.DB) user.DepartmentRepository {
+func NewDepartmentRepository(db *sqlx.DB) ports.DepartmentRepository {
 	return &departmentRepository{db: db}
 }
 

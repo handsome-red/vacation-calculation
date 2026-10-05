@@ -15,6 +15,13 @@ const (
 	StatusDeleted Status = "deleted"
 )
 
+var statusMap = map[Status]string{
+	StatusActive:  "Активен",
+	StatusBlocked: "Заблокирован",
+	StatusFired:   "Уволен",
+	StatusDeleted: "Удален",
+}
+
 func NewStatus(s string) (Status, error) {
 	st := Status(strings.ToLower(strings.TrimSpace(s)))
 	if !st.isValid() {
@@ -32,4 +39,4 @@ func (s Status) isValid() bool {
 	}
 }
 
-func (s Status) String() string { return string(s) }
+func (s Status) String() string { return statusMap[s] }
