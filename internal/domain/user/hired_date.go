@@ -40,32 +40,6 @@ func (h HiredDate) String() string {
 	return h.value.UTC().Format("02.01.2006")
 }
 
-// WorkYear - возвращает строковое представление рабочего года сотрудника
-func (h HiredDate) WorkYear(now time.Time) WorkYear {
-	years := now.Year() - h.value.Year()
-
-	from := h.value.AddDate(years, 0, 0)
-	if from.After(now) {
-		from = from.AddDate(-1, 0, 0)
-	}
-
-	to := from.AddDate(1, 0, 0)
-	return WorkYear{
-		from: from,
-		to:   to,
-	}
-}
-
-// TODO: Реализовать более элегантно
-func (w WorkYear) Year(now time.Time) int {
-	years := w.to.Year() - w.from.Year()
-	if w.from.AddDate(years, 0, 0).After(now) {
-		years--
-	}
-
-	return years
-}
-
 func (w WorkYear) String() string {
 
 	f := w.from.UTC().Format("02.01.2006")

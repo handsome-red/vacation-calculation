@@ -6,6 +6,8 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
+var DateFormat = "02.01.2006"
+
 type Vacation struct {
 	id        VacationID
 	status    VacationStatus

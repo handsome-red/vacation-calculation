@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 	"github.com/jmoiron/sqlx"
@@ -15,11 +16,11 @@ type shiftRepository struct {
 	db *sqlx.DB
 }
 
-func NewShiftRepository(db *sqlx.DB) vacation.ShiftRepository {
+func NewShiftRepository(db *sqlx.DB) ports.ShiftRepository {
 	return &shiftRepository{db: db}
 }
 
-var _ vacation.ShiftRepository = (*shiftRepository)(nil)
+var _ ports.ShiftRepository = (*shiftRepository)(nil)
 
 func (r *shiftRepository) ListByUser(ctx context.Context, userID user.UserID) ([]vacation.Shift, error) {
 	const q = `
@@ -59,9 +60,24 @@ func (r *shiftRepository) ListByUser(ctx context.Context, userID user.UserID) ([
 	return result, nil
 }
 
-func (r *shiftRepository)ListByUserInRange(ctx context.Context, userID user.UserID, from, to time.Time) ([]vacation.Shift, error) {
+func (r *shiftRepository) ListByUserInRange(ctx context.Context, userID user.UserID, from, to time.Time) ([]vacation.Shift, error) {
 	return nil, nil
 }
-func (r *shiftRepository)    Save(ctx context.Context, userID user.UserID, shift vacation.Shift) error {
+
+func (r *shiftRepository) Save(ctx context.Context, userID user.UserID, shift vacation.Shift) error {
+	const q = `
+		INSERT INTO shifts (user_id, kind, date_from, date_to)
+		VALUES (?, ?, ?, ?)
+	`
+
+	_, err := r.db.ExecContext(ctx, q,
+		userID.String(),
+		string(shift.Kind),
+		shift.From.Format(time.DateOnly),
+		shift.To.Format(time.DateOnly),
+	)
+	if err != nil {
+		return fmt.Errorf("shiftRepository.Save: %w", err)
+	}
 	return nil
 }

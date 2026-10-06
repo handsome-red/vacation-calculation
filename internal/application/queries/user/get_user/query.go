@@ -1,18 +1,9 @@
 package get_user
 
+import "github.com/handsome-red/vacation-calculation/internal/interfaces/http/dto"
+
 type Query struct {
 	UserID string
-}
-
-type VacationStat struct {
-	Year      int
-	Base      int
-	Irregular int
-	Seniority int
-}
-
-type VacationBlock struct {
-	Stats []VacationStat
 }
 
 type Result struct {
@@ -40,5 +31,5 @@ type Result struct {
 	Supposed string
 	Earned   float32
 
-	Vacations []VacationStat
+	YearStats []dto.YearStat
 }

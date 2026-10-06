@@ -2,8 +2,10 @@ package ports
 
 import (
 	"context"
+	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
+	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 	// "github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
@@ -50,4 +52,10 @@ type DistrictRepository interface {
 type DepartmentRepository interface {
 	List(ctx context.Context) ([]user.Department, error)
 	ListWithDistrict(ctx context.Context) ([]user.DepartmentWithDistrict, error)
+}
+
+type ShiftRepository interface {
+	ListByUser(ctx context.Context, userID user.UserID) ([]vacation.Shift, error)
+	ListByUserInRange(ctx context.Context, userID user.UserID, from, to time.Time) ([]vacation.Shift, error)
+	Save(ctx context.Context, userID user.UserID, shift vacation.Shift) error
 }

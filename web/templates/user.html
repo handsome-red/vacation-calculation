@@ -1,37 +1,69 @@
-<!DOCTYPE html>
-<html lang="ru">
+{{template "base" .}}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{.User.LastName}} {{.User.FirstName}}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
+{{define "title"}}Карточка пользователя{{end}}
 
-<body>
-    <h1>{{.User.LastName}} {{.User.FirstName}} {{.User.MiddleName}}</h1>
+{{define "content"}}
+<div class="container">
     <div class="user-page">
         <section class="card card--profile">
             <div class="card-header">
                 <h2>Общая статистика</h2>
                 <a class="btn" href="/api/v1/users/{{.User.ID}}/vacations/new">Редактировать</a>
             </div>
-
             <table>
                 <tbody>
-                    <tr><th>Статус</th>                             <td>{{.User.Status}}</td></tr>
-                    <tr><th>Фамилия</th>                            <td>{{.User.LastName}}</td></tr>
-                    <tr><th>Имя</th>                                <td>{{.User.FirstName}}</td></tr>
-                    <tr><th>Отчество</th>                           <td>{{.User.MiddleName}}</td></tr>
-                    <tr><th>Дата рождения</th>                      <td>{{.User.BirthDate}}</td></tr>
-                    <tr><th>Должность</th>                          <td>{{.User.Position}}</td></tr>
-                    <tr><th>Дата приема на работу</th>              <td>{{.User.HiredAt}}</td></tr>
-                    <tr><th>Территориальный отдел</th>              <td>{{.User.District}}</td></tr>
-                    <tr><th>Район/Отдел</th>                        <td>{{.User.Department}}</td></tr>
-                    <tr><th>Продолжительность рабочего дня</th>     <td>{{.User.WorkdayDuration}}</td></tr>
-                    <tr><th>E-mail</th>                             <td>{{.User.Email}}</td></tr>
-                    <tr><th>Инвалид</th>                            <td>{{if.User.IsInvalid}}Да{{else}}Нет{{end}}</td></tr>
-                    <tr><th>Общий стаж выслуги</th>                 <td>{{.User.Experience}}</td></tr>
+                    <tr>
+                        <th>Статус</th>
+                        <td>{{.User.Status}}</td>
+                    </tr>
+                    <tr>
+                        <th>Фамилия</th>
+                        <td>{{.User.LastName}}</td>
+                    </tr>
+                    <tr>
+                        <th>Имя</th>
+                        <td>{{.User.FirstName}}</td>
+                    </tr>
+                    <tr>
+                        <th>Отчество</th>
+                        <td>{{.User.MiddleName}}</td>
+                    </tr>
+                    <tr>
+                        <th>Дата рождения</th>
+                        <td>{{.User.BirthDate}}</td>
+                    </tr>
+                    <tr>
+                        <th>Должность</th>
+                        <td>{{.User.Position}}</td>
+                    </tr>
+                    <tr>
+                        <th>Дата приема на работу</th>
+                        <td>{{.User.HiredAt}}</td>
+                    </tr>
+                    <tr>
+                        <th>Территориальный отдел</th>
+                        <td>{{.User.District}}</td>
+                    </tr>
+                    <tr>
+                        <th>Район/Отдел</th>
+                        <td>{{.User.Department}}</td>
+                    </tr>
+                    <tr>
+                        <th>Продолжительность рабочего дня</th>
+                        <td>{{.User.WorkdayDuration}}</td>
+                    </tr>
+                    <tr>
+                        <th>E-mail</th>
+                        <td>{{.User.Email}}</td>
+                    </tr>
+                    <tr>
+                        <th>Инвалид</th>
+                        <td>{{if .User.IsInvalid}}Да{{else}}Нет{{end}}</td>
+                    </tr>
+                    <tr>
+                        <th>Общий стаж выслуги</th>
+                        <td>{{.User.Experience}}</td>
+                    </tr>
                 </tbody>
             </table>
         </section>
@@ -39,49 +71,75 @@
         <section class="card card--entitlement">
             <div class="card-header">
                 <h2>Статистика</h2>
-                <a class="btn" href="/api/v1/users/{{.User.ID}}/vacations/new">Добавить отпуск</a>
+                <a class="btn" href="/api/v1/users/{{.User.ID}}/shift/new">Добавить сдвиг</a>
             </div>
-                <table>
-                    <thead>
+            <table>
+                <thead>
                     <tr>
-                        <th>Год</th>
+                        <th>От</th>
+                        <th>До</th>
                         <th>Основной</th>
                         <th>Ненормированный</th>
                         <th>Выслуга лет</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {{range .Vacation}}
+                    {{range .YearStats}}
                     <tr>
-                        <td>{{.Year}}</td>
+                        <td>{{.From}}</td>
+                        <td>{{.To}}</td>
                         <td>{{.Base}}</td>
                         <td>{{.Irregular}}</td>
                         <td>{{.Seniority}}</td>
                     </tr>
                     {{else}}
-                    <tr><td colspan="4">Отпусков пока нет</td></tr>
+                    <tr>
+                        <td colspan="5">Отпусков пока нет</td>
+                    </tr>
                     {{end}}
                 </tbody>
             </table>
         </section>
+
         <section class="card card--balance">
             <table>
                 <tbody>
-                    <tr><th>Сотрудник</th>                                      <td>{{.User.Initials}}</td></tr>
-                    <tr><th>Рабочий год</th>                                    <td>{{.User.WorkYear}}</td></tr>
-                    <tr><th>Положено за год</th>                                <td>{{.User.Supposed}}</td></tr>
-                    <tr><th>Заработано на текущую дату ({{.User.Today}})</th>   <td>{{.User.Earned}}</td></tr>
-                    <tr><th>Использовано в этом году</th>                       <td>0 дней</td></tr>
-                    <tr><th>Остаток</th>                                        <td>2.5 дня</td></tr>
-                    <tr><th>Предупреждения</th>                                 <td>нет</td></tr>
+                    <tr>
+                        <th>Сотрудник</th>
+                        <td>{{.User.Initials}}</td>
+                    </tr>
+                    <tr>
+                        <th>Рабочий год</th>
+                        <td>{{.User.WorkYear}}</td>
+                    </tr>
+                    <tr>
+                        <th>Положено за год</th>
+                        <td>{{.User.Supposed}}</td>
+                    </tr>
+                    <tr>
+                        <th>Заработано на текущую дату ({{.User.Today}})</th>
+                        <td>{{.User.Earned}}</td>
+                    </tr>
+                    <tr>
+                        <th>Использовано в этом году</th>
+                        <td>0 дней</td>
+                    </tr>
+                    <tr>
+                        <th>Остаток</th>
+                        <td>2.5 дня</td>
+                    </tr>
+                    <tr>
+                        <th>Предупреждения</th>
+                        <td>нет</td>
+                    </tr>
                 </tbody>
             </table>
         </section>
     </div>
+
     <div class="container">
         <a class="btn" href="/api/v1/users/{{.User.ID}}/vacations">Посмотреть отпуска</a>
     </div>
-    <p><a href="/users">К списку</a></p>
-</body>
-
-</html>
+    <p><a href="/api/v1/users">← К списку</a></p>
+</div>
+{{end}}

@@ -6,9 +6,11 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/shift/create_shift"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/deactivate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/shift/shift_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/list_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
@@ -23,6 +25,8 @@ type UserHandler struct {
 	activateUseCase         *activate_user.Handler
 	getActiveUsersUseCase   *list_users.Handler
 	registerFormUserUseCase *register_form.Handler
+	createShiftUseCase      *create_shift.Handler
+	shiftFormUseCase        *shift_form.Handler
 	templates               *Templates
 }
 
@@ -33,6 +37,8 @@ func NewUserHandler(
 	activateUseCase *activate_user.Handler,
 	getActiveUsersUseCase *list_users.Handler,
 	registerFormUserUseCase *register_form.Handler,
+	createShiftUseCase *create_shift.Handler,
+	shiftFormUseCase *shift_form.Handler,
 	templates *Templates,
 ) *UserHandler {
 	return &UserHandler{
@@ -42,6 +48,8 @@ func NewUserHandler(
 		activateUseCase:         activateUseCase,
 		getActiveUsersUseCase:   getActiveUsersUseCase,
 		registerFormUserUseCase: registerFormUserUseCase,
+		createShiftUseCase:      createShiftUseCase,
+		shiftFormUseCase:        shiftFormUseCase,
 		templates:               templates,
 	}
 }
@@ -110,8 +118,8 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	// vacation, err := h.countVacation.Hanlde(r.Context())
 
 	data := map[string]any{
-		"User":     result,
-		"Vacation": result.Vacations,
+		"User":      result,
+		"YearStats": result.YearStats,
 	}
 
 	if err := h.templates.Render(w, "user.html", data); err != nil {
@@ -208,7 +216,7 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		"Total":   result.Total,
 	}
 
-	if err := h.templates.Render(w, "base.html", data); err != nil {
+	if err := h.templates.Render(w, "users.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

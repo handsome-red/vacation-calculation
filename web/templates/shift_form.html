@@ -1,0 +1,42 @@
+{{ define "title" }}Создание сдвига{{ end }}
+
+{{ define "content" }}
+<h1>Новый сдвиг рабочего года</h1>
+
+{{ if .Error }}
+<p class="error">{{ .Error }}</p>
+{{ end }}
+
+<form method="POST" action="/api/v1/users/{{ .Cmd.UserID }}/shift">
+    <input type="hidden" name="user_id" value="{{ .Cmd.UserID }}">
+
+    <label>
+        Вид
+        <select name="kind" required>
+            <option value="" disabled {{ if eq (printf "%v" .Cmd.Kind) "" }}selected{{ end }}>— выберите —</option>
+            {{ range .Kinds }}
+            <option value="{{ .Code }}" {{ if eq .Code (printf "%v" $.Cmd.Kind) }}selected{{ end }}>
+                {{ .Title }}
+            </option>
+            {{ end }}
+        </select>
+    </label>
+
+    <label>
+        С
+        <input type="date" name="date_from" value="{{ if not .Cmd.From.IsZero }}{{ .Cmd.From.Format " 2006-01-02" }}{{
+            end }}" required>
+    </label>
+
+    <label>
+        По
+        <input type="date" name="date_to" value="{{ if not .Cmd.To.IsZero }}{{ .Cmd.To.Format " 2006-01-02" }}{{ end }}"
+            required>
+    </label>
+
+    <div class="actions">
+        <button type="submit">Сохранить</button>
+        <a href="/api/v1/users/{{ .Cmd.UserID }}">Отмена</a>
+    </div>
+</form>
+{{ end }}

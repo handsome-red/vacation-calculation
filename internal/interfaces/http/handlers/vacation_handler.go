@@ -55,7 +55,7 @@ func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
 		"Vacations": result.Vacations,
 	}
 
-	if err := h.templates.Render(w, "base.html", data); err != nil {
+	if err := h.templates.Render(w, "vacations.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

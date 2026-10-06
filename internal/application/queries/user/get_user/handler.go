@@ -8,27 +8,28 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
+	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/dto"
 	// "github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type Handler struct {
 	userRepo     ports.UserRepository
-	shiftRepo    vacation.ShiftRepository
+	shiftRepo    ports.ShiftRepository
 	workYearCalc vacation.WorkYearCalculator
 	logger       ports.Logger
 }
 
 func NewHandler(
 	userRepo ports.UserRepository,
-	shiftRepo vacation.ShiftRepository,
-	// workYearCalc vacation.WorkYearCalculator,
+	shiftRepo ports.ShiftRepository,
+	workYearCalc vacation.WorkYearCalculator,
 	logger ports.Logger,
 ) *Handler {
 	return &Handler{
-		userRepo:  userRepo,
-		shiftRepo: shiftRepo,
-		// workYearCalc: workYearCalc,
-		logger: logger,
+		userRepo:     userRepo,
+		shiftRepo:    shiftRepo,
+		workYearCalc: workYearCalc,
+		logger:       logger,
 	}
 }
 
@@ -50,12 +51,15 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
-	// shifts, err := h.shiftRepo.ListByUser(ctx, userID)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("shifts list by user: %w", err)
-	// }
+	shifts, err := h.shiftRepo.ListByUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("shifts list by user: %w", err)
+	}
 
 	now := time.Now()
+	hiredAt := u.HiredAt().Time()
+
+	stats := h.workYearCalc.FindYearStat(hiredAt, now, u.IsIrregular(), shifts, h.workYearCalc.SeniorityAtFromHired(hiredAt))
 
 	// _, _ = h.workYearCalc.Calculate(u.HiredAt().Time(), now, shifts)
 
@@ -81,9 +85,11 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 
 		Initials: u.Initials(),
 		Today:    now.UTC().Format("02.01.2006"),
-		WorkYear: u.HiredAt().WorkYear(now).String(),
-		Supposed: u.Supposed().HumanRead(),
-		Earned:   0.0, // TODO
+		WorkYear: "MOCK", // TODO
+		Supposed: "MOCK", // TODO
+		Earned:   0.0,    // TODO
+
+		YearStats: dto.ToYearStats(stats),
 
 		// Vacations: vacationStats,
 	}, nil

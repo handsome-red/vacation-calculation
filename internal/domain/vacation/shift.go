@@ -26,6 +26,18 @@ type Shift struct {
 	To   time.Time // включительно
 }
 
+func NewShift(
+	Kind ShiftKind,
+	From time.Time,
+	To time.Time,
+) Shift {
+	return Shift{
+		Kind: Kind,
+		From: From,
+		To:   To,
+	}
+}
+
 // Перенести Error
 func (s Shift) Validate() error {
 	if s.To.Before(s.From) {
@@ -38,6 +50,24 @@ func (s Shift) Validate() error {
 		return fmt.Errorf("shift: неизвестный Kind: %s", s.Kind)
 	}
 	return nil
+}
+
+func ShiftKindName(kind ShiftKind) (string, bool) {
+	name, ok := shiftMap[kind]
+	return name, ok
+}
+
+func AllShiftKindName() []ShiftKind {
+	result := make([]ShiftKind, 0, len(shiftMap))
+	for s := range shiftMap {
+		result = append(result, s)
+	}
+	return result
+}
+
+func (s ShiftKind) String() string {
+	result := shiftMap[s]
+	return result
 }
 
 func (s Shift) Days() int {

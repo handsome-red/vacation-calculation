@@ -1,36 +1,33 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-	<meta charset="UTF-8">
-	<title>Новый отпуск</title>
-</head>
-<body>
-	<h1>Создать отпуск</h1>
+{{template "base" .}}
 
-	{{if .Errors}}
-	<ul style="color:#b00">
-		{{range .Errors}}<li>{{.}}</li>{{end}}
-	</ul>
-	{{end}}
+{{define "title"}}Создать отпуск{{end}}
 
-	<form method="POST" action="/api/v1/users/{{.UserID}}/vacations">
-		<input type="hidden" name="user_id" value="{{.UserID}}">
+{{define "content"}}
+<h1>Создать отпуск</h1>
 
-		<p>
-			<label>Дата начала<br>
-				<input type="date" name="start_date" value="{{.Form.StartDate}}" required>
-			</label>
-		</p>
+{{if .Errors}}
+<ul style="color:#b00">
+	{{range .Errors}}<li>{{.}}</li>{{end}}
+</ul>
+{{end}}
 
-		<p>
-			<label>Дата окончания<br>
-				<input type="date" name="end_date" value="{{.Form.EndDate}}" required>
-			</label>
-		</p>
+<form method="POST" action="/api/v1/users/{{.UserID}}/vacations">
+	<input type="hidden" name="user_id" value="{{.UserID}}">
 
-		<p>
-			<button type="submit">Создать</button>
-		</p>
-	</form>
-</body>
-</html>
+	<p>
+		<label>Дата начала<br>
+			<input type="date" name="start_date" value="{{.Form.StartDate}}" required>
+		</label>
+	</p>
+
+	<p>
+		<label>Дата окончания<br>
+			<input type="date" name="end_date" value="{{.Form.EndDate}}" required>
+		</label>
+	</p>
+
+	<p>
+		<button type="submit">Создать</button>
+	</p>
+</form>
+{{end}}

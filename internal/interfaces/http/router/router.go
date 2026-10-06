@@ -77,6 +77,8 @@ func (r *Router) registerRoutes() {
 		r.container.ActivateUserUseCase,
 		r.container.ListUsersUseCase,
 		r.container.GetRegisterFormUseCase,
+		r.container.CreateShiftUseCase,
+		r.container.ShiftFormUseCase,
 		templates,
 		// r.logger,
 	)
@@ -87,6 +89,12 @@ func (r *Router) registerRoutes() {
 		r.container.GetVacationFormUseCase,
 		templates,
 		r.logger,
+	)
+
+	shiftHandler := handlers.NewShiftHandler(
+		r.container.CreateShiftUseCase,
+		r.container.ShiftFormUseCase,
+		templates,
 	)
 
 	calendarHandler := handlers.NewCalendarHandler(
@@ -135,7 +143,10 @@ func (r *Router) registerRoutes() {
 	// Calendar routes
 	r.mux.HandleFunc("GET /api/v1/calendar", calendarHandler.GetCalendar)
 
-	r.mux.HandleFunc("GET /api/v1/holidays/new", calendarHandler.GetHolidayForm)
+	r.mux.HandleFunc("GET /api/v1/users/{userId}/shift/new", shiftHandler.NewShiftForm)
+	r.mux.HandleFunc("POST /api/v1/users/{userId}/shift", shiftHandler.CreateShift)
+
+	r.mux.HandleFunc("GET /admin/holidays", calendarHandler.NewHoliday)
 	r.mux.HandleFunc("POST /admin/holidays", calendarHandler.NewHoliday)
 
 	// r.mux.HandleFunc("POST /api/v1/vacations/{id}/approve", vacationHandler.ApproveVacation)
