@@ -15,6 +15,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/list_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
+	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/dto"
 )
 
@@ -109,24 +110,24 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	userID := r.PathValue("id")
 
 	query := get_user.Query{UserID: userID}
-	result, err := h.getUserUseCase.Handle(r.Context(), query)
+	out, err := h.getUserUseCase.Handle(r.Context(), query)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	// vacation, err := h.countVacation.Hanlde(r.Context())
+	// проекция: текущий рабочий год + заработано/остаток
+	current := vacation.CurrentYear(out.YearStats, out.Now)
 
 	data := map[string]any{
-		"User":      result,
-		"YearStats": result.YearStats,
+		"User":      dto.ToUser(out.User),
+		"YearStats": dto.ToYearStats(out.YearStats),
+		"Current":   dto.ToCurrentYearBlock(current, out.Now),
 	}
 
 	if err := h.templates.Render(w, "user.html", data); err != nil {
-		// h.logger.Error(r.Context(), "render user", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-
 }
 
 // func (h *UserHandler) ChangeEmail(w http.ResponseWriter, r *http.Request) {

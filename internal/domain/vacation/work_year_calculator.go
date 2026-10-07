@@ -18,6 +18,15 @@ type YearStat struct {
 	Base      int
 	Seniority int
 	Irregular int
+	Shifts    []Shift
+}
+
+type CurrentYearInfo struct {
+	Year      YearStat
+	Earned    float64
+	Used      int
+	Remaining float64
+	Today     time.Time
 }
 
 func (c WorkYearCalculator) FindYearStat(
@@ -26,12 +35,12 @@ func (c WorkYearCalculator) FindYearStat(
 	irregular bool,
 	shifts []Shift,
 	seniorityAt func(at time.Time) int,
-) []YearStat {
+) ([]YearStat, error) {
 	if !hiredAt.Before(now) {
-		return nil
+		return nil, ErrCalcInvalidTime
 	}
 	if err := validateShifts(shifts); err != nil {
-		panic(err) // программная ошибка, данные должны быть валидны
+		return nil, fmt.Errorf("validate shifts: %w", err)
 	}
 
 	result := make([]YearStat, 0)
@@ -53,12 +62,49 @@ func (c WorkYearCalculator) FindYearStat(
 			Base:      BaseAnnualDays,
 			Seniority: seniorityAt(asOf),
 			Irregular: irregularDays(irregular),
+			Shifts:    shiftsOverlapping(shifts, yearStart, yearEnd),
 		})
 
 		cursor = yearEnd
 	}
 
-	return result
+	return result, nil
+}
+
+// Получаем статистику по последнему рабочему году - текущему
+func (c WorkYearCalculator) GetLastPeriod(stats []YearStat) YearStat {
+	return stats[len(stats)-1]
+}
+
+// Использовано отпускных
+// func (c WorkYearCalculator) UsedVacationDays(from, to time.Time, vacation []Vacation) int {
+// 	used := 0
+// 	for _, v := range vacation {
+// 		used += DaysInclusive(v.StartDate().Time(), v.EndDate().Time())
+// 	}
+
+// }
+
+// // Смотрим сколько осталось отпускных
+// func (c WorkYearCalculator) FindRemaining(now time.Time, stat YearStat, vacation []Vacation) int {
+
+// }
+
+// func DaysInclusive(start, end time.Time) int {
+// 	start = start.UTC()
+// 	end = end.UTC()
+// 	days := int(end.Sub(start).Hours()/24) + 1
+// 	if days < 0 {
+// 		return 0
+// 	}
+// 	return days
+// }
+
+func CurrentYear(stats []YearStat, now time.Time) CurrentYearInfo {
+	info := CurrentYearInfo{Today: time.Time{}}
+	// y := currentYear(stats, now)
+	// info.Year = y
+	return info
 }
 
 func (c WorkYearCalculator) SeniorityAtFromHired(hiredAt time.Time) func(at time.Time) int {
@@ -125,4 +171,14 @@ func AnnualEntitlement(hired user.HiredDate, irregular bool, now time.Time) int 
 		total += IrregularDays
 	}
 	return total
+}
+
+func shiftsOverlapping(shifts []Shift, from, to time.Time) []Shift {
+	out := make([]Shift, 0)
+	for _, s := range shifts {
+		if s.From.Before(to) && s.To.After(from) {
+			out = append(out, s)
+		}
+	}
+	return out
 }

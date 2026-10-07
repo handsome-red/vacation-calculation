@@ -8,7 +8,6 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
-	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/dto"
 	// "github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
@@ -59,38 +58,14 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	now := time.Now()
 	hiredAt := u.HiredAt().Time()
 
-	stats := h.workYearCalc.FindYearStat(hiredAt, now, u.IsIrregular(), shifts, h.workYearCalc.SeniorityAtFromHired(hiredAt))
-
-	// _, _ = h.workYearCalc.Calculate(u.HiredAt().Time(), now, shifts)
-
-	// vacationStats := make([]VacationStat, 0, len(0))
+	stats, err := h.workYearCalc.FindYearStat(hiredAt, now, u.IsIrregular(), shifts, h.workYearCalc.SeniorityAtFromHired(hiredAt))
+	if err != nil {
+		return nil, fmt.Errorf("find year stat: %w", err)
+	}
 
 	return &Result{
-		ID:              u.ID().String(),
-		Status:          u.Status().String(),
-		LastName:        u.LastName(),
-		FirstName:       u.FirstName(),
-		MiddleName:      u.MiddleName(),
-		BirthDate:       u.BirthDate().HumanRead(),
-		Position:        u.Position().Title(),
-		HiredAt:         u.HiredAt().String(),
-		Department:      u.Department().Title,
-		District:        u.District().Title(),
-		WorkdayDuration: u.WorkdayDuration().Int(),
-		Email:           u.Email().String(),
-		IsInvalid:       u.IsInvalid(),
-		Experience:      u.Experience().String(),
-
-		//
-
-		Initials: u.Initials(),
-		Today:    now.UTC().Format("02.01.2006"),
-		WorkYear: "MOCK", // TODO
-		Supposed: "MOCK", // TODO
-		Earned:   0.0,    // TODO
-
-		YearStats: dto.ToYearStats(stats),
-
-		// Vacations: vacationStats,
+		User:      u,
+		YearStats: stats,
+		Now:       now,
 	}, nil
 }

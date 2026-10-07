@@ -149,6 +149,10 @@ func daysBetween(from, to time.Time) int {
 	return int(t.Sub(f) / (24 * time.Hour))
 }
 
+func (u *User) IsActive() bool {
+	return u.Status().IsActive()
+}
+
 func (u *User) IsIrregular() bool {
 	return u.Position().isIrregular()
 }

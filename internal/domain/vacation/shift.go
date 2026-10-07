@@ -9,7 +9,7 @@ import (
 type ShiftKind string
 
 const (
-	ShiftKindUnpaid        ShiftKind = "unpaid"
+	ShiftKindUnpaid        ShiftKind = "unpaid_long"
 	ShiftKindParentalLeave ShiftKind = "parental_leave"
 	ShiftKindAbsenteeism   ShiftKind = "absenteeism"
 )

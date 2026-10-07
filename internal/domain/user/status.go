@@ -30,6 +30,10 @@ func NewStatus(s string) (Status, error) {
 	return st, nil
 }
 
+func (s Status) IsActive() bool {
+	return s == StatusActive
+}
+
 func (s Status) isValid() bool {
 	switch s {
 	case StatusActive, StatusBlocked, StatusFired, StatusDeleted:

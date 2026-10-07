@@ -76,6 +76,7 @@
             <table>
                 <thead>
                     <tr>
+                        <th></th>
                         <th>От</th>
                         <th>До</th>
                         <th>Основной</th>
@@ -84,19 +85,37 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{range .YearStats}}
-                    <tr>
-                        <td>{{.From}}</td>
-                        <td>{{.To}}</td>
-                        <td>{{.Base}}</td>
-                        <td>{{.Irregular}}</td>
-                        <td>{{.Seniority}}</td>
+                {{range $i, $y := .YearStats}}
+                    <tr class="row" data-toggle>
+                        <td class="col-toggle">
+                            <button type="button" class="chevron" aria-expanded="false"
+                                    aria-controls="details-{{$i}}">▸</button>
+                        </td>
+                        <td>{{$y.From}}</td>
+                        <td>{{$y.To}}</td>
+                        <td>{{$y.Base}}</td>
+                        <td>{{$y.Irregular}}</td>
+                        <td>{{$y.Seniority}}</td>
                     </tr>
-                    {{else}}
-                    <tr>
-                        <td colspan="5">Отпусков пока нет</td>
+                    <tr class="row-details" id="details-{{$i}}" hidden>
+                        <td colspan="6">
+                            {{if $y.Shifts}}
+                            <ul class="subinterval-list">
+                                {{range $y.Shifts}}
+                                <li class="subinterval">
+                                    <span class="subinterval__dates">{{.From}} — {{.To}}</span>
+                                    <span class="subinterval__reason">{{.Reason}}</span>
+                                </li>
+                                {{end}}
+                            </ul>
+                            {{else}}
+                            <p class="muted">Подинтервалов нет</p>
+                            {{end}}
+                        </td>
                     </tr>
-                    {{end}}
+                {{else}}
+                    <tr><td colspan="6">Отпусков пока нет</td></tr>
+                {{end}}
                 </tbody>
             </table>
         </section>
@@ -108,26 +127,37 @@
                         <th>Сотрудник</th>
                         <td>{{.User.Initials}}</td>
                     </tr>
+                    {{if .Current.Range}}
                     <tr>
                         <th>Рабочий год</th>
-                        <td>{{.User.WorkYear}}</td>
+                        <td>{{.Current.Range}}</td>
                     </tr>
                     <tr>
                         <th>Положено за год</th>
-                        <td>{{.User.Supposed}}</td>
+                        <td>{{.Current.Base}} дн.</td>
                     </tr>
                     <tr>
-                        <th>Заработано на текущую дату ({{.User.Today}})</th>
-                        <td>{{.User.Earned}}</td>
+                        <th>Ненормированный</th>
+                        <td>{{.Current.Irregular}} дн.</td>
+                    </tr>
+                    <tr>
+                        <th>Заработано на {{.Current.Today}}</th>
+                        <td>{{printf "%.1f" .Current.Earned}} дн.</td>
                     </tr>
                     <tr>
                         <th>Использовано в этом году</th>
-                        <td>0 дней</td>
+                        <td>0 дн.</td>
                     </tr>
                     <tr>
                         <th>Остаток</th>
-                        <td>2.5 дня</td>
+                        <td>{{printf "%.1f" .Current.Remaining}} дн.</td>
                     </tr>
+                    {{else}}
+                    <tr>
+                        <th>Рабочий год</th>
+                        <td class="muted">Нет активного рабочего года</td>
+                    </tr>
+                    {{end}}
                     <tr>
                         <th>Предупреждения</th>
                         <td>нет</td>

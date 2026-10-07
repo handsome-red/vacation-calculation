@@ -1,6 +1,54 @@
 package dto
 
-import "github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
+import (
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
+	"github.com/handsome-red/vacation-calculation/internal/domain/user"
+)
+
+type UserDTO struct {
+	ID              string
+	Status          string
+	IsActive        bool
+	LastName        string
+	FirstName       string
+	MiddleName      string
+	BirthDate       string
+	Position        string
+	HiredAt         string
+	Department      string
+	District        string
+	WorkdayDuration int
+	Email           string
+	IsInvalid       bool
+	Experience      string
+	CreatedAt       string
+	UpdatedAt       string
+
+	Initials string
+}
+
+func ToUser(u *user.User) UserDTO {
+	return UserDTO{
+		ID:              u.ID().String(),
+		Status:          u.Status().String(),
+		IsActive:        u.IsActive(),
+		LastName:        u.LastName(),
+		FirstName:       u.FirstName(),
+		MiddleName:      u.MiddleName(),
+		BirthDate:       u.BirthDate().HumanRead(),
+		Position:        u.Position().Title(),
+		HiredAt:         u.HiredAt().String(),
+		Department:      u.Department().Title,
+		District:        u.District().Title(),
+		WorkdayDuration: u.WorkdayDuration().Int(),
+		Email:           u.Email().String(),
+		IsInvalid:       u.IsInvalid(),
+		Experience:      u.Experience().String(),
+		CreatedAt:       u.CreatedAt().Format(dateFormat),
+		UpdatedAt:       u.UpdatedAt().Format(dateFormat),
+		Initials:        u.Initials(),
+	}
+}
 
 type RegisterUserRequest struct {
 	Email      string `json:"email"           validate:"required,email"`

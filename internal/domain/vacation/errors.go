@@ -26,4 +26,6 @@ var (
 	ErrInvalidDateRange  = errors.New("start date must be before end date")
 	ErrZeroDays          = errors.New("vacation must be at least 1 day")
 	ErrAlreadyProcessed  = errors.New("vacation already processed")
+
+	ErrCalcInvalidTime = errors.New("hired after now")
 )
