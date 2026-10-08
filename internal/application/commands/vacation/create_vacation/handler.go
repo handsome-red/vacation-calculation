@@ -12,12 +12,12 @@ import (
 
 // TODO: Убрать прямой импорт пакета user
 type Handler struct {
-	vacationRepo vacation.VacationRepository
+	vacationRepo ports.VacationRepository
 	userRepo     ports.UserRepository
 }
 
 func NewHandler(
-	vacationRepo vacation.VacationRepository,
+	vacationRepo ports.VacationRepository,
 ) *Handler {
 	return &Handler{
 		vacationRepo: vacationRepo,

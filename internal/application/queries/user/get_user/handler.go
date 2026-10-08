@@ -8,11 +8,11 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
-	// "github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type Handler struct {
 	userRepo     ports.UserRepository
+	vacationRepo ports.VacationRepository
 	shiftRepo    ports.ShiftRepository
 	workYearCalc vacation.WorkYearCalculator
 	logger       ports.Logger
@@ -20,12 +20,14 @@ type Handler struct {
 
 func NewHandler(
 	userRepo ports.UserRepository,
+	vacationRepo ports.VacationRepository,
 	shiftRepo ports.ShiftRepository,
 	workYearCalc vacation.WorkYearCalculator,
 	logger ports.Logger,
 ) *Handler {
 	return &Handler{
 		userRepo:     userRepo,
+		vacationRepo: vacationRepo,
 		shiftRepo:    shiftRepo,
 		workYearCalc: workYearCalc,
 		logger:       logger,
@@ -63,9 +65,25 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		return nil, fmt.Errorf("find year stat: %w", err)
 	}
 
+	vacations, err := h.vacationRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("vacation by user id: %w", err)
+	}
+
+	var current vacation.CurrentYearInfo
+	if len(stats) > 0 {
+		last := stats[len(stats)-1]
+		used := vacation.UsedDaysInYear(vacations, last)
+		current, err = h.workYearCalc.CurrentYear(stats, now, used)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &Result{
 		User:      u,
 		YearStats: stats,
+		Current:   current,
 		Now:       now,
 	}, nil
 }

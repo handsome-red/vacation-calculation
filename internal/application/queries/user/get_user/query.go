@@ -42,5 +42,6 @@ type Query struct {
 type Result struct {
 	User      *user.User
 	YearStats []vacation.YearStat
+	Current   vacation.CurrentYearInfo
 	Now       time.Time
 }

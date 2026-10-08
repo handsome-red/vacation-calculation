@@ -4,7 +4,10 @@
 
 {{define "content"}}
 <div class="container">
-    <h1>Список отпусков сотрудника</h1>
+    <div class="card-header">
+        <h1>Список отпусков сотрудника</h1>
+        <a class="btn" href="/api/v1/users/{{.UserID}}/vacations/new">Добавить отпуск</a>
+    </div>  
     <table>
         <thead>
             <tr>

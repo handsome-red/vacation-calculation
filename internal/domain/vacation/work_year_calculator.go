@@ -71,11 +71,6 @@ func (c WorkYearCalculator) FindYearStat(
 	return result, nil
 }
 
-// Получаем статистику по последнему рабочему году - текущему
-func (c WorkYearCalculator) GetLastPeriod(stats []YearStat) YearStat {
-	return stats[len(stats)-1]
-}
-
 // Использовано отпускных
 // func (c WorkYearCalculator) UsedVacationDays(from, to time.Time, vacation []Vacation) int {
 // 	used := 0
@@ -90,21 +85,50 @@ func (c WorkYearCalculator) GetLastPeriod(stats []YearStat) YearStat {
 
 // }
 
-// func DaysInclusive(start, end time.Time) int {
-// 	start = start.UTC()
-// 	end = end.UTC()
-// 	days := int(end.Sub(start).Hours()/24) + 1
-// 	if days < 0 {
-// 		return 0
-// 	}
-// 	return days
-// }
+func DaysInclusive(start, end time.Time) int {
+	start = start.UTC()
+	end = end.UTC()
+	days := int(end.Sub(start).Hours()/24) + 1
+	if days < 0 {
+		return 0
+	}
+	return days
+}
 
-func CurrentYear(stats []YearStat, now time.Time) CurrentYearInfo {
-	info := CurrentYearInfo{Today: time.Time{}}
-	// y := currentYear(stats, now)
-	// info.Year = y
-	return info
+func (c WorkYearCalculator) CurrentYear(stats []YearStat, now time.Time, used int) (CurrentYearInfo, error) {
+	if len(stats) == 0 {
+		return CurrentYearInfo{}, ErrCalcEmptyStats
+	}
+
+	current := stats[len(stats)-1]
+
+	if now.Before(current.From) {
+		return CurrentYearInfo{}, ErrCalcInvalidTime
+	}
+
+	entitlement := current.Base + current.Seniority + current.Irregular
+	daysInYear := DaysInclusive(current.From, now)
+
+	daysInYear -= shiftCoverage(current.Shifts, current.From, now)
+	if daysInYear < 0 {
+		daysInYear = 0
+	}
+
+	months := daysInYear / 30
+	if daysInYear%30 >= 15 {
+		months++
+	}
+
+	earned := float64(entitlement) / 12.0 * float64(months)
+	remaining := earned - float64(used)
+
+	return CurrentYearInfo{
+		Year:      current,
+		Earned:    earned,
+		Used:      used,
+		Remaining: remaining,
+		Today:     now,
+	}, nil
 }
 
 func (c WorkYearCalculator) SeniorityAtFromHired(hiredAt time.Time) func(at time.Time) int {
@@ -181,4 +205,38 @@ func shiftsOverlapping(shifts []Shift, from, to time.Time) []Shift {
 		}
 	}
 	return out
+}
+
+func shiftCoverage(shift []Shift, from, to time.Time) int {
+	total := 0
+	for _, s := range shift {
+		oStart := MaxTime(s.From, from)
+		oEnd := MinTime(s.To, to)
+
+		if oEnd.Before(oStart) {
+			continue
+		}
+		total += DaysInclusive(oStart, oEnd)
+	}
+	return total
+}
+
+func UsedDaysInYear(vacations []*Vacation, year YearStat) int {
+	total := 0
+	for _, v := range vacations {
+		if v == nil {
+			continue
+		}
+
+		if v.Status() == StatusDraft {
+			continue
+		}
+		oStart := MaxTime(v.StartDate().Time(), year.From)
+		oEnd := MinTime(v.EndDate().Time(), year.To.AddDate(0, 0, -1))
+		if oEnd.Before(oStart) {
+			continue
+		}
+		total += DaysInclusive(oStart, oEnd)
+	}
+	return total
 }

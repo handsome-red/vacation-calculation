@@ -8,24 +8,20 @@ import (
 
 type CurrentYearBlock struct {
 	Range     string
-	Base      int
-	Irregular int
-	Seniority int
+	Total     int
 	Earned    float64
+	Used      int
 	Remaining float64
 	Today     string
 }
 
 func ToCurrentYearBlock(info vacation.CurrentYearInfo, now time.Time) CurrentYearBlock {
-	block := CurrentYearBlock{
-		Today: now.UTC().Format(dateFormat),
+	return CurrentYearBlock{
+		Range:     info.Year.From.Format(dateFormat) + " - " + info.Year.To.AddDate(0, 0, -1).Format(dateFormat),
+		Total:     info.Year.Base + info.Year.Irregular + info.Year.Seniority,
+		Earned:    info.Earned,
+		Used:      info.Used,
+		Remaining: info.Remaining,
+		Today:     now.UTC().Format(dateFormat),
 	}
-
-	block.Range = info.Year.From.Format(dateFormat) + " — " + info.Year.To.Format(dateFormat)
-	block.Base = info.Year.Base
-	block.Irregular = info.Year.Irregular
-	block.Seniority = info.Year.Seniority
-	block.Earned = info.Earned
-	block.Remaining = info.Remaining
-	return block
 }

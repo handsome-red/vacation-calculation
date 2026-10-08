@@ -85,8 +85,8 @@ func shiftDaysForYear(yearStart, yearEnd time.Time, shifts []Shift) int {
 	lastDay := yearEnd.AddDate(0, 0, -1)
 	var full, unpaid int
 	for _, s := range shifts {
-		oStart := maxTime(s.From, yearStart)
-		oEnd := minTime(s.To, lastDay)
+		oStart := MaxTime(s.From, yearStart)
+		oEnd := MinTime(s.To, lastDay)
 		if oEnd.Before(oStart) {
 			continue
 		}
@@ -106,14 +106,14 @@ func shiftDaysForYear(yearStart, yearEnd time.Time, shifts []Shift) int {
 	return full
 }
 
-func maxTime(time, yearStart time.Time) time.Time {
+func MaxTime(time, yearStart time.Time) time.Time {
 	if time.After(yearStart) {
 		return time
 	}
 	return yearStart
 }
 
-func minTime(time, lastDay time.Time) time.Time {
+func MinTime(time, lastDay time.Time) time.Time {
 	if time.Before(lastDay) {
 		return time
 	}

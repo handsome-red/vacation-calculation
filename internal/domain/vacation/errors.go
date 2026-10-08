@@ -28,4 +28,5 @@ var (
 	ErrAlreadyProcessed  = errors.New("vacation already processed")
 
 	ErrCalcInvalidTime = errors.New("hired after now")
+	ErrCalcEmptyStats  = errors.New("empty status")
 )

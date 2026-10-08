@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 	"github.com/jmoiron/sqlx"
 )
@@ -11,6 +12,8 @@ import (
 type holidayRepository struct {
 	db *sqlx.DB
 }
+
+var _ ports.HolidayRepository = (*holidayRepository)(nil)
 
 func NewHolidayRepository(db *sqlx.DB) *holidayRepository {
 	return &holidayRepository{
@@ -37,7 +40,7 @@ func (r *holidayRepository) Save(ctx context.Context, h vacation.Holiday) error 
 	return nil
 }
 
-func (r *holidayRepository)	ListByRange(ctx context.Context, from, to vacation.Date) ([]vacation.Holiday, error) {
+func (r *holidayRepository) ListInRange(ctx context.Context, from, to vacation.Date) ([]vacation.Holiday, error) {
 	const q = `
 		SELECT date, name
 		FROM holidays
@@ -48,13 +51,13 @@ func (r *holidayRepository)	ListByRange(ctx context.Context, from, to vacation.D
 	var holidaysRows []holidayRow
 	err := r.db.SelectContext(ctx, &holidaysRows, q, from, to)
 	if err != nil {
-		return nil, fmt.Errorf("list holidays: %w", err) 
+		return nil, fmt.Errorf("list holidays: %w", err)
 	}
 
 	return rowsToHoliday(holidaysRows)
 }
 
-func (r *holidayRepository)	ListByYear(ctx context.Context, year int) ([]vacation.Holiday, error) {
+func (r *holidayRepository) ListByYear(ctx context.Context, year int) ([]vacation.Holiday, error) {
 	const q = `
 		SELECT name, date
 		FROM holidays
@@ -62,8 +65,8 @@ func (r *holidayRepository)	ListByYear(ctx context.Context, year int) ([]vacatio
 		ORDER BY date
 	`
 
-	from := fmt.Sprintf("%04d-01-01")
-	to	 := fmt.Sprintf("%04d-12-31", year)
+	from := fmt.Sprintf("%04d-01-01", year)
+	to := fmt.Sprintf("%04d-12-31", year)
 
 	var holidaysRows []holidayRow
 	if err := r.db.SelectContext(ctx, &holidaysRows, q, from, to); err != nil {

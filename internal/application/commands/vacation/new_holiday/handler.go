@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type Handler struct {
-	holidayRepo vacation.HolidayRepository
+	holidayRepo ports.HolidayRepository
 }
 
-func NewHandler(holidayRepo vacation.HolidayRepository) *Handler {
+func NewHandler(holidayRepo ports.HolidayRepository) *Handler {
 	return &Handler{
 		holidayRepo: holidayRepo,
 	}

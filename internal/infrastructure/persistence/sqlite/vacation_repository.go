@@ -77,4 +77,36 @@ func (r *vacationRepository) FindByUserID(ctx context.Context, userID user.UserI
 	return result, nil
 }
 
-// func(r *vacationRepository) NewVacationRepository()
+func (r *vacationRepository) FindByUserIDInRange(
+	ctx context.Context,
+	userID user.UserID,
+	from, to vacation.Date,
+) ([]*vacation.Vacation, error) {
+	const q = `
+        SELECT id, user_id, start_date, end_date, status, created_at, updated_at
+        FROM vacations
+        WHERE user_id = ?
+          AND end_date   >= ?
+          AND start_date <= ?
+        ORDER BY start_date
+    `
+
+	var rows []vacationRow
+	if err := r.db.SelectContext(ctx, &rows, q,
+		userID.String(),
+		from.ISO(),
+		to.ISO(),
+	); err != nil {
+		return nil, fmt.Errorf("find vacations by user in range: %w", err)
+	}
+
+	result := make([]*vacation.Vacation, 0, len(rows))
+	for _, row := range rows {
+		v, err := row.toDomain()
+		if err != nil {
+			return nil, fmt.Errorf("vacation row %q: %w", row.ID, err)
+		}
+		result = append(result, v)
+	}
+	return result, nil
+}

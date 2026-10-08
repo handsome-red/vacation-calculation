@@ -81,21 +81,21 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	var departmentRepo ports.DepartmentRepository = sqlite.NewDepartmentRepository(db)
 	var shiftRepo ports.ShiftRepository = sqlite.NewShiftRepository(db)
 
-	var vacationRepo vacation.VacationRepository = sqlite.NewVacationRepository(db)
-	var holidayRepo vacation.HolidayRepository = sqlite.NewHolidayRepository(db)
+	var vacationRepo ports.VacationRepository = sqlite.NewVacationRepository(db)
+	var holidayRepo ports.HolidayRepository = sqlite.NewHolidayRepository(db)
 
 	registerUserUseCase := register_user.NewHandler(userRepo, hasher, log)
 	deactivateUserUseCase := deactivate_user.NewHandler(userRepo, log)
 	activateUserUseCase := activate_user.NewHandler(userRepo, log)
 	getRegisterFormUseCase := register_form.NewHandler(districtRepo, departmentRepo)
 
-	getUserUseCase := get_user.NewHandler(userRepo, shiftRepo, wc, log)
+	getUserUseCase := get_user.NewHandler(userRepo, vacationRepo, shiftRepo, wc, log)
 	getActiveUsersUseCase := list_users.NewHandler(userRepo, log)
 
 	createVacationUseCase := create_vacation.NewHandler(vacationRepo)
 	getUserVacationsUseCase := get_user_vacations.NewHandler(vacationRepo)
 	getVacationFormUseCase := get_vacation_form.NewHandler(holidayRepo)
-	getCalendarUseCase := get_calendar.NewHandler(holidayRepo)
+	getCalendarUseCase := get_calendar.NewHandler(holidayRepo, vacationRepo, shiftRepo)
 	newHolidayFormUseCase := new_holiday_form.NewHandler(holidayRepo)
 
 	newHolidayUseCase := new_holiday.NewHandler(holidayRepo)

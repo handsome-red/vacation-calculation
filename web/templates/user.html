@@ -9,7 +9,7 @@
             <div class="card-header">
                 <h2>Общая статистика</h2>
                 <a class="btn" href="/api/v1/users/{{.User.ID}}/vacations/new">Редактировать</a>
-            </div>
+            </div>  
             <table>
                 <tbody>
                     <tr>
@@ -134,11 +134,7 @@
                     </tr>
                     <tr>
                         <th>Положено за год</th>
-                        <td>{{.Current.Base}} дн.</td>
-                    </tr>
-                    <tr>
-                        <th>Ненормированный</th>
-                        <td>{{.Current.Irregular}} дн.</td>
+                        <td>{{.Current.Total}} дн.</td>
                     </tr>
                     <tr>
                         <th>Заработано на {{.Current.Today}}</th>
@@ -146,11 +142,11 @@
                     </tr>
                     <tr>
                         <th>Использовано в этом году</th>
-                        <td>0 дн.</td>
+                        <td>{{ .Current.Used }} дн.</td>
                     </tr>
                     <tr>
                         <th>Остаток</th>
-                        <td>{{printf "%.1f" .Current.Remaining}} дн.</td>
+                        <td>{{ printf "%.1f" .Current.Remaining }} дн.</td>
                     </tr>
                     {{else}}
                     <tr>
