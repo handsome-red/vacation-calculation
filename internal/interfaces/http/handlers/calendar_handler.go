@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"html/template"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -10,6 +10,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/new_holiday_form"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
+	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/dto"
 )
 
 type CalendarHandler struct {
@@ -36,31 +37,49 @@ func NewCalendarHandler(
 	}
 }
 
-func (h *CalendarHandler) GetCalendar(w http.ResponseWriter, r *http.Request) {
-	year := time.Now().Year()
-	if s := r.URL.Query().Get("year"); s != "" {
-		y, err := strconv.Atoi(s)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		year = y
+func (h *CalendarHandler) GetUserCalendar(w http.ResponseWriter, r *http.Request) {
+	userID := r.PathValue("userId")
+	if userID == "" {
+		http.Error(w, "userId is required", http.StatusBadRequest)
+		return
 	}
 
-	result, err := h.getCalendarUseCase.Handle(r.Context(), get_calendar.Query{Year: year})
+	year := time.Now().Year()
+	if s := r.URL.Query().Get("year"); s != "" {
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			http.Error(w, "invalid year", http.StatusBadRequest)
+			return
+		}
+		year = v
+	}
+
+	month := int(time.Now().Month())
+	if s := r.URL.Query().Get("month"); s != "" {
+		v, err := strconv.Atoi(s)
+		if err != nil || v < 1 || v > 12 {
+			http.Error(w, "invalid month", http.StatusBadRequest)
+			return
+		}
+		month = v
+	}
+
+	result, err := h.getCalendarUseCase.Handle(r.Context(), get_calendar.Query{
+		UserID: userID,
+		Year:   year,
+		Month:  month,
+	})
 	if err != nil {
+		h.logger.Error(r.Context(), "get user calendar failed",
+			"user_id", userID, "year", year, "month", month, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	data := map[string]any{
-		"Year":         year,
-		"PrevYear":     year - 1,
-		"NextYear":     year + 1,
-		"HolidaysJSON": template.JS(result.HolidaysJSON),
-	}
-	if err := h.templates.Render(w, "calendar.html", data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if err := json.NewEncoder(w).Encode(dto.ToCalendarResponse(result)); err != nil {
+		// лог, но ответ уже частично отправлен
+		h.logger.Error(r.Context(), "encode calendar response", "error", err)
 	}
 }
 

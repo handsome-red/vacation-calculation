@@ -4,6 +4,9 @@ import (
 	"io/fs"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/di"
 	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/handlers"
@@ -11,65 +14,120 @@ import (
 )
 
 type Router struct {
-	mux         *http.ServeMux
-	container   *di.Container
-	logger      ports.Logger
-	middlewares []func(http.Handler) http.Handler
-	handler     http.Handler
+	container *di.Container
+	logger    ports.Logger
+	authMW    func(http.Handler) http.Handler
+
+	templates           *handlers.Templates
+	healthHandler       *handlers.HealthHandler
+	homeHandler         *handlers.HomeHandler
+	registrationHandler *handlers.RegistrationHandler
+	userHandler         *handlers.UserHandler
+	vacationHandler     *handlers.VacationHandler
+	shiftHandler        *handlers.ShiftHandler
+	calendarHandler     *handlers.CalendarHandler
 }
 
-func NewRouter(container *di.Container, logger ports.Logger) *Router {
-	return &Router{
-		mux:         http.NewServeMux(),
-		container:   container,
-		logger:      logger,
-		middlewares: []func(http.Handler) http.Handler{},
-	}
-}
-
-func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if r.handler == nil {
-		panic("routes.Router: Setup() must be called before ServeHTTP")
-	}
-	r.handler.ServeHTTP(w, req)
-}
-
-func (r *Router) WithMiddleware(mw ...func(http.Handler) http.Handler) *Router {
-	r.middlewares = append(r.middlewares, mw...)
-	return r
-}
-
-func (r *Router) Build() http.Handler {
-	r.registerRoutes()
-
-	handler := http.Handler(r.mux)
-
-	for _, mw := range r.middlewares {
-		handler = mw(handler)
+func NewRouter(
+	container *di.Container,
+	logger ports.Logger,
+	authMW func(http.Handler) http.Handler,
+) (*Router, error) {
+	templates, err := handlers.NewTemplates()
+	if err != nil {
+		return nil, fmt.Errorf("templates: %w", err)
 	}
 
-	return handler
+	r := &Router{
+		container: container,
+		logger:    logger,
+		authMW:    authMW,
+		templates: templates,
+	}
+
+	r.healthHandler = handlers.NewHealthHandler()
+	r.homeHandler = handlers.NewHomeHandler(templates)
+	r.registrationHandler = handlers.NewRegistrationHandler(
+		container.RegisterUserUseCase,
+		container.GetRegisterFormUseCase,
+		templates,
+	)
+	r.userHandler = handlers.NewUserHandler(
+		container.GetUserUseCase,
+		container.DeactivateUserUseCase,
+		container.ActivateUserUseCase,
+		container.ListUsersUseCase,
+		templates,
+	)
+	r.vacationHandler = handlers.NewVacationHandler(
+		container.CreateVacationUseCase,
+		container.GetUserVacationsUseCase,
+		container.GetVacationFormUseCase,
+		templates,
+		logger,
+	)
+	r.shiftHandler = handlers.NewShiftHandler(
+		container.CreateShiftUseCase,
+		container.ShiftFormUseCase,
+		templates,
+	)
+	r.calendarHandler = handlers.NewCalendarHandler(
+		container.GetCalendarUseCase,
+		container.NewHolidayUseCase,
+		container.NewHolidayFormUseCase,
+		templates,
+		logger,
+	)
+
+	return r, nil
 }
 
-func (r *Router) registerRoutes() {
+func (r *Router) Build() (http.Handler, error) {
+	// Глобальный middleware для всего приложения
+	root := chi.NewRouter()
+	root.Use(middleware.RequestID)
+	root.Use(middleware.RealIP)
+	root.Use(middleware.Logger)
+	root.Use(middleware.Recoverer)
 
+	// 1. Публичные маршруты (без аутентификации)
+	r.registerPublic(root)
+
+	// 2. API v1 (с аутентификацией)
+	root.Route("/api/v1", func(api chi.Router) {
+		api.Use(r.authMW) // Middleware применяется ко всей группе /api/v1
+		r.registerAPI(api)
+	})
+
+	// 3. Админка (аутентификация + проверка роли)
+	root.Route("/admin", func(admin chi.Router) {
+		admin.Use(r.authMW)
+		// admin.Use(adminRoleMW) // Если нужна проверка роли
+		r.registerAdmin(admin)
+	})
+
+	return root, nil
+}
+
+func (r *Router) registerPublic(mux chi.Router) {
 	staticFS, err := fs.Sub(web.FS, "static")
 	if err != nil {
 		panic("router: static fs: " + err.Error())
 	}
-	r.mux.Handle(
-		"GET /static/",
-		http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
-	)
+	mux.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+
 	templates, err := handlers.NewTemplates()
 	if err != nil {
 		panic("router: templates: " + err.Error())
 	}
 
 	healthHandler := handlers.NewHealthHandler()
-
 	homeHandler := handlers.NewHomeHandler(templates)
 
+	mux.Get("/", homeHandler.Home)
+	mux.Get("/health", healthHandler.Health)
+
+	// Публичный регистрация
 	userHandler := handlers.NewUserHandler(
 		r.container.RegisterUserUseCase,
 		r.container.GetUserUseCase,
@@ -79,77 +137,35 @@ func (r *Router) registerRoutes() {
 		r.container.GetRegisterFormUseCase,
 		r.container.CreateShiftUseCase,
 		r.container.ShiftFormUseCase,
-		templates,
-		// r.logger,
+		r.teplates,
 	)
+	mux.Get("/user/register", userHandler.RegisterUserForm)
+	mux.Post("/user/register", userHandler.RegisterUser)
+}
 
-	vacationHandler := handlers.NewVacationHandler(
-		r.container.CreateVacationUseCase,
-		r.container.GetUserVacationsUseCase,
-		r.container.GetVacationFormUseCase,
-		templates,
-		r.logger,
-	)
+func (r *Router) registerAPI(mux chi.Router) {
+	// Здесь все пути БЕЗ префикса /api/v1, потому что мы уже внутри Route("/api/v1")
+	userHandler := handlers.NewUserHandler( /* ... */ )
+	vacationHandler := handlers.NewVacationHandler( /* ... */ )
+	calendarHandler := handlers.NewCalendarHandler( /* ... */ )
+	shiftHandler := handlers.NewShiftHandler( /* ... */ )
 
-	shiftHandler := handlers.NewShiftHandler(
-		r.container.CreateShiftUseCase,
-		r.container.ShiftFormUseCase,
-		templates,
-	)
+	mux.Get("/users/{id}", userHandler.GetUser)
+	mux.Delete("/users/{id}", userHandler.DeactivateUser)
+	mux.Get("/users", userHandler.ListUsers)
 
-	calendarHandler := handlers.NewCalendarHandler(
-		r.container.GetCalendarUseCase,
-		r.container.NewHolidayUseCase,
-		r.container.NewHolidayFormUseCase,
-		templates,
-		r.logger,
-	)
-	// calendarHandler := handlers.NewCalendarHandlers(
-	// 	r.container.д
-	// )
+	mux.Get("/users/{userId}/vacations", vacationHandler.GetVacations)
+	mux.Get("/users/{userId}/vacations/new", vacationHandler.GetVacationForm)
+	mux.Post("/users/{userId}/vacations", vacationHandler.CreateVacation)
 
-	r.mux.HandleFunc("GET /{$}", homeHandler.Home)
+	mux.Get("/users/{userId}/calendar", calendarHandler.GetUserCalendar)
 
-	// ============================================================
-	// Public Routes (без аутентификации)
-	// ============================================================
-	r.mux.HandleFunc("GET /health", healthHandler.Health)
-	// r.mux.HandleFunc("GET /ready", healthHandler.Ready)
+	mux.Get("/users/{userId}/shift/new", shiftHandler.NewShiftForm)
+	mux.Post("/users/{userId}/shift", shiftHandler.CreateShift)
+}
 
-	// ============================================================
-	// API v1 Routes
-	// ============================================================
-	// User routes
-	// TODO подумать над маршрутом для html
-	r.mux.HandleFunc("GET /api/v1/user/register", userHandler.RegisterUserForm)
-	r.mux.HandleFunc("POST /api/v1/user/register", userHandler.RegisterUser)
-
-	r.mux.HandleFunc("GET /api/v1/users/{id}", userHandler.GetUser)
-	// r.mux.HandleFunc("PUT /api/v1/users/{id}/email", userHandler.ChangeEmail)
-	r.mux.HandleFunc("DELETE /api/v1/users/{id}", userHandler.DeactivateUser)
-	// r.mux.HandleFunc("POST /api/v1/users/{id}/activate", userHandler.ActivateUser)
-	r.mux.HandleFunc("GET /api/v1/users", userHandler.ListUsers)
-
-	// Calendar
-	// r.mux.HandleFunc("GET /api/v1/calendar", calendarHandler.GetCalendar)
-
-	// Vacation routes
-	// r.mux.HandleFunc("POST /api/v1/vacations", vacationHandler.CreateVacation)
-	r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations", vacationHandler.GetVacations)
-	r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations/new", vacationHandler.GetVacationForm)
-	r.mux.HandleFunc("POST /api/v1/users/{userId}/vacations", vacationHandler.CreateVacation)
-	// r.mux.HandleFunc("GET /api/v1/users/{userId}/vacations", vacationHandler.GetUserVacations)
-
-	// Calendar routes
-	r.mux.HandleFunc("GET /api/v1/calendar", calendarHandler.GetCalendar)
-
-	r.mux.HandleFunc("GET /api/v1/users/{userId}/shift/new", shiftHandler.NewShiftForm)
-	r.mux.HandleFunc("POST /api/v1/users/{userId}/shift", shiftHandler.CreateShift)
-
-	r.mux.HandleFunc("GET /admin/holidays", calendarHandler.NewHoliday)
-	r.mux.HandleFunc("POST /admin/holidays", calendarHandler.NewHoliday)
-
-	// r.mux.HandleFunc("POST /api/v1/vacations/{id}/approve", vacationHandler.ApproveVacation)
-	// r.mux.HandleFunc("POST /api/v1/vacations/{id}/reject", vacationHandler.RejectVacation)
-	// r.mux.HandleFunc("DELETE /api/v1/vacations/{id}", vacationHandler.CancelVacation)
+func (r *Router) registerAdmin(mux chi.Router) {
+	calendarHandler := handlers.NewCalendarHandler( /* ... */ )
+	mux.Get("/holidays", calendarHandler.NewHoliday)
+	mux.Post("/holidays", calendarHandler.NewHoliday)
 }

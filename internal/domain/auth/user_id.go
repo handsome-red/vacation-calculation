@@ -9,21 +9,17 @@ type UserID struct {
 func ParseUserID(s string) (UserID, error) {
 	value, err := uuid.Parse(s)
 	if err != nil {
-		return  UserID{}, ErrIDRequired
+		return UserID{}, ErrIDRequired
 	}
 	return UserID{
 		value: value,
 	}, nil
 }
 
-func(u UserID) isValid(s string) bool {
-	userID, err := uuid.Parse(s)
-	if err != nil {
-		return false
-	}
-	return userID != uuid.Nil
+func (u UserID) String() string {
+	return u.value.String()
 }
 
-func(u UserID) IsZero() bool {
-	return u.value != uuid.Nil
+func (u UserID) IsZero() bool {
+	return u.value == uuid.Nil
 }

@@ -5,4 +5,5 @@ type Query struct {
 }
 
 type Result struct {
+	UserID string
 }

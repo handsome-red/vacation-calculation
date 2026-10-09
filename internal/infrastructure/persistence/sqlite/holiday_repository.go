@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
@@ -42,19 +43,17 @@ func (r *holidayRepository) Save(ctx context.Context, h vacation.Holiday) error 
 
 func (r *holidayRepository) ListInRange(ctx context.Context, from, to vacation.Date) ([]vacation.Holiday, error) {
 	const q = `
-		SELECT date, name
-		FROM holidays
-		WHERE date BETWEEN ? AND ?
-		ORDER BY date
-	`
+        SELECT date, name
+        FROM holidays
+        WHERE date BETWEEN ? AND ?
+        ORDER BY date
+    `
 
-	var holidaysRows []holidayRow
-	err := r.db.SelectContext(ctx, &holidaysRows, q, from, to)
-	if err != nil {
+	var rows []holidayRow
+	if err := r.db.SelectContext(ctx, &rows, q, from, to); err != nil {
 		return nil, fmt.Errorf("list holidays: %w", err)
 	}
-
-	return rowsToHoliday(holidaysRows)
+	return rowsToHoliday(rows)
 }
 
 func (r *holidayRepository) ListByYear(ctx context.Context, year int) ([]vacation.Holiday, error) {
@@ -65,8 +64,14 @@ func (r *holidayRepository) ListByYear(ctx context.Context, year int) ([]vacatio
 		ORDER BY date
 	`
 
-	from := fmt.Sprintf("%04d-01-01", year)
-	to := fmt.Sprintf("%04d-12-31", year)
+	from, err := vacation.NewDate(year, time.January, 1)
+	if err != nil {
+		return nil, fmt.Errorf("holiday year %d: %w", year, err)
+	}
+	to, err := vacation.NewDate(year, time.December, 31)
+	if err != nil {
+		return nil, fmt.Errorf("holiday year %d: %w", year, err)
+	}
 
 	var holidaysRows []holidayRow
 	if err := r.db.SelectContext(ctx, &holidaysRows, q, from, to); err != nil {

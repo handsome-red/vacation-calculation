@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
@@ -84,10 +85,9 @@ func (h *VacationHandler) CreateVacation(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request) {
-
 	userID := r.PathValue("userId")
-	if _, err := user.ParseUserID(userID); err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+	if userID == "" {
+		http.Error(w, "userId is required", http.StatusBadRequest)
 		return
 	}
 
@@ -99,10 +99,20 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	now := time.Now()
+
 	data := map[string]any{
-		"Form":     create_vacation.Command{UserID: userID},
-		"UserID":   userID,
-		"Calendar": result,
+		"Cmd": create_vacation.Command{
+			UserID: result.UserID,
+		},
+		"Error": "",
+		"Calendar": CalendarProps{
+			UserID:    result.UserID,
+			Year:      now.Year(),
+			Month:     int(now.Month()),
+			FromField: "start_date",
+			ToField:   "end_date",
+		},
 	}
 
 	if err := h.templates.Render(w, "vacation_form.html", data); err != nil {

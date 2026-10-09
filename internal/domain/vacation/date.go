@@ -1,6 +1,7 @@
 package vacation
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"log"
 	"time"
@@ -12,6 +13,40 @@ type Date struct {
 	year  int
 	month time.Month
 	day   int
+}
+
+func (d Date) Value() (driver.Value, error) {
+	if d.IsZero() {
+		return nil, nil
+	}
+	return d.ISO(), nil
+}
+
+func (d *Date) Scan(src any) error {
+	if src == nil {
+		*d = Date{}
+		return nil
+	}
+
+	var s string
+	switch v := src.(type) {
+	case string:
+		s = v
+	case []byte:
+		s = string(v)
+	case time.Time:
+		*d = Date{year: v.Year(), month: v.Month(), day: v.Day()}
+		return nil
+	default:
+		return fmt.Errorf("vacation.Date: cannot scan type %T", src)
+	}
+
+	parsed, err := ParseDate(s)
+	if err != nil {
+		return fmt.Errorf("vacation.Date: scan %q: %w", s, err)
+	}
+	*d = parsed
+	return nil
 }
 
 func (d Date) IsZero() bool {

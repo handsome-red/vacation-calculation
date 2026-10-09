@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 	// "github.com/handsome-red/vacation-calculation/internal/domain/vacation"
@@ -74,4 +75,13 @@ type HolidayRepository interface {
 	Save(ctx context.Context, h vacation.Holiday) error
 	ListInRange(ctx context.Context, from, to vacation.Date) ([]vacation.Holiday, error)
 	ListByYear(ctx context.Context, year int) ([]vacation.Holiday, error)
+}
+
+type AuthRepository interface {
+	FindByEmail(ctx context.Context, email auth.Email) (*auth.AuthUser, error)
+	Save(ctx context.Context, u *auth.AuthUser) error
+}
+
+type SessionRepository interface {
+	UserBySession(ctx context.Context, sessionID string) (*auth.AuthUser, error)
 }

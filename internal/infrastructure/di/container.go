@@ -94,7 +94,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 
 	createVacationUseCase := create_vacation.NewHandler(vacationRepo)
 	getUserVacationsUseCase := get_user_vacations.NewHandler(vacationRepo)
-	getVacationFormUseCase := get_vacation_form.NewHandler(holidayRepo)
+	getVacationFormUseCase := get_vacation_form.NewHandler()
 	getCalendarUseCase := get_calendar.NewHandler(holidayRepo, vacationRepo, shiftRepo)
 	newHolidayFormUseCase := new_holiday_form.NewHandler(holidayRepo)
 

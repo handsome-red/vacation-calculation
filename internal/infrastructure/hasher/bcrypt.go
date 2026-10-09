@@ -10,11 +10,11 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 )
 
-type BcryptHasher struct {
+type bcryptHasher struct {
 	cost int
 }
 
-func NewBcryptHasher(cost int) *BcryptHasher {
+func NewBcryptHasher(cost int) *bcryptHasher {
 	if cost < bcrypt.MinCost {
 		cost = bcrypt.MinCost
 	}
@@ -22,12 +22,12 @@ func NewBcryptHasher(cost int) *BcryptHasher {
 		cost = bcrypt.MaxCost
 	}
 
-	return &BcryptHasher{cost: cost}
+	return &bcryptHasher{cost: cost}
 }
 
-var _ ports.PasswordHasher = (*BcryptHasher)(nil)
+var _ ports.PasswordHasher = (*bcryptHasher)(nil)
 
-func (h *BcryptHasher) HashPassword(ctx context.Context, password string) (string, error) {
+func (h *bcryptHasher) HashPassword(ctx context.Context, password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), h.cost)
 	if err != nil {
 		return "", fmt.Errorf("hashing password: %w", err)
@@ -37,7 +37,7 @@ func (h *BcryptHasher) HashPassword(ctx context.Context, password string) (strin
 }
 
 // Verify проверяет пароль
-func (h *BcryptHasher) Verify(ctx context.Context, hashedPassword, plainPassword string) (bool, error) {
+func (h *bcryptHasher) Verify(ctx context.Context, hashedPassword, plainPassword string) (bool, error) {
 	if hashedPassword == "" {
 		return false, errors.New("hashed password is empty")
 	}
@@ -61,7 +61,7 @@ func (h *BcryptHasher) Verify(ctx context.Context, hashedPassword, plainPassword
 }
 
 // NeedsRehash проверяет, нужно ли перехешировать
-func (h *BcryptHasher) NeedsRehash(ctx context.Context, hashedPassword string) bool {
+func (h *bcryptHasher) NeedsRehash(ctx context.Context, hashedPassword string) bool {
 	if hashedPassword == "" {
 		return true // Пустой хеш точно нужно пересоздать
 	}

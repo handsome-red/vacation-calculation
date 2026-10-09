@@ -7,20 +7,14 @@ import (
 )
 
 type holidayRow struct {
-	Name string `db:"name"`
-	Date string `db:"date"`
+	Name string        `db:"name"`
+	Date vacation.Date `db:"date"`
 }
 
 func (r holidayRow) toDomain() (vacation.Holiday, error) {
-	date, err := vacation.ParseDate(r.Date)
+	h, err := vacation.NewHoliday(r.Name, r.Date)
 	if err != nil {
-		return vacation.Holiday{}, fmt.Errorf("invalid holiday date: %q, %w", r.Date, err)
+		return vacation.Holiday{}, fmt.Errorf("holiday %q: %w", r.Date.ISO(), err)
 	}
-
-	h, err := vacation.NewHoliday(r.Name, date)
-	if err != nil {
-		return vacation.Holiday{}, fmt.Errorf("invalid holiday: %q, %w", r.Date, err)
-	}
-
 	return h, nil
 }

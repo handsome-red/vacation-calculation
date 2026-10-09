@@ -1,0 +1,12 @@
+{{ define "calendar" }}
+<div class="calendar-widget"
+     data-user-id="{{ .UserID }}"
+     data-year="{{ .Year }}"
+     data-month="{{ .Month }}"
+     data-from-field="{{ .FromField }}"
+     data-to-field="{{ .ToField }}">
+</div>
+
+<input type="hidden" name="{{ .FromField }}" id="{{ .FromField }}" value="">
+<input type="hidden" name="{{ .ToField }}"   id="{{ .ToField }}"   value="">
+{{ end }}

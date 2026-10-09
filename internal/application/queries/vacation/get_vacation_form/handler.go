@@ -2,25 +2,21 @@ package get_vacation_form
 
 import (
 	"context"
+	"fmt"
 
-	// "github.com/handsome-red/vacation-calculation/internal/domain/user"
-	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
+	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
-type Handler struct {
-	repoHoliday ports.HolidayRepository
+type Handler struct{}
+
+func NewHandler() *Handler {
+	return &Handler{}
 }
 
-func NewHandler(
-	repoHoliday ports.HolidayRepository,
-) *Handler {
-	return &Handler{
-		repoHoliday: repoHoliday,
+func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
+	userID, err := user.ParseUserID(q.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user ID: %w", err)
 	}
-}
-
-func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
-	// userID := user.ParseUserID()
-	// result, err := h.repoHoliday.ListInRange()
-	return nil, nil
+	return &Result{UserID: userID.String()}, nil
 }

@@ -1,33 +1,21 @@
-{{template "base" .}}
+{{ define "title" }}Создать отпуск{{ end }}
 
-{{define "title"}}Создать отпуск{{end}}
-
-{{define "content"}}
+{{ define "content" }}
 <h1>Создать отпуск</h1>
 
-{{if .Errors}}
+{{ if .Errors }}
 <ul style="color:#b00">
-	{{range .Errors}}<li>{{.}}</li>{{end}}
+    {{ range .Errors }}<li>{{ . }}</li>{{ end }}
 </ul>
-{{end}}
+{{ end }}
 
-<form method="POST" action="/api/v1/users/{{.UserID}}/vacations">
-	<input type="hidden" name="user_id" value="{{.UserID}}">
+<form method="POST" action="/api/v1/users/{{ .Cmd.UserID }}/vacations">
+    <input type="hidden" name="user_id" value="{{ .Cmd.UserID }}">
 
-	<p>
-		<label>Дата начала<br>
-			<input type="date" name="start_date" value="{{.Form.StartDate}}" required>
-		</label>
-	</p>
+    {{ template "calendar" .Calendar }}
 
-	<p>
-		<label>Дата окончания<br>
-			<input type="date" name="end_date" value="{{.Form.EndDate}}" required>
-		</label>
-	</p>
-
-	<p>
-		<button type="submit">Создать</button>
-	</p>
+    <p>
+        <button type="submit">Создать</button>
+    </p>
 </form>
-{{end}}
+{{ end }}

@@ -1,98 +1,178 @@
 (function () {
-	const data = JSON.parse(document.getElementById('calendar-data').textContent);
-	const year = data.year;
-	const holidayMap = new Map(data.holidays.map(h => [h.date, h.name]));
+    const widgets = document.querySelectorAll(".calendar-widget");
+    if (!widgets.length) return;
 
-	const calendarEl = document.getElementById('calendar');
-	const listEl = document.getElementById('holidays-list');
+    const monthNames = [
+        "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+        "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+    ];
+    const weekdays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
-	const monthNames = [
-		'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-		'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-	];
+    widgets.forEach(initCalendar);
 
-	const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    function initCalendar(el) {
+        const userId   = el.dataset.userId;
+        const fromName = el.dataset.fromField;
+        const toName   = el.dataset.toField;
 
-	function pad(n) { return String(n).padStart(2, '0'); }
+        if (!userId || !fromName || !toName) {
+            console.warn("calendar-widget: missing data attributes", el);
+            return;
+        }
 
-	function formatDate(d) {
-		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-	}
+        let year  = parseInt(el.dataset.year, 10)  || new Date().getFullYear();
+        let month = parseInt(el.dataset.month, 10) || (new Date().getMonth() + 1);
 
-	function renderMonth(month) {
-		const first = new Date(year, month, 1);
-		const last = new Date(year, month + 1, 0);
+        // Скрытые поля для дат — в форме, не внутри виджета.
+        const form     = el.closest("form") || document;
+        const fromInput = form.querySelector(`input[name="${fromName}"]`);
+        const toInput   = form.querySelector(`input[name="${toName}"]`);
 
-		// Понедельник — первый день недели
-		let startWeekDay = first.getDay();
-		if (startWeekDay === 0) startWeekDay = 7;
-		startWeekDay -= 1;
+        let pickStart = null;   // первая кликнутая дата, ISO-строка
+        let data = null;        // ответ сервера на текущий месяц
 
-		const table = document.createElement('table');
-		table.className = 'month';
+        el.innerHTML = "";
 
-		const caption = document.createElement('caption');
-		caption.textContent = monthNames[month];
-		table.appendChild(caption);
+        const header = document.createElement("div");
+        header.className = "cal-header";
 
-		const thead = document.createElement('thead');
-		const headRow = document.createElement('tr');
-		for (const wd of weekDays) {
-			const th = document.createElement('th');
-			th.textContent = wd;
-			headRow.appendChild(th);
-		}
-		thead.appendChild(headRow);
-		table.appendChild(thead);
+        const prev = document.createElement("button");
+        prev.type = "button";
+        prev.textContent = "←";
+        prev.addEventListener("click", () => shiftMonth(-1));
 
-		const tbody = document.createElement('tbody');
-		let row = document.createElement('tr');
+        const label = document.createElement("span");
+        label.className = "cal-label";
 
-		for (let i = 0; i < startWeekDay; i++) {
-			row.appendChild(document.createElement('td'));
-		}
+        const next = document.createElement("button");
+        next.type = "button";
+        next.textContent = "→";
+        next.addEventListener("click", () => shiftMonth(1));
 
-		for (let day = 1; day <= last.getDate(); day++) {
-			const d = new Date(year, month, day);
-			const iso = formatDate(d);
+        header.append(prev, label, next);
+        el.appendChild(header);
 
-			const td = document.createElement('td');
-			td.textContent = day;
+        const grid = document.createElement("div");
+        grid.className = "cal-grid";
+        el.appendChild(grid);
 
-			if (holidayMap.has(iso)) {
-				td.classList.add('holiday');
-				td.title = holidayMap.get(iso);
-			}
+        // заголовки дней недели
+        for (const wd of weekdays) {
+            const cell = document.createElement("div");
+            cell.className = "cal-weekday";
+            cell.textContent = wd;
+            grid.appendChild(cell);
+        }
 
-			row.appendChild(td);
+        async function load() {
+            label.textContent = `${monthNames[month - 1]} ${year}`;
 
-			if (row.children.length === 7) {
-				tbody.appendChild(row);
-				row = document.createElement('tr');
-			}
-		}
+            const url = `/api/v1/users/${userId}/calendar?year=${year}&month=${month}`;
+            try {
+                const res = await fetch(url);
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                data = await res.json();
+            } catch (err) {
+                console.error("calendar load failed:", err);
+                grid.innerHTML = `<p class="error">Не удалось загрузить календарь</p>`;
+                return;
+            }
+            renderGrid();
+        }
 
-		if (row.children.length > 0) {
-			while (row.children.length < 7) {
-				row.appendChild(document.createElement('td'));
-			}
-			tbody.appendChild(row);
-		}
+        function renderGrid() {
+            // очищаем всё, кроме заголовков дней недели
+            while (grid.children.length > 7) {
+                grid.removeChild(grid.lastChild);
+            }
 
-		table.appendChild(tbody);
-		return table;
-	}
+            // сдвиг: сколько пустых ячеек до первого дня месяца
+            const first = new Date(year, month - 1, 1);
+            const offset = (first.getDay() + 6) % 7; // неделя с понедельника
+            for (let i = 0; i < offset; i++) {
+                const empty = document.createElement("div");
+                empty.className = "cal-day cal-empty";
+                grid.appendChild(empty);
+            }
 
-	for (let m = 0; m < 12; m++) {
-		calendarEl.appendChild(renderMonth(m));
-	}
+            // дни месяца
+            for (const d of data.days) {
+                const cell = document.createElement("button");
+                cell.type = "button";
+                cell.className = "cal-day";
+                cell.dataset.date = d.date;
+                cell.textContent = d.day;
 
-	// Список праздников
-	const sorted = [...data.holidays].sort((a, b) => a.date.localeCompare(b.date));
-	for (const h of sorted) {
-		const li = document.createElement('li');
-		const [y, m, d] = h.date.split('-');
-		li.textContent = `${d}.${m}.${y} — ${h.name}`;
-		listEl.appendChild(li);
-	}
+                if (d.isWeekend) cell.classList.add("cal-weekend");
+                if (d.isHoliday) {
+                    cell.classList.add("cal-holiday");
+                    if (d.holidayName) cell.title = d.holidayName;
+                }
+                if (d.events && d.events.length > 0) {
+                    cell.classList.add("cal-busy");
+                    const kinds = d.events.map(e => e.title).join("; ");
+                    cell.title = cell.title ? `${cell.title}; ${kinds}` : kinds;
+                    cell.disabled = true; // занятые дни не выбираем
+                }
+
+                cell.addEventListener("click", () => onDayClick(d.date));
+                grid.appendChild(cell);
+            }
+
+            highlightSelection();
+        }
+
+        function shiftMonth(delta) {
+            month += delta;
+            if (month < 1)  { month = 12; year--; }
+            if (month > 12) { month = 1;  year++; }
+            load();
+        }
+
+        function onDayClick(date) {
+            if (!fromInput || !toInput) return;
+
+            if (!pickStart) {
+                pickStart = date;
+                fromInput.value = date;
+                toInput.value = date;
+                highlightSelection();
+                return;
+            }
+
+            if (date === pickStart) {
+                pickStart = null;
+                fromInput.value = "";
+                toInput.value = "";
+                highlightSelection();
+                return;
+            }
+
+            const [from, to] = date < pickStart ? [date, pickStart] : [pickStart, date];
+            fromInput.value = from;
+            toInput.value   = to;
+            pickStart = null;
+            highlightSelection();
+        }
+
+        function highlightSelection() {
+            if (!fromInput || !toInput) return;
+            const from = fromInput.value;
+            const to   = toInput.value;
+
+            grid.querySelectorAll(".cal-day").forEach((cell) => {
+                cell.classList.remove("cal-selected");
+                const date = cell.dataset.date;
+                if (!date) return;
+
+                if (from && to && date >= from && date <= to) {
+                    cell.classList.add("cal-selected");
+                }
+            });
+        }
+
+        load();
+    }
 })();

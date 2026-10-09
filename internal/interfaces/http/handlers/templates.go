@@ -33,6 +33,7 @@ func NewTemplates() (*Templates, error) {
 		// Для каждой страницы — свой набор: base + её контент
 		tpl, err := template.ParseFS(web.FS,
 			"templates/base.html",
+			"templates/partials/*.html",
 			path,
 		)
 		if err != nil {

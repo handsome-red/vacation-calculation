@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
+	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -14,7 +15,7 @@ type authRepository struct {
 	db *sqlx.DB
 }
 
-var _ auth.AuthRepository = (*authRepository)(nil)
+var _ ports.AuthRepository = (*authRepository)(nil)
 
 func NewAuthRepository(db *sqlx.DB) *authRepository {
 	return &authRepository{
@@ -22,7 +23,7 @@ func NewAuthRepository(db *sqlx.DB) *authRepository {
 	}
 }
 
-func (r authRepository) FindByEmail(ctx context.Context, email auth.Email)(*auth.AuthUser, error) {
+func (r authRepository) FindByEmail(ctx context.Context, email auth.Email) (*auth.AuthUser, error) {
 	const q = `
 		SELECT id, email, password_hash, role, status
 		FROM auth_users
@@ -40,7 +41,7 @@ func (r authRepository) FindByEmail(ctx context.Context, email auth.Email)(*auth
 	return result.toDomain()
 }
 
-func (r authRepository)	Save(ctx context.Context, u *auth.AuthUser) error {
+func (r authRepository) Save(ctx context.Context, u *auth.AuthUser) error {
 	const q = `
 		INSERT INTO auth_users(
 			id, email, password_hash, role, status
