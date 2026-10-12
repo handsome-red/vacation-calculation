@@ -48,6 +48,7 @@ type UserRepository interface {
 
 type DistrictRepository interface {
 	List(ctx context.Context) ([]user.District, error)
+	FindByCode(ctx context.Context, code string) (user.District, error)
 }
 
 type DepartmentRepository interface {
@@ -63,6 +64,7 @@ type ShiftRepository interface {
 
 type VacationRepository interface {
 	Save(ctx context.Context, vacation *vacation.Vacation) error
+	FindByID(ctx context.Context, userID user.UserID, id vacation.VacationID) (*vacation.Vacation, error)
 	FindByUserID(ctx context.Context, userID user.UserID) ([]*vacation.Vacation, error)
 	FindByUserIDInRange(
 		ctx context.Context,

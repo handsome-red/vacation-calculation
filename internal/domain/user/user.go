@@ -78,6 +78,7 @@ func NewUser(
 		password:        password,
 		createdAt:       now,
 		updatedAt:       now,
+		status:          StatusActive,
 	}, nil
 }
 

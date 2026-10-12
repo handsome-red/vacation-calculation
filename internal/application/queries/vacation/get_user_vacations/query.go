@@ -5,6 +5,7 @@ type Query struct {
 }
 
 type Vacations struct {
+	ID        string
 	Color     int
 	StartDate string
 	EndDate   string

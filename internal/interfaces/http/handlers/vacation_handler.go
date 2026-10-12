@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
@@ -14,6 +15,7 @@ import (
 
 type VacationHandler struct {
 	createVacationUseCase   *create_vacation.Handler
+	approveVacationUseCase  *approve_vacation.Handler
 	getUserVacationsUseCase *get_user_vacations.Handler
 	getVacationFormUseCase  *get_vacation_form.Handler
 	templates               *Templates
@@ -22,17 +24,19 @@ type VacationHandler struct {
 
 func NewVacationHandler(
 	createVacationUseCase *create_vacation.Handler,
+	approveVacationUseCase *approve_vacation.Handler,
 	getUserVacationsUseCase *get_user_vacations.Handler,
 	getVacationFormUseCase *get_vacation_form.Handler,
 	templates *Templates,
 	logger ports.Logger,
 ) *VacationHandler {
 	return &VacationHandler{
-		createVacationUseCase:   createVacationUseCase,
-		getUserVacationsUseCase: getUserVacationsUseCase,
-		getVacationFormUseCase:  getVacationFormUseCase,
-		templates:               templates,
-		logger:                  logger,
+		createVacationUseCase:    createVacationUseCase,
+		approveVacationUseCase:   approveVacationUseCase,
+		getUserVacationsUseCase:  getUserVacationsUseCase,
+		getVacationFormUseCase:   getVacationFormUseCase,
+		templates:                templates,
+		logger:                   logger,
 	}
 }
 
@@ -81,7 +85,8 @@ func (h *VacationHandler) CreateVacation(w http.ResponseWriter, r *http.Request)
 
 	h.logger.Info(r.Context(), "vacation create successfuly")
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	redirectURL := "/users/" + cmd.UserID
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
 func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request) {
@@ -113,9 +118,41 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 			FromField: "start_date",
 			ToField:   "end_date",
 		},
+		"Balance": struct {
+			Total         int  // Base + Irregular + Seniority — полное ежегодное право
+			Used          int  // уже использовано в текущем рабочем году
+			Available     int  // Total - Used — сколько можно взять
+			HasActiveYear bool // есть ли активный рабочий год
+		}{
+			Total:         result.Total,
+			Used:          result.Used,
+			Available:     result.Available,
+			HasActiveYear: result.HasActiveYear,
+		},
 	}
 
 	if err := h.templates.Render(w, "vacation_form.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (h *VacationHandler) ApproveVacation(w http.ResponseWriter, r *http.Request) {
+	userID := r.PathValue("userId")
+	vacationID := r.PathValue("id")
+
+	cmd := approve_vacation.Command{
+		UserID:     userID,
+		VacationID: vacationID,
+	}
+
+	_, err := h.approveVacationUseCase.Handle(r.Context(), cmd)
+	if err != nil {
+		h.logger.Error(r.Context(), "failed to approve vacation", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	h.logger.Info(r.Context(), "vacation approved successfully")
+	redirectURL := "/api/v1/users/" + userID + "/vacations"
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }

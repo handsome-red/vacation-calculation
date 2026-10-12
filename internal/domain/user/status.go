@@ -43,4 +43,14 @@ func (s Status) isValid() bool {
 	}
 }
 
-func (s Status) String() string { return statusMap[s] }
+func (s Status) Label() string { return statusMap[s] }
+
+// String returns the database-safe value for serialization.
+func (s Status) String() string {
+	switch s {
+	case StatusActive, StatusBlocked, StatusFired, StatusDeleted, StatusUnknown:
+		return string(s)
+	default:
+		return ""
+	}
+}

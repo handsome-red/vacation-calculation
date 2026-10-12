@@ -15,6 +15,7 @@
                 <th>Дата начала отпуска</th>
                 <th>Дата конца отпуска</th>
                 <th>Статус</th>
+                <th>Действия</th>
             </tr>
         </thead>
         <tbody>
@@ -24,10 +25,17 @@
                 <td>{{.StartDate}}</td>
                 <td>{{.EndDate}}</td>
                 <td>{{.Status}}</td>
+                <td>
+                    {{if eq .Status "DRAFT"}}
+                    <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/approve" style="display:inline;">
+                        <button type="submit" class="btn btn-sm">Approve</button>
+                    </form>
+                    {{end}}
+                </td>
             </tr>
             {{else}}
             <tr>
-                <td colspan="4">Нет отпусков</td>
+                <td colspan="5">Нет отпусков</td>
             </tr>
             {{end}}
         </tbody>

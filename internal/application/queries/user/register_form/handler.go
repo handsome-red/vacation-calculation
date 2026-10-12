@@ -3,6 +3,7 @@ package register_form
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -65,5 +66,11 @@ func (h *Handler) Handle(ctx context.Context, _ Query) (*Result, error) {
 		Positions:   pos,
 		Districts:   dis,
 		Departments: dep,
+		Errors:      []string{},
+		CSRFToken:   "",
+		Today:       time.Now().Format("2006-01-02"),
+		Form:        Form{
+			WorkdayDuration: 8,
+		},
 	}, nil
 }

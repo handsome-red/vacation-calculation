@@ -63,6 +63,7 @@ func NewRouter(
 	)
 	r.vacationHandler = handlers.NewVacationHandler(
 		container.CreateVacationUseCase,
+		container.ApproveVacationUseCase,
 		container.GetUserVacationsUseCase,
 		container.GetVacationFormUseCase,
 		templates,
@@ -130,6 +131,10 @@ func (r *Router) registerPublic(mux chi.Router) {
 	// Public registration form
 	mux.Get("/user/register", r.registrationHandler.Form)
 	mux.Post("/user/register", r.registrationHandler.Register)
+
+	// Публичные страницы SPA (HTML views)
+	mux.Get("/users", r.userHandler.ListUsersPage)
+	mux.Get("/users/{id}", r.userHandler.GetUserPage)
 }
 
 func (r *Router) registerAPI(mux chi.Router) {
@@ -146,6 +151,7 @@ func (r *Router) registerAPI(mux chi.Router) {
 		mux.Get("/users/{userId}/vacations", r.vacationHandler.GetVacations)
 		mux.Get("/users/{userId}/vacations/new", r.vacationHandler.GetVacationForm)
 		mux.Post("/users/{userId}/vacations", r.vacationHandler.CreateVacation)
+		mux.Post("/users/{userId}/vacations/{id}/approve", r.vacationHandler.ApproveVacation)
 	}
 
 	if r.calendarHandler != nil {

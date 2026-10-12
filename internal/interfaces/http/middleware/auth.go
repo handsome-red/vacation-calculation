@@ -48,7 +48,7 @@ func (m *AuthMiddleware) Require(next http.Handler) http.Handler {
 	})
 }
 
-func (m *AuthMiddleware) auntificate(r *http.Request) (*auth.AuthUser, bool) {
+func (m *AuthMiddleware) authenticate(r *http.Request) (*auth.AuthUser, bool) {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil || cookie.Value == "" {
 		return nil, false

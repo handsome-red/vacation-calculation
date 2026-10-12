@@ -1,145 +1,133 @@
-<!DOCTYPE html>
-<html lang="ru">
+{{template "base" .}}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>New_user</title>
-	<link rel="stylesheet" href="/static/css/style.css">
-</head>
+{{define "title"}}Новый сотрудник{{end}}
 
-<body>
+{{define "content"}}
+<div class="container">
+    <h1>Добавить нового пользователя</h1>
 
-    {{template "sidebar" .}}
+    {{if .Errors}}
+    <ul style="color:#b00">
+        {{range .Errors}}<li>{{.}}</li>{{end}}
+    </ul>
+    {{end}}
 
-    <main class="content">
-        <div class="container">
+    <form method="POST" action="/user/register">
+        {{if .CSRFToken}}
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        {{end}}
 
-            <h1>Добавить нового пользователя</h1>
+        <p><label>Фамилия<br>
+                <input type="text" name="last_name" value="{{.Form.LastName}}" required>
+            </label></p>
 
-            {{if .Errors}}
-            <ul style="color:#b00">
-                {{range .Errors}}<li>{{.}}</li>{{end}}
-            </ul>
+        <p><label>Имя<br>
+                <input type="text" name="first_name" value="{{.Form.FirstName}}" required>
+            </label></p>
+
+        <p><label>Отчество<br>
+                <input type="text" name="middle_name" value="{{.Form.MiddleName}}" required>
+            </label></p>
+
+        <p><label>Email<br>
+                <input type="email" name="email" value="{{.Form.Email}}" required>
+            </label></p>
+
+        <p><label>Пароль<br>
+                <input type="password" name="password" required>
+            </label></p>
+
+        <p><label>Дата рождения<br>
+                <input type="date" name="birth_date" value="{{.Form.BirthDate}}" max="{{.Today}}" required>
+            </label></p>
+
+        <p><label for="position">Должность</label></p>
+        <select id="position" name="position" required>
+            <option value="">- выберите должность -</option>
+            {{range .Positions}}
+            <option value="{{.Code}}">{{.Title}}</option>
             {{end}}
+        </select>
 
-            <form method="POST" action="/api/v1/user/register">
-                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-
-                <p><label>Фамилия<br>
-                        <input type="text" name="last_name" value="{{.Form.LastName}}" required>
-                    </label></p>
-
-                <p><label>Имя<br>
-                        <input type="text" name="first_name" value="{{.Form.FirstName}}" required>
-                    </label></p>
-
-                <p><label>Отчество<br>
-                        <input type="text" name="middle_name" value="{{.Form.MiddleName}}" required>
-                    </label></p>
-
-                <p><label>Email<br>
-                        <input type="email" name="email" value="{{.Form.Email}}" required>
-                    </label></p>
-
-                <p><label>Пароль<br>
-                        <input type="password" name="password" required>
-                    </label></p>
-
-                <p><label>Дата рождения<br>
-                        <input type="date" name="birth_date" value="{{.Form.BirthDate}}" max="{{.Today}}" required>
-                    </label></p>
-
-                <p><label for="position">Должность</label></p>
-                <select id="position" name="position" required>
-                    <option value="">- выберите должность -</option>
-                    {{range .Positions}}
-                    <option value="{{.Code}}">{{.Title}}</option>
-                    {{end}}
-                </select>
-
-                <p><label>Дата приема на работу<br>
-                        <input type="date" name="hired_at" value="{{.Form.HiredAt}}" max="{{.Today}}" required>
-                    </label></p>
-                
-                <p><label for ="district">Территориальный отдел</label></p>
-                <select id="district" name="district" required>
-                    <option value="">— выберите территориальный отдел —</option>
-                    {{range .Districts}}
-                    <option value="{{.Code}}">{{.Title}}</option>
-                    {{end}}
-                </select>
+        <p><label>Дата приема на работу<br>
+                <input type="date" name="hired_at" value="{{.Form.HiredAt}}" max="{{.Today}}" required>
+            </label></p>
+        
+        <p><label for="district">Территориальный отдел</label></p>
+        <select id="district" name="district" required>
+            <option value="">-- выберите территориальный отдел --</option>
+            {{range .Districts}}
+            <option value="{{.Code}}">{{.Title}}</option>
+            {{end}}
+        </select>
 
 
-                <p><label for ="department">Район/Отдел</label></p>
-                <select id="department" name="department" required disabled>
-                    <option value="">— сначала выберите теротдел —</option>
-                    {{range .Departments}}
-                    <option value="{{.Code}}" data-district="{{.DistrictCode}}">{{.Title}}</option>
-                    {{end}}
-                </select>
+        <p><label for="department">Район/Отдел</label></p>
+        <select id="department" name="department" required disabled>
+            <option value="">-- сначала выберите теротдел --</option>
+            {{range .Departments}}
+            <option value="{{.Code}}" data-district="{{.DistrictCode}}">{{.Title}}</option>
+            {{end}}
+        </select>
 
-                <p><label>Продолжительность рабочего дня<br>
-                        <input type="number" name="workday_duration" value="{{.Form.WorkdayDuration}}" min="1" max="1440"
-                            step="1" required>
-                    </label></p>
+        <p><label>Продолжительность рабочего дня<br>
+                <input type="number" name="workday_duration" value="{{.Form.WorkdayDuration}}" min="1" max="1440"
+                    step="1" required>
+                </label></p>
 
-                <p><label>Инвалид<br>
-                        <input type="hidden" name="is_invalid" value="false" required>
-                        <input type="checkbox" name="is_invalid" value="true" {{if .Form.IsInvalid}}checked{{end}}>
-                    </label></p>
+        <p><label>Инвалид<br>
+                <input type="hidden" name="is_invalid" value="false" required>
+                <input type="checkbox" name="is_invalid" value="true" {{if .Form.IsInvalid}}checked{{end}}>
+            </label></p>
 
-                <p><button type="submit">Сохранить</button></p>
-            </form>
-        </div>
-    </main>
-    
-    <script>
-    (function () {
-        const district = document.getElementById('district');
-        const department = document.getElementById('department');
+        <p><button type="submit">Сохранить</button></p>
+    </form>
+</div>
 
-        // Собираем все опции один раз (кроме placeholder)
-        const allOptions = Array.from(department.querySelectorAll('option[data-district]'));
+<script>
+(function () {
+    const district = document.getElementById('district');
+    const department = document.getElementById('department');
 
-        function render() {
-            const code = district.value;
+    // Собираем все опции один раз (кроме placeholder)
+    const allOptions = Array.from(department.querySelectorAll('option[data-district]'));
 
-            if (!code) {
-                department.disabled = true;
-                department.value = '';
-                allOptions.forEach(opt => { opt.hidden = true; });
-                department.querySelector('option[value=""]').textContent = '— сначала выберите теротдел —';
-                return;
-            }
+    function render() {
+        const code = district.value;
 
-            let anyVisible = false;
-
-            allOptions.forEach(opt => {
-                // Республиканские отделы (district_code = "") показываем всегда
-                const belongs = opt.dataset.district === '' || opt.dataset.district === code;
-                opt.hidden = !belongs;
-                if (belongs) anyVisible = true;
-            });
-
-            department.disabled = !anyVisible;
-            department.querySelector('option[value=""]').textContent = anyVisible
-                ? '— выберите отдел —'
-                : '— нет отделов для этого теротдела —';
-
-            // Если выбранный отдел скрыт — сбрасываем
-            const selected = department.selectedOptions[0];
-            if (!selected || selected.hidden || selected.value === '') {
-                department.value = '';
-            }
+        if (!code) {
+            department.disabled = true;
+            department.value = '';
+            allOptions.forEach(opt => { opt.hidden = true; });
+            department.querySelector('option[value=""]').textContent = '-- сначала выберите теротдел --';
+            return;
         }
 
-        district.addEventListener('change', render);
+        let anyVisible = false;
 
-        // Восстанавливаем состояние при повторном рендере (например, форма с ошибкой)
-        render();
-    })();
-    </script>
-</body>
+        allOptions.forEach(opt => {
+            // Республиканские отделы (district_code = "") показываем всегда
+            const belongs = opt.dataset.district === '' || opt.dataset.district === code;
+            opt.hidden = !belongs;
+            if (belongs) anyVisible = true;
+        });
 
-</html>
+        department.disabled = !anyVisible;
+        department.querySelector('option[value=""]').textContent = anyVisible
+            ? '-- выберите отдел --'
+            : '-- нет отделов для этого теротдела --';
+
+        // Если выбранный отдел скрыт - сбрасываем
+        const selected = department.selectedOptions[0];
+        if (!selected || selected.hidden || selected.value === '') {
+            department.value = '';
+        }
+    }
+
+    district.addEventListener('change', render);
+
+    // Восстанавливаем состояние при повторном рендере (например, форма с ошибкой)
+    render();
+})();
+</script>
+{{end}}

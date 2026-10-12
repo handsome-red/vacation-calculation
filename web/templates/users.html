@@ -5,7 +5,7 @@
 {{define "content"}}
 
 <div class="container">
-    <form method="GET" action="/api/v1/users" class="filters">
+    <form method="GET" action="/users" class="filters">
         <input type="text" name="last_name"
             value="{{.Filters.LastName}}" placeholder="Фамилия">
 
@@ -32,7 +32,7 @@
         <input type="hidden" name="page" value="1">   <!-- сбрасываем на 1-ю страницу при новом фильтре -->
 
         <button type="submit">Применить</button>
-        <a href="/api/v1/users">Сбросить</a>
+        <a href="/users">Сбросить</a>
     </form>
 </div>
 
@@ -55,10 +55,10 @@
         </thead>
         <tbody>
             {{range .Users}}
-            <tr data-href="/api/v1/users/{{.ID}}">
+            <tr data-href="/users/{{.ID}}">
                 <td>{{.Status}}</td>
                 <td>
-                    <a href="/api/v1/users/{{.ID}}" class="user-link">{{.LastName}}</a>
+                    <a href="/users/{{.ID}}" class="user-link">{{.LastName}}</a>
                 </td>
                 <td>{{.FirstName}}</td>
                 <td>{{.MiddleName}}</td>

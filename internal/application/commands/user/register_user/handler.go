@@ -9,20 +9,23 @@ import (
 )
 
 type Handler struct {
-	userRepo ports.UserRepository
-	hasher   ports.PasswordHasher
-	logger   ports.Logger
+	userRepo     ports.UserRepository
+	districtRepo ports.DistrictRepository
+	hasher       ports.PasswordHasher
+	logger       ports.Logger
 }
 
 func NewHandler(
 	userRepo ports.UserRepository,
+	districtRepo ports.DistrictRepository,
 	hasher ports.PasswordHasher,
 	logger ports.Logger,
 ) *Handler {
 	return &Handler{
-		userRepo: userRepo,
-		hasher:   hasher,
-		logger:   logger,
+		userRepo:     userRepo,
+		districtRepo: districtRepo,
+		hasher:       hasher,
+		logger:       logger,
 	}
 }
 
@@ -62,7 +65,10 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	}
 
 	// Валидируем район/отдел
-	district := user.NewDistrict(cmd.DistrictCode, cmd.DistrictCode) // TODO
+	district, err := h.districtRepo.FindByCode(ctx, cmd.DistrictCode)
+	if err != nil {
+		return nil, fmt.Errorf("invalid district: %w", err)
+	}
 
 	// Валидируем продолжительность рабочего дня
 	workdayDuration, err := user.NewWorkdayDuration(cmd.WorkdayDuration)

@@ -12,17 +12,12 @@
 <body>
     <div class="layout">
         <aside class="sidebar">
-            <h3>Меню</h3>
-                <nav>
-                    <ul>
-                        <li><a href="/api/v1/users">Пользователи</a></li>
-                    </ul>
-                </nav>
+            {{template "sidebar" .}}
         </aside>
         <main class="content">
             {{block "content" .}}{{end}}
         </main>
-    </div>    
+    </div>
 </body>
 </html>
 {{end}}

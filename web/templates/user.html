@@ -3,76 +3,76 @@
 {{define "title"}}Карточка пользователя{{end}}
 
 {{define "content"}}
-<div class="container">
-    <div class="user-page">
-        <section class="card card--profile">
-            <div class="card-header">
-                <h2>Общая статистика</h2>
-                <a class="btn" href="/api/v1/users/{{.User.ID}}/vacations/new">Редактировать</a>
-            </div>  
-            <table>
-                <tbody>
-                    <tr>
-                        <th>Статус</th>
-                        <td>{{.User.Status}}</td>
-                    </tr>
-                    <tr>
-                        <th>Фамилия</th>
-                        <td>{{.User.LastName}}</td>
-                    </tr>
-                    <tr>
-                        <th>Имя</th>
-                        <td>{{.User.FirstName}}</td>
-                    </tr>
-                    <tr>
-                        <th>Отчество</th>
-                        <td>{{.User.MiddleName}}</td>
-                    </tr>
-                    <tr>
-                        <th>Дата рождения</th>
-                        <td>{{.User.BirthDate}}</td>
-                    </tr>
-                    <tr>
-                        <th>Должность</th>
-                        <td>{{.User.Position}}</td>
-                    </tr>
-                    <tr>
-                        <th>Дата приема на работу</th>
-                        <td>{{.User.HiredAt}}</td>
-                    </tr>
-                    <tr>
-                        <th>Территориальный отдел</th>
-                        <td>{{.User.District}}</td>
-                    </tr>
-                    <tr>
-                        <th>Район/Отдел</th>
-                        <td>{{.User.Department}}</td>
-                    </tr>
-                    <tr>
-                        <th>Продолжительность рабочего дня</th>
-                        <td>{{.User.WorkdayDuration}}</td>
-                    </tr>
-                    <tr>
-                        <th>E-mail</th>
-                        <td>{{.User.Email}}</td>
-                    </tr>
-                    <tr>
-                        <th>Инвалид</th>
-                        <td>{{if .User.IsInvalid}}Да{{else}}Нет{{end}}</td>
-                    </tr>
-                    <tr>
-                        <th>Общий стаж выслуги</th>
-                        <td>{{.User.Experience}}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
+    <div class="container">
+        <div class="user-page">
+            <section class="card card--profile">
+                <div class="card-header">
+                    <h2>Общая статистика</h2>
+                    <a class="btn" href="/users/{{.UserID}}/vacations/new">Редактировать</a>
+                </div>  
+                <table>
+                    <tbody>
+                        <tr>
+                            <th>Статус</th>
+                            <td>{{.StatusLabel}}</td>
+                        </tr>
+                        <tr>
+                            <th>Фамилия</th>
+                            <td>{{.LastName}}</td>
+                        </tr>
+                        <tr>
+                            <th>Имя</th>
+                            <td>{{.FirstName}}</td>
+                        </tr>
+                        <tr>
+                            <th>Отчество</th>
+                            <td>{{.MiddleName}}</td>
+                        </tr>
+                        <tr>
+                            <th>Дата рождения</th>
+                            <td>{{.BirthDate}}</td>
+                        </tr>
+                        <tr>
+                            <th>Должность</th>
+                            <td>{{.PositionTitle}}</td>
+                        </tr>
+                        <tr>
+                            <th>Дата приема на работу</th>
+                            <td>{{.HiredAt}}</td>
+                        </tr>
+                        <tr>
+                            <th>Территориальный отдел</th>
+                            <td>{{.District}}</td>
+                        </tr>
+                        <tr>
+                            <th>Район/Отдел</th>
+                            <td>{{.Department}}</td>
+                        </tr>
+                        <tr>
+                            <th>Продолжительность рабочего дня</th>
+                            <td>{{.WorkdayDuration}}</td>
+                        </tr>
+                        <tr>
+                            <th>E-mail</th>
+                            <td>{{.Email}}</td>
+                        </tr>
+                        <tr>
+                            <th>Инвалид</th>
+                            <td>{{if .IsInvalid}}Да{{else}}Нет{{end}}</td>
+                        </tr>
+                        <tr>
+                            <th>Общий стаж выслуги</th>
+                            <td>{{.Experience}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
 
-        <section class="card card--entitlement">
-            <div class="card-header">
-                <h2>Статистика</h2>
-                <a class="btn" href="/api/v1/users/{{.User.ID}}/shift/new">Добавить сдвиг</a>
-            </div>
+            <section class="card card--entitlement">
+                <div class="card-header">
+                    <h2>Статистика</h2>
+                    <a class="btn" href="/api/v1/users/{{.UserID}}/shift/new">Добавить сдвиг</a>
+                </div>
             <table>
                 <thead>
                     <tr>
@@ -125,7 +125,7 @@
                 <tbody>
                     <tr>
                         <th>Сотрудник</th>
-                        <td>{{.User.Initials}}</td>
+                        <td>{{.Initials}}</td>
                     </tr>
                     {{if .Current.Range}}
                     <tr>
@@ -135,6 +135,10 @@
                     <tr>
                         <th>Положено за год</th>
                         <td>{{.Current.Total}} дн.</td>
+                    </tr>
+                    <tr>
+                        <th>Доступно всего</th>
+                        <td>{{.Current.Available}} дн.</td>
                     </tr>
                     <tr>
                         <th>Заработано на {{.Current.Today}}</th>
@@ -164,8 +168,8 @@
     </div>
 
     <div class="container">
-        <a class="btn" href="/api/v1/users/{{.User.ID}}/vacations">Посмотреть отпуска</a>
+        <a class="btn" href="/api/v1/users/{{.UserID}}/vacations">Посмотреть отпуска</a>
     </div>
-    <p><a href="/api/v1/users">← К списку</a></p>
+    <p><a href="/users">← К списку</a></p>
 </div>
 {{end}}

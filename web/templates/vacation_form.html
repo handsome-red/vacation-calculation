@@ -3,6 +3,32 @@
 {{ define "content" }}
 <h1>Создать отпуск</h1>
 
+{{ if .Balance.HasActiveYear }}
+<section class="card card--balance" style="margin-bottom: 1rem;">
+    <div class="card-header">
+        <h2>Баланс отпусков</h2>
+    </div>
+    <table>
+        <tbody>
+            <tr>
+                <th>Положено за год</th>
+                <td>{{ .Balance.Total }} дн.</td>
+            </tr>
+            <tr>
+                <th>Использовано</th>
+                <td>{{ .Balance.Used }} дн.</td>
+            </tr>
+            <tr>
+                <th>Доступно</th>
+                <td><strong>{{ .Balance.Available }} дн.</strong></td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+{{ else }}
+<p class="muted">Нет активного рабочего года — баланс недоступен</p>
+{{ end }}
+
 {{ if .Errors }}
 <ul style="color:#b00">
     {{ range .Errors }}<li>{{ . }}</li>{{ end }}

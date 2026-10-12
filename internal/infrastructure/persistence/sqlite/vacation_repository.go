@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -50,6 +51,30 @@ func (r *vacationRepository) Save(ctx context.Context, v *vacation.Vacation) err
 	}
 
 	return nil
+}
+
+func (r *vacationRepository) FindByID(ctx context.Context, userID user.UserID, id vacation.VacationID) (*vacation.Vacation, error) {
+	const q = `
+		SELECT id, user_id, start_date, end_date, status, created_at, updated_at
+		FROM vacations
+		WHERE user_id = ? AND id = ?
+		LIMIT 1
+	`
+
+	var row vacationRow
+	if err := r.db.GetContext(ctx, &row, q, userID.String(), id.String()); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("vacation not found")
+		}
+		return nil, fmt.Errorf("find vacation by id: %w", err)
+	}
+
+	v, err := row.toDomain()
+	if err != nil {
+		return nil, fmt.Errorf("vacation row %q: %w", row.ID, err)
+	}
+
+	return v, nil
 }
 
 func (r *vacationRepository) FindByUserID(ctx context.Context, userID user.UserID) ([]*vacation.Vacation, error) {

@@ -10,4 +10,4 @@ type Department struct {
 	Title string
 }
 
-func (d Department) String() string { return d.Code }
+func (d Department) String() string { return d.Title }

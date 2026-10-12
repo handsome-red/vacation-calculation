@@ -24,13 +24,13 @@
 
     <label>
         С
-        <input type="date" name="date_from" value="{{ if not .Cmd.From.IsZero }}{{ .Cmd.From.Format " 2006-01-02" }}{{
+        <input type="date" name="date_from" value="{{ if not .Cmd.From.IsZero }}{{ .Cmd.From.Format "2006-01-02" }}{{
             end }}" required>
     </label>
 
     <label>
         По
-        <input type="date" name="date_to" value="{{ if not .Cmd.To.IsZero }}{{ .Cmd.To.Format " 2006-01-02" }}{{ end }}"
+        <input type="date" name="date_to" value="{{ if not .Cmd.To.IsZero }}{{ .Cmd.To.Format "2006-01-02" }}{{ end }}"
             required>
     </label>
 

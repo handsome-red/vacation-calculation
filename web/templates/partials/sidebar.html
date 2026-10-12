@@ -1,0 +1,23 @@
+<!-- web/templates/partials/sidebar.html -->
+{{define "sidebar"}}
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="logo"></div>
+        <h2>Калькулятор отпуска</h2>
+        <p>Управление отпусками</p>
+    </div>
+
+    <nav class="nav-menu">
+        <div class="nav-label">Основное</div>
+<a href="/" class="nav-item">Главная</a>
+<a href="/vacations" class="nav-item">Все отпуска</a>
+<a href="/vacations/new" class="nav-item">Добавить отпуск</a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="nav-item" style="opacity: 0.6; cursor: default;">
+            <span style="font-size: 0.8rem;">Версия 1.0.0</span>
+        </div>
+    </div>
+</aside>
+{{end}}

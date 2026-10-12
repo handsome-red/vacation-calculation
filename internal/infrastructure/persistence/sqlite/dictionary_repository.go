@@ -43,6 +43,18 @@ func (r *districtRepository) List(ctx context.Context) ([]user.District, error) 
 	return result, nil
 }
 
+func (r *districtRepository) FindByCode(ctx context.Context, code string) (user.District, error) {
+	var row struct {
+		Code  string `db:"code"`
+		Title string `db:"title"`
+	}
+	const q = `SELECT code, title FROM districts WHERE code = ? AND is_active = 1`
+	if err := r.db.GetContext(ctx, &row, q, code); err != nil {
+		return user.District{}, fmt.Errorf("find district by code: %w", err)
+	}
+	return user.NewDistrict(row.Code, row.Title), nil
+}
+
 func (r *departmentRepository) List(ctx context.Context) ([]user.Department, error) {
 	var rows []struct {
 		Code  string `db:"code"`

@@ -18,9 +18,9 @@ var (
 
 	ErrNameRequired = errors.New("name is required")
 
-	ErrStatusInvalid = errors.New("status inlavid")
+	ErrStatusInvalid = errors.New("status invalid")
 
-	ErrBirthDateInvalid = errors.New("birth date inlavid")
+	ErrBirthDateInvalid = errors.New("birth date invalid")
 
 	ErrPositionInvalid = errors.New("position invalid")
 
