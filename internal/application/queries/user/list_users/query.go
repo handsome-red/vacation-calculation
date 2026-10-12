@@ -1,5 +1,10 @@
 package list_users
 
+type Query struct {
+	Page int
+	Size int
+}
+
 type Result struct {
 	Users []UserListItem
 	Page  int

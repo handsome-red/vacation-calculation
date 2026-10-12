@@ -37,7 +37,7 @@ func NewAuthMiddleware(
 
 func (m *AuthMiddleware) Require(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, ok := m.auntificate(r)
+		user, ok := m.authenticate(r)
 		if !ok {
 			m.unauthorized(w, r)
 			return

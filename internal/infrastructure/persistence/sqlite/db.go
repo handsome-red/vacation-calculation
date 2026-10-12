@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
+	"github.com/handsome-red/vacation-calculation/internal/infrastructure/storage"
 	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 )
@@ -34,6 +35,10 @@ func NewDB(ctx context.Context, cfg Config, log ports.Logger) (*sqlx.DB, error) 
 	if err := db.PingContext(ctx); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("sqlite: ping: %w", err)
+	}
+
+	if err := storage.Migrate(ctx, db); err != nil {
+		return nil, fmt.Errorf("migrate: %w", err)
 	}
 
 	log.Info(ctx, "connected to database", "path", cfg.Path)

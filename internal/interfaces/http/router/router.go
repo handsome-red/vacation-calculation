@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
 
@@ -20,7 +21,7 @@ type Router struct {
 
 	templates           *handlers.Templates
 	healthHandler       *handlers.HealthHandler
-	homeHandler         *handlers.HomeHandler
+	homeHandler         *handlers.Handler
 	registrationHandler *handlers.RegistrationHandler
 	userHandler         *handlers.UserHandler
 	vacationHandler     *handlers.VacationHandler
@@ -54,10 +55,11 @@ func NewRouter(
 	)
 	r.userHandler = handlers.NewUserHandler(
 		container.GetUserUseCase,
+		container.ListUsersUseCase,
 		container.DeactivateUserUseCase,
 		container.ActivateUserUseCase,
-		container.ListUsersUseCase,
 		templates,
+		logger,
 	)
 	r.vacationHandler = handlers.NewVacationHandler(
 		container.CreateVacationUseCase,
@@ -95,13 +97,17 @@ func (r *Router) Build() (http.Handler, error) {
 
 	// 2. API v1 (с аутентификацией)
 	root.Route("/api/v1", func(api chi.Router) {
-		api.Use(r.authMW) // Middleware применяется ко всей группе /api/v1
+		if r.authMW != nil { // Middleware применяется ко всей группе /api/v1
+			api.Use(r.authMW)
+		}
 		r.registerAPI(api)
 	})
 
 	// 3. Админка (аутентификация + проверка роли)
 	root.Route("/admin", func(admin chi.Router) {
-		admin.Use(r.authMW)
+		if r.authMW != nil {
+			admin.Use(r.authMW)
+		}
 		// admin.Use(adminRoleMW) // Если нужна проверка роли
 		r.registerAdmin(admin)
 	})
@@ -110,62 +116,49 @@ func (r *Router) Build() (http.Handler, error) {
 }
 
 func (r *Router) registerPublic(mux chi.Router) {
+	// Static files
 	staticFS, err := fs.Sub(web.FS, "static")
 	if err != nil {
 		panic("router: static fs: " + err.Error())
 	}
 	mux.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	templates, err := handlers.NewTemplates()
-	if err != nil {
-		panic("router: templates: " + err.Error())
-	}
+	// Public handlers (pre-initialized in NewRouter)
+	mux.Get("/", r.homeHandler.Home)
+	mux.Get("/health", r.healthHandler.Health)
 
-	healthHandler := handlers.NewHealthHandler()
-	homeHandler := handlers.NewHomeHandler(templates)
-
-	mux.Get("/", homeHandler.Home)
-	mux.Get("/health", healthHandler.Health)
-
-	// Публичный регистрация
-	userHandler := handlers.NewUserHandler(
-		r.container.RegisterUserUseCase,
-		r.container.GetUserUseCase,
-		r.container.DeactivateUserUseCase,
-		r.container.ActivateUserUseCase,
-		r.container.ListUsersUseCase,
-		r.container.GetRegisterFormUseCase,
-		r.container.CreateShiftUseCase,
-		r.container.ShiftFormUseCase,
-		r.teplates,
-	)
-	mux.Get("/user/register", userHandler.RegisterUserForm)
-	mux.Post("/user/register", userHandler.RegisterUser)
+	// Public registration form
+	mux.Get("/user/register", r.registrationHandler.Form)
+	mux.Post("/user/register", r.registrationHandler.Register)
 }
 
 func (r *Router) registerAPI(mux chi.Router) {
 	// Здесь все пути БЕЗ префикса /api/v1, потому что мы уже внутри Route("/api/v1")
-	userHandler := handlers.NewUserHandler( /* ... */ )
-	vacationHandler := handlers.NewVacationHandler( /* ... */ )
-	calendarHandler := handlers.NewCalendarHandler( /* ... */ )
-	shiftHandler := handlers.NewShiftHandler( /* ... */ )
 
-	mux.Get("/users/{id}", userHandler.GetUser)
-	mux.Delete("/users/{id}", userHandler.DeactivateUser)
-	mux.Get("/users", userHandler.ListUsers)
+	// Reuse pre-initialized handlers from the router
+	if r.userHandler != nil {
+		mux.Get("/users/{id}", r.userHandler.GetUser)
+		mux.Delete("/users/{id}", r.userHandler.DeactivateUser)
+		mux.Get("/users", r.userHandler.ListUsers)
+	}
 
-	mux.Get("/users/{userId}/vacations", vacationHandler.GetVacations)
-	mux.Get("/users/{userId}/vacations/new", vacationHandler.GetVacationForm)
-	mux.Post("/users/{userId}/vacations", vacationHandler.CreateVacation)
+	if r.vacationHandler != nil {
+		mux.Get("/users/{userId}/vacations", r.vacationHandler.GetVacations)
+		mux.Get("/users/{userId}/vacations/new", r.vacationHandler.GetVacationForm)
+		mux.Post("/users/{userId}/vacations", r.vacationHandler.CreateVacation)
+	}
 
-	mux.Get("/users/{userId}/calendar", calendarHandler.GetUserCalendar)
+	if r.calendarHandler != nil {
+		mux.Get("/users/{userId}/calendar", r.calendarHandler.GetUserCalendar)
+	}
 
-	mux.Get("/users/{userId}/shift/new", shiftHandler.NewShiftForm)
-	mux.Post("/users/{userId}/shift", shiftHandler.CreateShift)
+	if r.shiftHandler != nil {
+		mux.Get("/users/{userId}/shift/new", r.shiftHandler.NewShiftForm)
+		mux.Post("/users/{userId}/shift", r.shiftHandler.CreateShift)
+	}
 }
 
 func (r *Router) registerAdmin(mux chi.Router) {
-	calendarHandler := handlers.NewCalendarHandler( /* ... */ )
-	mux.Get("/holidays", calendarHandler.NewHoliday)
-	mux.Post("/holidays", calendarHandler.NewHoliday)
+	mux.Get("/holidays", r.calendarHandler.NewHoliday)
+	mux.Post("/holidays", r.calendarHandler.NewHoliday)
 }

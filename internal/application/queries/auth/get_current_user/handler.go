@@ -1,6 +1,10 @@
 package get_current_user
 
-import "context"
+import (
+	"context"
+
+	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
+)
 
 type Handler struct {
 }

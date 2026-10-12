@@ -22,7 +22,7 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) Handle(ctx context.Context, query ports.Query) (*Result, error) {
+func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	// Дефолтные значения
 	if query.Page < 1 {
 		query.Page = 1
@@ -32,7 +32,11 @@ func (h *Handler) Handle(ctx context.Context, query ports.Query) (*Result, error
 	}
 
 	// Получаем активных пользователей
-	users, total, err := h.userRepo.FindUsers(ctx, query)
+	portQuery := ports.Query{
+		Page: query.Page,
+		Size: query.Size,
+	}
+	users, total, err := h.userRepo.FindUsers(ctx, portQuery)
 	if err != nil {
 		h.logger.Error(ctx, "failed to get users", "error", err)
 		return nil, fmt.Errorf("failed to get users: %w", err)

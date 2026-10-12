@@ -28,11 +28,19 @@ func Run(ctx context.Context, cfg config.Config) error {
 	}
 	defer container.Close()
 
-	r := routes.NewRouter(container, log)
+	r, err := routes.NewRouter(container, log, nil)
+	if err != nil {
+		return fmt.Errorf("router: %w", err)
+	}
+
+	handler, err := r.Build()
+	if err != nil {
+		return fmt.Errorf("build router: %w", err)
+	}
 
 	srv := http.Server{
 		Addr:              cfg.Addr,
-		Handler:           r.Build(),
+		Handler:           handler,
 		ReadTimeout:       cfg.ReadTimeout,
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
