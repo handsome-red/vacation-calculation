@@ -95,6 +95,19 @@ func (v *Vacation) Reject(now time.Time) error {
 	return nil
 }
 
+func (v *Vacation) ChangeStatus(status VacationStatus, now time.Time) error {
+	validatedStatus, err := NewVacationStatus(status.ISO())
+	if err != nil {
+		return err
+	}
+	if v.status == validatedStatus {
+		return ErrStatusInvalid
+	}
+	v.status = validatedStatus
+	v.updatedAt = now.UTC()
+	return nil
+}
+
 func (v *Vacation) ID() VacationID                 { return v.id }
 func (v *Vacation) VacationStatus() VacationStatus { return v.Status() }
 func (v *Vacation) UserID() user.UserID            { return v.userID }

@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/auth/login"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/shift/create_shift"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/deactivate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/new_holiday"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/shift/shift_form"
@@ -30,9 +32,10 @@ import (
 
 type Container struct {
 	// Infrastructure
-	DB     *sqlx.DB
-	Logger ports.Logger
-	Hasher ports.PasswordHasher
+	DB           *sqlx.DB
+	Logger       ports.Logger
+	Hasher       ports.PasswordHasher
+	LoginUseCase *login.Handler
 
 	// Repositories
 	UserRepo       ports.UserRepository
@@ -46,7 +49,8 @@ type Container struct {
 	ActivateUserUseCase    *activate_user.Handler
 	GetRegisterFormUseCase *register_form.Handler
 	// Use Cases - Commands (Vacation)
-	ApproveVacationUseCase *approve_vacation.Handler
+	ApproveVacationUseCase      *approve_vacation.Handler
+	ChangeVacationStatusUseCase *change_status.Handler
 
 	CreateVacationUseCase   *create_vacation.Handler
 	GetUserVacationsUseCase *get_user_vacations.Handler
@@ -93,8 +97,9 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	getUserUseCase := get_user.NewHandler(userRepo, vacationRepo, shiftRepo, wc, log)
 	getActiveUsersUseCase := list_users.NewHandler(userRepo, log)
 
-	createVacationUseCase := create_vacation.NewHandler(vacationRepo)
+	createVacationUseCase := create_vacation.NewHandler(vacationRepo, userRepo, shiftRepo, wc)
 	approveVacationUseCase := approve_vacation.NewHandler(vacationRepo)
+	changeVacationStatusUseCase := change_status.NewHandler(vacationRepo)
 	getUserVacationsUseCase := get_user_vacations.NewHandler(vacationRepo)
 	getVacationFormUseCase := get_vacation_form.NewHandler(userRepo, vacationRepo, shiftRepo, wc)
 	getCalendarUseCase := get_calendar.NewHandler(holidayRepo, vacationRepo, shiftRepo)
@@ -107,9 +112,10 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 
 	return &Container{
 		// Infrastructure
-		DB:     db,
-		Logger: log,
-		Hasher: hasher,
+		DB:           db,
+		Logger:       log,
+		Hasher:       hasher,
+		LoginUseCase: login.NewHandler(userRepo, hasher),
 		// Repositories
 		UserRepo: userRepo,
 		// Use Cases - Commands
@@ -118,19 +124,20 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		ActivateUserUseCase:    activateUserUseCase,
 		GetRegisterFormUseCase: getRegisterFormUseCase,
 		// Use Cases - Queries
-		GetUserUseCase:          getUserUseCase,
-		ListUsersUseCase:        getActiveUsersUseCase,
-		DistrictRepo:            districtRepo,
-		DepartmentRepo:          departmentRepo,
-		CreateVacationUseCase:    createVacationUseCase,
-		ApproveVacationUseCase:   approveVacationUseCase,
-		GetUserVacationsUseCase: getUserVacationsUseCase,
-		GetVacationFormUseCase:  getVacationFormUseCase,
-		GetCalendarUseCase:      getCalendarUseCase,
-		NewHolidayFormUseCase:   newHolidayFormUseCase,
-		NewHolidayUseCase:       newHolidayUseCase,
-		CreateShiftUseCase:      createShiftUseCase,
-		ShiftFormUseCase:        shiftFormUseCase,
+		GetUserUseCase:              getUserUseCase,
+		ListUsersUseCase:            getActiveUsersUseCase,
+		DistrictRepo:                districtRepo,
+		DepartmentRepo:              departmentRepo,
+		CreateVacationUseCase:       createVacationUseCase,
+		ApproveVacationUseCase:      approveVacationUseCase,
+		ChangeVacationStatusUseCase: changeVacationStatusUseCase,
+		GetUserVacationsUseCase:     getUserVacationsUseCase,
+		GetVacationFormUseCase:      getVacationFormUseCase,
+		GetCalendarUseCase:          getCalendarUseCase,
+		NewHolidayFormUseCase:       newHolidayFormUseCase,
+		NewHolidayUseCase:           newHolidayUseCase,
+		CreateShiftUseCase:          createShiftUseCase,
+		ShiftFormUseCase:            shiftFormUseCase,
 	}, nil
 }
 

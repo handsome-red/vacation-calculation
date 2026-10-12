@@ -7,7 +7,7 @@
     <div class="card-header">
         <h1>Список отпусков сотрудника</h1>
         <a class="btn" href="/api/v1/users/{{.UserID}}/vacations/new">Добавить отпуск</a>
-    </div>  
+    </div>
     <table>
         <thead>
             <tr>
@@ -15,27 +15,42 @@
                 <th>Дата начала отпуска</th>
                 <th>Дата конца отпуска</th>
                 <th>Статус</th>
-                <th>Действия</th>
+                {{if .IsAdmin}}<th>Изменить статус</th>
+                <th>Действия</th>{{end}}
             </tr>
         </thead>
         <tbody>
-            {{range .Vacations}}
+            {{range $v := .Vacations}}
             <tr>
                 <td>{{.Color}}</td>
                 <td>{{.StartDate}}</td>
                 <td>{{.EndDate}}</td>
                 <td>{{.Status}}</td>
+                {{if $.IsAdmin}}
                 <td>
-                    {{if eq .Status "DRAFT"}}
-                    <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/approve" style="display:inline;">
+                    <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/status">
+                        <select name="status" aria-label="Новый статус отпуска" required>
+                            <option value="" selected disabled>Выберите статус</option>
+                            {{range $.Statuses}}
+                            {{if ne .Code $v.StatusCode}}<option value="{{.Code}}">{{.Label}}</option>{{end}}
+                            {{end}}
+                        </select>
+                        <button type="submit" class="btn btn-sm">Сохранить</button>
+                    </form>
+                </td>
+                <td>
+                    {{if eq .StatusCode "DRAFT"}}
+                    <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/approve"
+                        style="display:inline;">
                         <button type="submit" class="btn btn-sm">Approve</button>
                     </form>
                     {{end}}
                 </td>
+                {{end}}
             </tr>
             {{else}}
             <tr>
-                <td colspan="5">Нет отпусков</td>
+                <td colspan="{{if $.IsAdmin}}6{{else}}4{{end}}">Нет отпусков</td>
             </tr>
             {{end}}
         </tbody>

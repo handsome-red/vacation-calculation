@@ -8,7 +8,9 @@
             <section class="card card--profile">
                 <div class="card-header">
                     <h2>Общая статистика</h2>
+                    {{if .IsAdmin}}
                     <a class="btn" href="/users/{{.UserID}}/vacations/new">Редактировать</a>
+                    {{end}}
                 </div>  
                 <table>
                     <tbody>
@@ -71,7 +73,9 @@
             <section class="card card--entitlement">
                 <div class="card-header">
                     <h2>Статистика</h2>
+                    {{if .IsAdmin}}
                     <a class="btn" href="/api/v1/users/{{.UserID}}/shift/new">Добавить сдвиг</a>
+                    {{end}}
                 </div>
             <table>
                 <thead>

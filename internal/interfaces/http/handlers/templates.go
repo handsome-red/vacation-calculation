@@ -15,6 +15,7 @@ type Templates struct {
 }
 
 var pages = map[string]string{
+	"login.html":            "templates/login.html",
 	"calendar.html":         "templates/calendar.html",
 	"get_holiday_form.html": "templates/get_holiday_form.html",
 	"home.html":             "templates/home.html",

@@ -24,6 +24,7 @@ type userRow struct {
 	WorkdayDuration int    `db:"workday_duration"`
 	Email           string `db:"email"`
 	IsInvalid       int    `db:"is_invalid"`
+	Superadmin      int    `db:"superadmin"`
 	Password        string `db:"password"`
 	CreatedAt       string `db:"created_at"`
 	UpdatedAt       string `db:"updated_at"`
@@ -100,6 +101,7 @@ func (r *userRow) toDomain() (*user.User, error) {
 		District:        district,
 		WorkdayDuration: workdayDuration,
 		IsInvalid:       r.IsInvalid != 0,
+		Superadmin:      r.Superadmin == 1,
 		CreatedAt:       createdAt,
 		UpdatedAt:       updatedAt,
 	}), nil

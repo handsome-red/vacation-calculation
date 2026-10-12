@@ -42,6 +42,7 @@ CREATE TABLE users (
     email             TEXT NOT NULL UNIQUE,
     is_invalid        INTEGER NOT NULL DEFAULT 0,
     password          TEXT NOT NULL,
+    superadmin        INTEGER NOT NULL DEFAULT 0 CHECK (superadmin IN (0, 1)),
     created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
     updated_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );

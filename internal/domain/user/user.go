@@ -20,6 +20,7 @@ type User struct {
 	workdayDuration WorkdayDuration // Продолжительность рабочего дня
 	email           Email           // Почта
 	isInvalid       bool            // Инвалидность
+	superadmin      bool            // Суперадминистратор
 	password        Password
 	createdAt       time.Time
 	updatedAt       time.Time
@@ -40,6 +41,7 @@ type UserParams struct {
 	District        District
 	WorkdayDuration WorkdayDuration
 	IsInvalid       bool
+	Superadmin      bool
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -98,6 +100,7 @@ func ReconstructUser(p UserParams) *User {
 		district:        p.District,
 		workdayDuration: p.WorkdayDuration,
 		isInvalid:       p.IsInvalid,
+		superadmin:      p.Superadmin,
 		createdAt:       p.CreatedAt,
 		updatedAt:       p.UpdatedAt,
 	}
@@ -164,6 +167,15 @@ func (u *User) ExperienceLabel() string {
 
 func (u *User) IsInvalid() bool {
 	return u.isInvalid
+}
+
+func (u *User) isAdmin() bool {
+	return u != nil && u.superadmin
+}
+
+// IsAdmin сообщает, является ли пользователь суперадминистратором.
+func (u *User) IsAdmin() bool {
+	return u.isAdmin()
 }
 
 func (u *User) District() District {

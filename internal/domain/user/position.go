@@ -11,8 +11,13 @@ type Position string
 const (
 	PositionUnknown Position = ""
 
-	PositionDirector Position = "director"
-	PositionEmployee Position = "employee"
+	PositionDirector       Position = "director"
+	PositionDeputyDirector Position = "deputy_director"
+
+	// Специалисты.
+	PositionChiefSpecialistExpert Position = "chief_specialist_expert"
+	PositionSpecialistExpert      Position = "specialist_expert"
+	PositionSeniorSpecialistFirst Position = "senior_specialist_first"
 
 	PositionGarageManager    Position = "garage_manager"
 	PositionDriver           Position = "driver"
@@ -26,8 +31,11 @@ const (
 )
 
 var positionsMap = map[Position]string{
-	PositionDirector: "Директор",
-	PositionEmployee: "Сотрудник",
+	PositionDirector:              "Начальник территориального отдела",
+	PositionDeputyDirector:        "Заместитель начальника",
+	PositionChiefSpecialistExpert: "Главный специалист-эксперт",
+	:      "Специалист-эксперт",
+	PositionSeniorSpecialistFirst: "Старший специалист 1 разряда",
 
 	PositionGarageManager:    "Начальник гаража",
 	PositionDriver:           "Водитель автомобиля",
@@ -57,7 +65,12 @@ func (p Position) isValid() bool {
 // isIrregular - является ли должность с ненормированным рабочим днем
 func (p Position) isIrregular() bool {
 	switch p {
-	case PositionDirector, PositionEmployee:
+	case
+		PositionDirector,
+		PositionDeputyDirector,
+		PositionChiefSpecialistExpert,
+		PositionSpecialistExpert,
+		PositionSeniorSpecialistFirst:
 		return true
 	default:
 		return false

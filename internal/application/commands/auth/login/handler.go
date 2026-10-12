@@ -5,19 +5,19 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
+	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
 
 type Handler struct {
-	userRepo ports.AuthRepository
+	userRepo ports.UserRepository
 	hasher   ports.PasswordHasher
 }
 
 func NewHandler(
-	userRepo ports.AuthRepository,
+	userRepo ports.UserRepository,
 	hasher ports.PasswordHasher,
 ) *Handler {
 	return &Handler{
@@ -27,15 +27,22 @@ func NewHandler(
 }
 
 func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
-	user, err := h.userRepo.FindByEmail(ctx, cmd.Email)
+	email, err := user.NewEmail(cmd.Email)
+	if err != nil || cmd.Password == "" {
+		return nil, ErrInvalidCredentials
+	}
+	u, err := h.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		if errors.Is(err, auth.ErrUserNotFound) {
+		if errors.Is(err, user.ErrUserNotFound) {
 			return nil, ErrInvalidCredentials
 		}
 		return nil, fmt.Errorf("login: find by email: %w", err)
 	}
 
-	ok, err := h.hasher.Verify(ctx, user.PasswordHash().Value(), cmd.Password)
+	if !u.Status().IsActive() {
+		return nil, ErrInvalidCredentials
+	}
+	ok, err := h.hasher.Verify(ctx, u.Password().String(), cmd.Password)
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
@@ -45,7 +52,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	}
 
 	return &Result{
-		UserID: user.ID().String(),
-		Email:  user.Email().Value(),
+		UserID: u.ID().String(),
+		Email:  u.Email().Value(),
 	}, nil
 }

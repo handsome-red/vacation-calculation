@@ -1,21 +1,31 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
+	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
+	authmiddleware "github.com/handsome-red/vacation-calculation/internal/interfaces/http/middleware"
 )
+
+type vacationStatusOption struct {
+	Code  string
+	Label string
+}
 
 type VacationHandler struct {
 	createVacationUseCase   *create_vacation.Handler
 	approveVacationUseCase  *approve_vacation.Handler
+	changeStatusUseCase     *change_status.Handler
 	getUserVacationsUseCase *get_user_vacations.Handler
 	getVacationFormUseCase  *get_vacation_form.Handler
 	templates               *Templates
@@ -25,18 +35,20 @@ type VacationHandler struct {
 func NewVacationHandler(
 	createVacationUseCase *create_vacation.Handler,
 	approveVacationUseCase *approve_vacation.Handler,
+	changeStatusUseCase *change_status.Handler,
 	getUserVacationsUseCase *get_user_vacations.Handler,
 	getVacationFormUseCase *get_vacation_form.Handler,
 	templates *Templates,
 	logger ports.Logger,
 ) *VacationHandler {
 	return &VacationHandler{
-		createVacationUseCase:    createVacationUseCase,
-		approveVacationUseCase:   approveVacationUseCase,
-		getUserVacationsUseCase:  getUserVacationsUseCase,
-		getVacationFormUseCase:   getVacationFormUseCase,
-		templates:                templates,
-		logger:                   logger,
+		createVacationUseCase:   createVacationUseCase,
+		approveVacationUseCase:  approveVacationUseCase,
+		changeStatusUseCase:     changeStatusUseCase,
+		getUserVacationsUseCase: getUserVacationsUseCase,
+		getVacationFormUseCase:  getVacationFormUseCase,
+		templates:               templates,
+		logger:                  logger,
 	}
 }
 
@@ -55,9 +67,18 @@ func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	currentUser, _ := authmiddleware.UserFromContext(r.Context())
 	data := map[string]any{
+		"IsAdmin":   currentUser.IsAdmin(),
 		"UserID":    userID.String(),
 		"Vacations": result.Vacations,
+		"Statuses": []vacationStatusOption{
+			{vacation.StatusDraft.ISO(), vacation.StatusDraft.String()},
+			{vacation.StatusRequested.ISO(), vacation.StatusRequested.String()},
+			{vacation.StatusApproved.ISO(), vacation.StatusApproved.String()},
+			{vacation.StatusRejected.ISO(), vacation.StatusRejected.String()},
+			{vacation.StatusCancelled.ISO(), vacation.StatusCancelled.String()},
+		},
 	}
 
 	if err := h.templates.Render(w, "vacations.html", data); err != nil {
@@ -79,6 +100,10 @@ func (h *VacationHandler) CreateVacation(w http.ResponseWriter, r *http.Request)
 
 	_, err := h.createVacationUseCase.Handle(r.Context(), cmd)
 	if err != nil {
+		if errors.Is(err, vacation.ErrBasicVacationRules) {
+			http.Error(w, vacation.ErrBasicVacationRules.Error(), http.StatusBadRequest)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -155,4 +180,27 @@ func (h *VacationHandler) ApproveVacation(w http.ResponseWriter, r *http.Request
 	h.logger.Info(r.Context(), "vacation approved successfully")
 	redirectURL := "/api/v1/users/" + userID + "/vacations"
 	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+}
+
+func (h *VacationHandler) ChangeVacationStatus(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	cmd := change_status.Command{
+		UserID:     r.PathValue("userId"),
+		VacationID: r.PathValue("id"),
+		Status:     r.FormValue("status"),
+	}
+	if err := h.changeStatusUseCase.Handle(r.Context(), cmd); err != nil {
+		h.logger.Error(r.Context(), "failed to change vacation status", err)
+		if errors.Is(err, vacation.ErrStatusInvalid) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/api/v1/users/"+cmd.UserID+"/vacations", http.StatusSeeOther)
 }

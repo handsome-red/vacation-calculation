@@ -1,10 +1,8 @@
 package login
 
-import "github.com/handsome-red/vacation-calculation/internal/domain/auth"
-
 type Command struct {
 	Password string
-	Email    auth.Email
+	Email    string
 }
 
 type Result struct {

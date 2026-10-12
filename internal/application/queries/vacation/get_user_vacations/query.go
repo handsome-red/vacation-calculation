@@ -5,11 +5,12 @@ type Query struct {
 }
 
 type Vacations struct {
-	ID        string
-	Color     int
-	StartDate string
-	EndDate   string
-	Status    string
+	ID         string
+	Color      int
+	StartDate  string
+	EndDate    string
+	Status     string
+	StatusCode string
 }
 
 type Result struct {

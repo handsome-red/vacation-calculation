@@ -11,13 +11,15 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/di"
 	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/handlers"
+	authmiddleware "github.com/handsome-red/vacation-calculation/internal/interfaces/http/middleware"
 	"github.com/handsome-red/vacation-calculation/web"
 )
 
 type Router struct {
-	container *di.Container
-	logger    ports.Logger
-	authMW    func(http.Handler) http.Handler
+	container    *di.Container
+	logger       ports.Logger
+	authMW       func(http.Handler) http.Handler
+	loginHandler *handlers.LoginHandler
 
 	templates           *handlers.Templates
 	healthHandler       *handlers.HealthHandler
@@ -47,6 +49,9 @@ func NewRouter(
 	}
 
 	r.healthHandler = handlers.NewHealthHandler()
+	sessions := authmiddleware.NewAuthMiddleware(container.UserRepo)
+	r.authMW = sessions.Require
+	r.loginHandler = handlers.NewLoginHandler(container.LoginUseCase, sessions, templates)
 	r.homeHandler = handlers.NewHomeHandler(templates)
 	r.registrationHandler = handlers.NewRegistrationHandler(
 		container.RegisterUserUseCase,
@@ -64,6 +69,7 @@ func NewRouter(
 	r.vacationHandler = handlers.NewVacationHandler(
 		container.CreateVacationUseCase,
 		container.ApproveVacationUseCase,
+		container.ChangeVacationStatusUseCase,
 		container.GetUserVacationsUseCase,
 		container.GetVacationFormUseCase,
 		templates,
@@ -125,16 +131,19 @@ func (r *Router) registerPublic(mux chi.Router) {
 	mux.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	// Public handlers (pre-initialized in NewRouter)
-	mux.Get("/", r.homeHandler.Home)
 	mux.Get("/health", r.healthHandler.Health)
+	mux.Get("/login", r.loginHandler.Form)
+	mux.Post("/login", r.loginHandler.Login)
+	mux.Post("/logout", r.loginHandler.Logout)
 
-	// Public registration form
-	mux.Get("/user/register", r.registrationHandler.Form)
-	mux.Post("/user/register", r.registrationHandler.Register)
-
-	// Публичные страницы SPA (HTML views)
-	mux.Get("/users", r.userHandler.ListUsersPage)
-	mux.Get("/users/{id}", r.userHandler.GetUserPage)
+	mux.Group(func(private chi.Router) {
+		private.Use(r.authMW)
+		private.Get("/", r.homeHandler.Home)
+		private.With(authmiddleware.RequireAdmin).Get("/user/register", r.registrationHandler.Form)
+		private.With(authmiddleware.RequireAdmin).Post("/user/register", r.registrationHandler.Register)
+		private.With(authmiddleware.RequireAdmin).Get("/users", r.userHandler.ListUsersPage)
+		private.Get("/users/{id}", r.userHandler.GetUserPage)
+	})
 }
 
 func (r *Router) registerAPI(mux chi.Router) {
@@ -143,15 +152,16 @@ func (r *Router) registerAPI(mux chi.Router) {
 	// Reuse pre-initialized handlers from the router
 	if r.userHandler != nil {
 		mux.Get("/users/{id}", r.userHandler.GetUser)
-		mux.Delete("/users/{id}", r.userHandler.DeactivateUser)
-		mux.Get("/users", r.userHandler.ListUsers)
+		mux.With(authmiddleware.RequireAdmin).Delete("/users/{id}", r.userHandler.DeactivateUser)
+		mux.With(authmiddleware.RequireAdmin).Get("/users", r.userHandler.ListUsers)
 	}
 
 	if r.vacationHandler != nil {
 		mux.Get("/users/{userId}/vacations", r.vacationHandler.GetVacations)
 		mux.Get("/users/{userId}/vacations/new", r.vacationHandler.GetVacationForm)
 		mux.Post("/users/{userId}/vacations", r.vacationHandler.CreateVacation)
-		mux.Post("/users/{userId}/vacations/{id}/approve", r.vacationHandler.ApproveVacation)
+		mux.With(authmiddleware.RequireAdmin).Post("/users/{userId}/vacations/{id}/approve", r.vacationHandler.ApproveVacation)
+		mux.With(authmiddleware.RequireAdmin).Post("/users/{userId}/vacations/{id}/status", r.vacationHandler.ChangeVacationStatus)
 	}
 
 	if r.calendarHandler != nil {
@@ -159,8 +169,8 @@ func (r *Router) registerAPI(mux chi.Router) {
 	}
 
 	if r.shiftHandler != nil {
-		mux.Get("/users/{userId}/shift/new", r.shiftHandler.NewShiftForm)
-		mux.Post("/users/{userId}/shift", r.shiftHandler.CreateShift)
+		mux.With(authmiddleware.RequireAdmin).Get("/users/{userId}/shift/new", r.shiftHandler.NewShiftForm)
+		mux.With(authmiddleware.RequireAdmin).Post("/users/{userId}/shift", r.shiftHandler.CreateShift)
 	}
 }
 

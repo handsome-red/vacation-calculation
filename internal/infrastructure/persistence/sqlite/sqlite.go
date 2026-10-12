@@ -27,7 +27,7 @@ const userColumns = `
 	u.birth_date, u.position, u.hired_at,
 	u.department_code, dep.title AS department_title,
 	u.district_code,   dis.title AS district_title,
-	u.workday_duration, u.email, u.is_invalid, u.password,
+	u.workday_duration, u.email, u.is_invalid, u.password, u.superadmin,
 	u.created_at, u.updated_at
 `
 
@@ -77,7 +77,7 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 		u.BirthDate().ISO(),
 		u.Position().String(),
 		u.HiredAt().Time().Format("2006-01-02"),
-		u.Department().String(),
+		u.Department().Code,
 		u.District().Code(),
 		u.Email().Value(),
 		boolToInt(u.IsInvalid()),
@@ -99,6 +99,18 @@ func (ur *userRepository) FindByID(ctx context.Context, userID user.UserID) (*us
 			return nil, user.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("finding user by ID: %w", err)
+	}
+	return row.toDomain()
+}
+
+func (ur *userRepository) FindByEmail(ctx context.Context, email user.Email) (*user.User, error) {
+	var row userRow
+	query := `SELECT ` + userColumns + userFrom + ` WHERE LOWER(u.email) = LOWER(?)`
+	if err := ur.db.GetContext(ctx, &row, query, email.Value()); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, user.ErrUserNotFound
+		}
+		return nil, fmt.Errorf("finding user by email: %w", err)
 	}
 	return row.toDomain()
 }

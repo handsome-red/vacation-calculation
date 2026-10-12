@@ -36,11 +36,12 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	result := make([]Vacations, 0, len(vacations))
 	for _, v := range vacations {
 		result = append(result, Vacations{
-			ID:       v.ID().String(),
-			Color:     0,
-			StartDate: v.StartDate().String(),
-			EndDate:   v.EndDate().String(),
-			Status:    v.Status().String(),
+			ID:         v.ID().String(),
+			Color:      0,
+			StartDate:  v.StartDate().String(),
+			EndDate:    v.EndDate().String(),
+			Status:     v.Status().String(),
+			StatusCode: v.Status().ISO(),
 		})
 	}
 
