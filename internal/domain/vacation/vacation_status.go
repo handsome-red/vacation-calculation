@@ -18,6 +18,12 @@ const (
 )
 
 // TODO
+// Перенос
+// Отзыв - возврат из отпуска по производной необходимости (?)
+
+// Принято
+// Отменен
+// Перенос (?)
 var vacationStatusMap = map[VacationStatus]string{
 	StatusDraft:     "Черновик",
 	StatusApproved:  "Принято",

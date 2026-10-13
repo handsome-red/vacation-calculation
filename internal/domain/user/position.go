@@ -31,11 +31,17 @@ const (
 )
 
 var positionsMap = map[Position]string{
-	PositionDirector:              "Начальник территориального отдела",
-	PositionDeputyDirector:        "Заместитель начальника",
-	PositionChiefSpecialistExpert: "Главный специалист-эксперт",
-	:      "Специалист-эксперт",
+	PositionDirector:              "Начальник территориального отдела", // +
+	PositionDeputyDirector:        "Заместитель начальника",            // +
+	PositionChiefSpecialistExpert: "Главный специалист-эксперт",        // +
+	PositionSpecialistExpert:      "Специалист-эксперт",                // +
 	PositionSeniorSpecialistFirst: "Старший специалист 1 разряда",
+	// Помощник +
+	// Рук  +
+	// Зам рук +
+	// Ведущий +
+	// Старший спец 2 раз
+	// Специалист 1 раз
 
 	PositionGarageManager:    "Начальник гаража",
 	PositionDriver:           "Водитель автомобиля",

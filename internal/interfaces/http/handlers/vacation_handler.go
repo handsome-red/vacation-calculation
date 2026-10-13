@@ -8,6 +8,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/export_report"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
 
@@ -28,6 +29,7 @@ type VacationHandler struct {
 	changeStatusUseCase     *change_status.Handler
 	getUserVacationsUseCase *get_user_vacations.Handler
 	getVacationFormUseCase  *get_vacation_form.Handler
+	exportReportUseCase     *export_report.Handler
 	templates               *Templates
 	logger                  ports.Logger
 }
@@ -38,6 +40,7 @@ func NewVacationHandler(
 	changeStatusUseCase *change_status.Handler,
 	getUserVacationsUseCase *get_user_vacations.Handler,
 	getVacationFormUseCase *get_vacation_form.Handler,
+	exportReportUseCase *export_report.Handler,
 	templates *Templates,
 	logger ports.Logger,
 ) *VacationHandler {
@@ -47,6 +50,7 @@ func NewVacationHandler(
 		changeStatusUseCase:     changeStatusUseCase,
 		getUserVacationsUseCase: getUserVacationsUseCase,
 		getVacationFormUseCase:  getVacationFormUseCase,
+		exportReportUseCase:     exportReportUseCase,
 		templates:               templates,
 		logger:                  logger,
 	}
@@ -203,4 +207,26 @@ func (h *VacationHandler) ChangeVacationStatus(w http.ResponseWriter, r *http.Re
 	}
 
 	http.Redirect(w, r, "/api/v1/users/"+cmd.UserID+"/vacations", http.StatusSeeOther)
+}
+
+func (h *VacationHandler) ExportReport(w http.ResponseWriter, r *http.Request) {
+	year := r.URL.Query().Get("year")
+
+	if year == "" {
+		http.Error(w, "не указан год", http.StatusBadRequest)
+		return
+	}
+
+	data, err := h.exportReportUseCase.Handle(r.Context(), export_report.Query{
+		Year:         0,
+		DistrictCode: "",
+	})
+	if err != nil {
+		h.logger.Info(r.Context(), "export vacation repor", "error", err)
+		http.Error(w, "не удалось сформировать отчёт", http.StatusInternalServerError)
+		return
+	}
+
+	// TODO
+	_ = data
 }

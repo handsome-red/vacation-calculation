@@ -17,6 +17,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/list_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/export_report"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
@@ -28,6 +29,8 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/hasher"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/persistence/sqlite"
 	"github.com/jmoiron/sqlx"
+
+	"github.com/handsome-red/vacation-calculation/internal/infrastructure/exporter/exel"
 )
 
 type Container struct {
@@ -55,6 +58,7 @@ type Container struct {
 	CreateVacationUseCase   *create_vacation.Handler
 	GetUserVacationsUseCase *get_user_vacations.Handler
 	GetVacationFormUseCase  *get_vacation_form.Handler
+	ExportReportUseCase     *export_report.Handler
 
 	// Use Cases - Queries (User)
 	GetUserUseCase        *get_user.Handler
@@ -89,6 +93,8 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	var vacationRepo ports.VacationRepository = sqlite.NewVacationRepository(db)
 	var holidayRepo ports.HolidayRepository = sqlite.NewHolidayRepository(db)
 
+	var exporter ports.ReportExporter = excel.NewReportExporter()
+
 	registerUserUseCase := register_user.NewHandler(userRepo, districtRepo, hasher, log)
 	deactivateUserUseCase := deactivate_user.NewHandler(userRepo, log)
 	activateUserUseCase := activate_user.NewHandler(userRepo, log)
@@ -104,6 +110,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	getVacationFormUseCase := get_vacation_form.NewHandler(userRepo, vacationRepo, shiftRepo, wc)
 	getCalendarUseCase := get_calendar.NewHandler(holidayRepo, vacationRepo, shiftRepo)
 	newHolidayFormUseCase := new_holiday_form.NewHandler(holidayRepo)
+	exportReportUseCase := export_report.NewHandler(userRepo, vacationRepo, departmentRepo, districtRepo, wc, exporter)
 
 	newHolidayUseCase := new_holiday.NewHandler(holidayRepo)
 
@@ -138,6 +145,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		NewHolidayUseCase:           newHolidayUseCase,
 		CreateShiftUseCase:          createShiftUseCase,
 		ShiftFormUseCase:            shiftFormUseCase,
+		ExportReportUseCase:         exportReportUseCase,
 	}, nil
 }
 

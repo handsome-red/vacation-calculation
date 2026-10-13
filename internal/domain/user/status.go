@@ -15,11 +15,13 @@ const (
 	StatusDeleted Status = "deleted"
 )
 
+// Удален не отображается
+// TODO
 var statusMap = map[Status]string{
-	StatusActive:  "Активен",
-	StatusBlocked: "Заблокирован",
+	StatusActive:  "Активен",      // Работает TODO
+	StatusBlocked: "Заблокирован", // дЕкрет. административный
 	StatusFired:   "Уволен",
-	StatusDeleted: "Удален",
+	StatusDeleted: "Удален", // Убрать
 }
 
 func NewStatus(s string) (Status, error) {

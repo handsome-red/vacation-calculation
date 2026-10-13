@@ -72,6 +72,7 @@ func NewRouter(
 		container.ChangeVacationStatusUseCase,
 		container.GetUserVacationsUseCase,
 		container.GetVacationFormUseCase,
+		container.ExportReportUseCase,
 		templates,
 		logger,
 	)
