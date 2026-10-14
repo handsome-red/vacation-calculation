@@ -21,9 +21,9 @@
                 {{range .YearStats}}
                 <tr>
                     <td>{{.Year}}</td>
-                    <td>{{.Base}}</td>
-                    <td>{{.Seniority}}</td>
-                    <td>{{.Irregular}}</td>
+                    <td>{{.Base}}{{.BaseUse}}</td>
+                    <td>{{.Seniority}}{{.SeniorityUse}}</td>
+                    <td>{{.Irregular}}{{.IrregularUse}}</td>
                 </tr>
                 {{else}}
                 <tr>

@@ -133,6 +133,39 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 
 	now := time.Now()
 
+	type Quota struct {
+		Total int // всего выделено
+	    Used  int // уже потрачено
+	}
+
+	type YearStat struct {
+		Year string
+		Base Quota
+		Seniority Quota
+		Irregular Quota
+	}
+
+	YearStats := []YearStat{
+		{
+			Year:      "01.01.24-01.01.25",
+			Base:      Quota{Total: 30, Used: 28},
+			Seniority: Quota{Total: 0,  Used: 0},
+			Irregular: Quota{Total: 3,  Used: 3},
+		},
+		{
+			Year:      "01.01.25-01.01.26",
+			Base:      Quota{Total: 30, Used: 8},
+			Seniority: Quota{Total: 1,  Used: 1},
+			Irregular: Quota{Total: 3,  Used: 2},
+		},
+		{
+			Year:      "01.01.26-01.01.27",
+			Base:      Quota{Total: 30, Used: 0},
+			Seniority: Quota{Total: 1,  Used: 0},
+			Irregular: Quota{Total: 3,  Used: 0},
+		},
+	}
+
 	data := map[string]any{
 		"Cmd": create_vacations.Command{
 			UserID: result.UserID,
@@ -150,11 +183,7 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 		}{
 			HasActiveYear: result.HasActiveYear,
 		},
-		"YearStat": struct {
-			Year string
-		}{
-			Year: "14.10.2026 - 13.10.2027",
-		},
+		"YearStats": YearStats,
 	}
 
 	if err := h.templates.Render(w, "vacation_form.html", data); err != nil {
