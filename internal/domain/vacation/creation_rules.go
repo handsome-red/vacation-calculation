@@ -18,16 +18,8 @@ const (
 
 	// MinGapDays — минимальное количество свободных дней между частями отпуска.
 	MinGapDays = 14
-
-	// MinBalanceAfter — минимальный остаток дней на балансе после оформления отпуска.
-	MinBalanceAfter = 7
 )
 
-// Ошибки валидации отпуска.
-//
-// ErrBasicVacationRules — «зонтик»: errors.Is(err, ErrBasicVacationRules)
-// сработает для любой из перечисленных ниже ошибок, что позволяет сохранить
-// обратную совместимость с вызывающим кодом.
 var (
 	ErrBasicVacationRules = errors.New("нарушены правила предоставления отпуска")
 
@@ -56,10 +48,6 @@ var (
 	ErrNoLongPart = fmt.Errorf(
 		"%w: в течение рабочего года должна быть предусмотрена непрерывная часть отпуска не менее %d дней",
 		ErrBasicVacationRules, LongPartDays)
-
-	ErrNotEnoughBalance = fmt.Errorf(
-		"%w: после оформления отпуска на балансе должно остаться не менее %d дней",
-		ErrBasicVacationRules, MinBalanceAfter)
 
 	ErrBeforeHireDate = fmt.Errorf(
 		"%w: дата начала отпуска раньше даты приёма на работу",
@@ -123,7 +111,7 @@ func ValidateCreation(
 	periods := []vacationPeriod{{from: from, to: to}}
 
 	for _, v := range vacations {
-		if v == nil || v.Status() == StatusRejected || v.Status() == StatusCancelled {
+		if v == nil || v.Status() == StatusCancelled {
 			continue
 		}
 
@@ -205,14 +193,6 @@ func ValidateCreation(
 		return fmt.Errorf(
 			"%w: запрошено %d дн., остаток по расчёту — %.1f дн.",
 			ErrExceedsAnnual, days, info.Remaining,
-		)
-	}
-
-	// 6.1. После оформления на балансе должно остаться не менее MinBalanceAfter дней.
-	if remainingAfter := info.Remaining - float64(days); remainingAfter < MinBalanceAfter {
-		return fmt.Errorf(
-			"%w: остаток после оформления — %.1f дн., минимум — %d дн.",
-			ErrNotEnoughBalance, remainingAfter, MinBalanceAfter,
 		)
 	}
 

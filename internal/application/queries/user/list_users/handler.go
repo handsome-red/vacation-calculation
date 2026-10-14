@@ -53,7 +53,7 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	for _, u := range users {
 		result.Users = append(result.Users, UserListItem{
 			ID:              u.ID().String(),
-			Status:          u.Status().String(),
+			Status:          u.Status().Label(),
 			Email:           u.Email().String(),
 			FirstName:       u.FirstName(),
 			LastName:        u.LastName(),

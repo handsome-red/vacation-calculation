@@ -16,7 +16,9 @@ import (
 const sessionCookieName = "session_id"
 const sessionLifetime = 24 * time.Hour
 
-type contextKey struct{}
+type contextKey string
+
+const userCtxKey contextKey = "user"
 
 type session struct {
 	userID  user.UserID
@@ -71,7 +73,7 @@ func (m *AuthMiddleware) Require(next http.Handler) http.Handler {
 			if found {
 				u, err := m.users.FindByID(r.Context(), s.userID)
 				if err == nil && u.Status().IsActive() {
-					next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), contextKey{}, u)))
+					next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userCtxKey, u)))
 					return
 				}
 			}
@@ -85,7 +87,7 @@ func (m *AuthMiddleware) Require(next http.Handler) http.Handler {
 }
 
 func UserFromContext(ctx context.Context) (*user.User, bool) {
-	u, ok := ctx.Value(contextKey{}).(*user.User)
+	u, ok := ctx.Value(userCtxKey).(*user.User)
 	return u, ok
 }
 

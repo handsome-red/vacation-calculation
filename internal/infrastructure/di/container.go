@@ -11,7 +11,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
-	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/new_holiday"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/shift/shift_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
@@ -30,7 +30,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/persistence/sqlite"
 	"github.com/jmoiron/sqlx"
 
-	"github.com/handsome-red/vacation-calculation/internal/infrastructure/exporter/exel"
+	excel "github.com/handsome-red/vacation-calculation/internal/infrastructure/exporter/exel"
 )
 
 type Container struct {
@@ -55,7 +55,7 @@ type Container struct {
 	ApproveVacationUseCase      *approve_vacation.Handler
 	ChangeVacationStatusUseCase *change_status.Handler
 
-	CreateVacationUseCase   *create_vacation.Handler
+	CreateVacationUseCase   *create_vacations.Handler
 	GetUserVacationsUseCase *get_user_vacations.Handler
 	GetVacationFormUseCase  *get_vacation_form.Handler
 	ExportReportUseCase     *export_report.Handler
@@ -103,8 +103,8 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	getUserUseCase := get_user.NewHandler(userRepo, vacationRepo, shiftRepo, wc, log)
 	getActiveUsersUseCase := list_users.NewHandler(userRepo, log)
 
-	createVacationUseCase := create_vacation.NewHandler(vacationRepo, userRepo, shiftRepo, wc)
-	approveVacationUseCase := approve_vacation.NewHandler(vacationRepo)
+	createVacationUseCase := create_vacations.NewHandler(vacationRepo, userRepo, shiftRepo, wc)
+	approveVacationUseCase := approve_vacation.NewHandler(vacationRepo, userRepo)
 	changeVacationStatusUseCase := change_status.NewHandler(vacationRepo)
 	getUserVacationsUseCase := get_user_vacations.NewHandler(vacationRepo)
 	getVacationFormUseCase := get_vacation_form.NewHandler(userRepo, vacationRepo, shiftRepo, wc)

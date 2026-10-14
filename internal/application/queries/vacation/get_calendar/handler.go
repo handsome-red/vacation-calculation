@@ -77,7 +77,7 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 	eventsByDate := make(map[string][]Event)
 
 	for _, v := range vacations {
-		if v.Status() == vacation.StatusCancelled || v.Status() == vacation.StatusRejected {
+		if v.Status() == vacation.StatusCancelled {
 			continue
 		}
 		ev := Event{

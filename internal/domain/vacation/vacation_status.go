@@ -9,11 +9,8 @@ type VacationStatus string
 const (
 	StatusUnknown VacationStatus = "UNKNOWN"
 
-	StatusDraft VacationStatus = "DRAFT"
-
-	StatusRequested VacationStatus = "REQUESTED"
+	StatusDraft     VacationStatus = "DRAFT"
 	StatusApproved  VacationStatus = "APPROVED"
-	StatusRejected  VacationStatus = "REJECTED"
 	StatusCancelled VacationStatus = "CANCELLED"
 )
 
@@ -27,9 +24,7 @@ const (
 var vacationStatusMap = map[VacationStatus]string{
 	StatusDraft:     "Черновик",
 	StatusApproved:  "Принято",
-	StatusRejected:  "Отказано",
 	StatusCancelled: "Отменён",
-	StatusRequested: "Запрошен",
 }
 
 func NewVacationStatus(s string) (VacationStatus, error) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
-	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacation"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/export_report"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
@@ -24,7 +24,7 @@ type vacationStatusOption struct {
 }
 
 type VacationHandler struct {
-	createVacationUseCase   *create_vacation.Handler
+	createVacationUseCase   *create_vacations.Handler
 	approveVacationUseCase  *approve_vacation.Handler
 	changeStatusUseCase     *change_status.Handler
 	getUserVacationsUseCase *get_user_vacations.Handler
@@ -35,7 +35,7 @@ type VacationHandler struct {
 }
 
 func NewVacationHandler(
-	createVacationUseCase *create_vacation.Handler,
+	createVacationUseCase *create_vacations.Handler,
 	approveVacationUseCase *approve_vacation.Handler,
 	changeStatusUseCase *change_status.Handler,
 	getUserVacationsUseCase *get_user_vacations.Handler,
@@ -78,9 +78,7 @@ func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
 		"Vacations": result.Vacations,
 		"Statuses": []vacationStatusOption{
 			{vacation.StatusDraft.ISO(), vacation.StatusDraft.String()},
-			{vacation.StatusRequested.ISO(), vacation.StatusRequested.String()},
 			{vacation.StatusApproved.ISO(), vacation.StatusApproved.String()},
-			{vacation.StatusRejected.ISO(), vacation.StatusRejected.String()},
 			{vacation.StatusCancelled.ISO(), vacation.StatusCancelled.String()},
 		},
 	}
@@ -96,10 +94,10 @@ func (h *VacationHandler) CreateVacation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cmd := create_vacation.Command{
-		UserID:    r.FormValue("user_id"),
-		StartDate: r.FormValue("start_date"),
-		EndDate:   r.FormValue("end_date"),
+	cmd := create_vacations.Command{
+		UserID: r.FormValue("user_id"),
+		// Periods[0].StartDate: r.FormValue("start_date"),
+		// EndDate:   r.FormValue("end_date"),
 	}
 
 	_, err := h.createVacationUseCase.Handle(r.Context(), cmd)
@@ -136,7 +134,7 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 	now := time.Now()
 
 	data := map[string]any{
-		"Cmd": create_vacation.Command{
+		"Cmd": create_vacations.Command{
 			UserID: result.UserID,
 		},
 		"Error": "",
@@ -148,15 +146,14 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 			ToField:   "end_date",
 		},
 		"Balance": struct {
-			Total         int  // Base + Irregular + Seniority — полное ежегодное право
-			Used          int  // уже использовано в текущем рабочем году
-			Available     int  // Total - Used — сколько можно взять
 			HasActiveYear bool // есть ли активный рабочий год
 		}{
-			Total:         result.Total,
-			Used:          result.Used,
-			Available:     result.Available,
 			HasActiveYear: result.HasActiveYear,
+		},
+		"YearStat": struct {
+			Year string
+		}{
+			Year: "14.10.2026 - 13.10.2027",
 		},
 	}
 

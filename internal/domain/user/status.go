@@ -2,8 +2,6 @@ package user
 
 import "strings"
 
-// import "fmt"
-
 // Status - статус пользователя
 type Status string
 
@@ -12,16 +10,14 @@ const (
 	StatusActive  Status = "active"
 	StatusBlocked Status = "blocked"
 	StatusFired   Status = "fired"
-	StatusDeleted Status = "deleted"
 )
 
 // Удален не отображается
 // TODO
 var statusMap = map[Status]string{
-	StatusActive:  "Активен",      // Работает TODO
-	StatusBlocked: "Заблокирован", // дЕкрет. административный
+	StatusActive:  "Работает",
+	StatusBlocked: "Заблокирован", // декрет, административный
 	StatusFired:   "Уволен",
-	StatusDeleted: "Удален", // Убрать
 }
 
 func NewStatus(s string) (Status, error) {
@@ -38,7 +34,7 @@ func (s Status) IsActive() bool {
 
 func (s Status) isValid() bool {
 	switch s {
-	case StatusActive, StatusBlocked, StatusFired, StatusDeleted:
+	case StatusActive, StatusBlocked, StatusFired:
 		return true
 	default:
 		return false
@@ -50,7 +46,7 @@ func (s Status) Label() string { return statusMap[s] }
 // String returns the database-safe value for serialization.
 func (s Status) String() string {
 	switch s {
-	case StatusActive, StatusBlocked, StatusFired, StatusDeleted, StatusUnknown:
+	case StatusActive, StatusBlocked, StatusFired, StatusUnknown:
 		return string(s)
 	default:
 		return ""

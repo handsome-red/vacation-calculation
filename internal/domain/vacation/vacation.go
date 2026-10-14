@@ -90,7 +90,7 @@ func (v *Vacation) Reject(now time.Time) error {
 	if v.Status() != StatusDraft {
 		return ErrVacationNotRejectable
 	}
-	v.status = StatusRejected
+	v.status = StatusCancelled
 	v.updatedAt = now.UTC()
 	return nil
 }
