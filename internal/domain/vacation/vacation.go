@@ -3,17 +3,16 @@ package vacation
 import (
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
-
-var DateFormat = "02.01.2006"
 
 type Vacation struct {
 	id        VacationID
 	status    VacationStatus
 	userID    user.UserID
-	startDate Date
-	endDate   Date
+	startDate date.Date
+	endDate   date.Date
 	createdAt time.Time
 	updatedAt time.Time
 	// TODO
@@ -23,8 +22,8 @@ type VacationParams struct {
 	ID             VacationID
 	VacationStatus VacationStatus
 	UserID         user.UserID
-	StartDate      Date
-	EndDate        Date
+	StartDate      date.Date
+	EndDate        date.Date
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -33,8 +32,8 @@ type VacationParams struct {
 func NewVacation(
 	id VacationID,
 	userID user.UserID,
-	startDate Date,
-	endDate Date,
+	startDate date.Date,
+	endDate date.Date,
 	now time.Time,
 ) (*Vacation, error) {
 	if id.IsZero() {
@@ -64,7 +63,7 @@ func NewVacation(
 	}, nil
 }
 
-func (v *Vacation) ChangePeriod(start, end Date, now time.Time) error {
+func (v *Vacation) ChangePeriod(start, end date.Date, now time.Time) error {
 	if v.Status() != StatusDraft {
 		return ErrVacationNotEditable
 	}
@@ -111,8 +110,8 @@ func (v *Vacation) ChangeStatus(status VacationStatus, now time.Time) error {
 func (v *Vacation) ID() VacationID                 { return v.id }
 func (v *Vacation) VacationStatus() VacationStatus { return v.Status() }
 func (v *Vacation) UserID() user.UserID            { return v.userID }
-func (v *Vacation) StartDate() Date                { return v.startDate }
-func (v *Vacation) EndDate() Date                  { return v.endDate }
+func (v *Vacation) StartDate() date.Date           { return v.startDate }
+func (v *Vacation) EndDate() date.Date             { return v.endDate }
 func (v *Vacation) Status() VacationStatus         { return v.status }
 func (v *Vacation) CreatedAt() time.Time           { return v.createdAt }
 func (v *Vacation) UpdatedAt() time.Time           { return v.updatedAt }

@@ -1,36 +1,42 @@
-package new_holiday
+package new_calendar_day
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type Handler struct {
-	holidayRepo ports.HolidayRepository
+	calendarDayRepo ports.CalendarDayRepository
 }
 
-func NewHandler(holidayRepo ports.HolidayRepository) *Handler {
+func NewHandler(calendarDayRepo ports.CalendarDayRepository) *Handler {
 	return &Handler{
-		holidayRepo: holidayRepo,
+		calendarDayRepo: calendarDayRepo,
 	}
 }
 
 func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 
-	date, err := vacation.ParseDate(cmd.Date)
+	date, err := date.ParseDate(cmd.Date)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse date %s: %w", cmd.Date, err)
 	}
 
-	holiday, err := vacation.NewHoliday(cmd.Name, date)
+	dayType := date.DateType(cmd.Type)
+	if !dayType.Valid() {
+		return nil, fmt.Errorf("invalid day type %q", cmd.Type)
+	}
+
+	holiday, err := vacation.NewCalendarDay(date, dayType, cmd.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create holiday %s: %w", cmd.Name, err)
 	}
 
-	if err := h.holidayRepo.Save(ctx, holiday); err != nil {
+	if err := h.calendarDayRepo.Save(ctx, holiday); err != nil {
 		return nil, fmt.Errorf("failed to create holiday %s: %w", cmd.Name, err)
 	}
 

@@ -3,8 +3,7 @@ package vacation
 import "errors"
 
 var (
-	ErrIDEmpty     = errors.New("id is empty")
-	ErrInvalidDate = errors.New("date invalid")
+	ErrIDEmpty = errors.New("id is empty")
 
 	ErrVacationIDEmpty    = errors.New("vacation id is empty")
 	ErrUserIDEmpty        = errors.New("user id is empty")
@@ -13,8 +12,10 @@ var (
 	ErrEndDateBeforeStart = errors.New("end date is before start date")
 	ErrStatusInvalid      = errors.New("status is invalid")
 
-	ErrHolidayDateEmpty = errors.New("holiday date is empty")
-	ErrHolidayNameEmpty = errors.New("holiday name is empty")
+	ErrCalendarDayDateEmpty   = errors.New("calendar day date is empty")
+	ErrCalendarDayNameEmpty   = errors.New("calendar day name is empty")
+	ErrCalendarDayTypeInvalid = errors.New("calendar day type is invalid")
+	ErrCalendarDayNotFound    = errors.New("calendar day not found")
 
 	ErrStatusNotFound = errors.New("status not found")
 

@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
+	"html/template"
 	"net/http"
 	"time"
 
@@ -134,42 +136,58 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 	now := time.Now()
 
 	type Quota struct {
-		Total int // всего выделено
-	    Used  int // уже потрачено
+		Total   int `json:"total"`
+		Blocked int `json:"blocked"`
 	}
 
 	type YearStat struct {
-		Year string
-		Base Quota
-		Seniority Quota
-		Irregular Quota
+		Year      string `json:"year"`
+		Base      Quota  `json:"base"`
+		Seniority Quota  `json:"seniority"`
+		Irregular Quota  `json:"irregular"`
+	}
+
+	type AppData struct {
+		UserID        string     `json:"userId"`
+		HasActiveYear bool       `json:"hasActiveYear"`
+		YearStats     []YearStat `json:"yearStats"`
 	}
 
 	YearStats := []YearStat{
 		{
 			Year:      "01.01.24-01.01.25",
-			Base:      Quota{Total: 30, Used: 28},
-			Seniority: Quota{Total: 0,  Used: 0},
-			Irregular: Quota{Total: 3,  Used: 3},
+			Base:      Quota{Total: 30, Blocked: 28},
+			Seniority: Quota{Total: 0, Blocked: 0},
+			Irregular: Quota{Total: 3, Blocked: 3},
 		},
 		{
 			Year:      "01.01.25-01.01.26",
-			Base:      Quota{Total: 30, Used: 8},
-			Seniority: Quota{Total: 1,  Used: 1},
-			Irregular: Quota{Total: 3,  Used: 2},
+			Base:      Quota{Total: 30, Blocked: 8},
+			Seniority: Quota{Total: 1, Blocked: 1},
+			Irregular: Quota{Total: 3, Blocked: 2},
 		},
 		{
 			Year:      "01.01.26-01.01.27",
-			Base:      Quota{Total: 30, Used: 0},
-			Seniority: Quota{Total: 1,  Used: 0},
-			Irregular: Quota{Total: 3,  Used: 0},
+			Base:      Quota{Total: 30, Blocked: 0},
+			Seniority: Quota{Total: 1, Blocked: 0},
+			Irregular: Quota{Total: 3, Blocked: 0},
 		},
 	}
 
+	appData := AppData{
+		UserID:        result.UserID,
+		HasActiveYear: result.HasActiveYear,
+		YearStats:     YearStats,
+	}
+
+	raw, err := json.Marshal(appData)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	data := map[string]any{
-		"Cmd": create_vacations.Command{
-			UserID: result.UserID,
-		},
+		"Cmd":   create_vacations.Command{UserID: result.UserID},
 		"Error": "",
 		"Calendar": CalendarProps{
 			UserID:    result.UserID,
@@ -178,12 +196,9 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 			FromField: "start_date",
 			ToField:   "end_date",
 		},
-		"Balance": struct {
-			HasActiveYear bool // есть ли активный рабочий год
-		}{
-			HasActiveYear: result.HasActiveYear,
-		},
-		"YearStats": YearStats,
+		"Balance":     struct{ HasActiveYear bool }{result.HasActiveYear},
+		"YearStats":   YearStats,        // оставим для серверного рендера таблицы (пока)
+		"AppDataJSON": template.JS(raw), // <- это уйдёт в <script>
 	}
 
 	if err := h.templates.Render(w, "vacation_form.html", data); err != nil {

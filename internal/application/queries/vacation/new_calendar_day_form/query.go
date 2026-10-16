@@ -1,4 +1,4 @@
-package new_holiday_form
+package new_calendar_day_form
 
 type Query struct {
 }

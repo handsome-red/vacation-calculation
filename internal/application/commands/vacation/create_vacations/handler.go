@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
@@ -38,12 +39,12 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 		return nil, fmt.Errorf("%w: некорректный идентификатор пользователя %q", vacation.ErrInvalidInput, cmd.UserID)
 	}
 
-	startDate, err := vacation.ParseDate(cmd.Periods[0].StartDate)
+	startDate, err := date.ParseDate(cmd.Periods[0].StartDate)
 	if err != nil {
 		return nil, fmt.Errorf("%w: не удалось разобрать дату начала %q", vacation.ErrInvalidInput, cmd.Periods[0].StartDate)
 	}
 
-	endDate, err := vacation.ParseDate(cmd.Periods[0].EndDate)
+	endDate, err := date.ParseDate(cmd.Periods[0].EndDate)
 	if err != nil {
 		return nil, fmt.Errorf("%w: не удалось разобрать дату окончания %q", vacation.ErrInvalidInput, cmd.Periods[0].EndDate)
 	}

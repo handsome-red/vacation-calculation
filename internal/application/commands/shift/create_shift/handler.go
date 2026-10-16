@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
@@ -28,7 +29,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	}
 	if cmd.To.Before(cmd.From) {
 		return nil, fmt.Errorf("create_shift: to (%s) before from (%s)",
-			cmd.To.Format(vacation.DateFormat), cmd.From.Format(vacation.DateFormat))
+			cmd.To.Format(date.DateFormat), cmd.From.Format(date.DateFormat))
 	}
 
 	userID, err := user.ParseUserID(cmd.UserID)

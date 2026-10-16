@@ -11,12 +11,11 @@ type CalendarResponse struct {
 }
 
 type CalendarDay struct {
-	Date        string          `json:"date"` // "2026-11-04"
-	Day         int             `json:"day"`  // 4
-	IsWeekend   bool            `json:"isWeekend"`
-	IsHoliday   bool            `json:"isHoliday"`
-	HolidayName string          `json:"holidayName,omitempty"`
-	Events      []CalendarEvent `json:"events,omitempty"`
+	Date        string `json:"date"` // "2026-11-04"
+	Day         int    `json:"day"`  // 4
+	IsWeekend   bool   `json:"isWeekend"`
+	IsHoliday   bool   `json:"isHoliday"`
+	HolidayName string `json:"holidayName,omitempty"`
 }
 
 type CalendarEvent struct {
@@ -27,26 +26,15 @@ type CalendarEvent struct {
 	To      string `json:"to"`   // "2026-11-05"
 }
 
-func ToCalendarResponse(r *get_calendar.Result) CalendarResponse {
-	days := make([]CalendarDay, 0, len(r.Days))
+func ToUserCalendarResponse(r *get_calendar.Result) CalendarResponse {
+	days := make([]CalendarDay, 0, len(r.Calendar))
 	for _, d := range r.Days {
-		events := make([]CalendarEvent, 0, len(d.Events))
-		for _, e := range d.Events {
-			events = append(events, CalendarEvent{
-				Kind:    string(e.Kind),
-				SubKind: e.SubKind,
-				Title:   e.Title,
-				From:    e.From.ISO(),
-				To:      e.To.ISO(),
-			})
-		}
 		days = append(days, CalendarDay{
 			Date:        d.Date.ISO(),
 			Day:         d.Date.Day(),
 			IsWeekend:   d.IsWeekend,
 			IsHoliday:   d.IsHoliday,
 			HolidayName: d.HolidayName,
-			Events:      events,
 		})
 	}
 	return CalendarResponse{

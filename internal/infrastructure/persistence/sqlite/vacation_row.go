@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type vacationRow struct {
-	ID        string        `db:"id"`
-	UserID    string        `db:"user_id"`
-	StartDate vacation.Date `db:"start_date"`
-	EndDate   vacation.Date `db:"end_date"`
-	Status    string        `db:"status"`
-	CreatedAt string        `db:"created_at"`
-	UpdatedAt string        `db:"updated_at"`
+	ID        string    `db:"id"`
+	UserID    string    `db:"user_id"`
+	StartDate date.Date `db:"start_date"`
+	EndDate   date.Date `db:"end_date"`
+	Status    string    `db:"status"`
+	CreatedAt string    `db:"created_at"`
+	UpdatedAt string    `db:"updated_at"`
 }
 
 func (r vacationRow) toDomain() (*vacation.Vacation, error) {

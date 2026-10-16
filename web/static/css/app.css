@@ -1,0 +1,66 @@
+.year-card {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.year-card:last-child {
+  border-bottom: none;
+}
+
+.year-card__title {
+  margin: 0 0 .5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.year-card__bars {
+  display: grid;
+  gap: .75rem;
+}
+
+.quota__header {
+  display: flex;
+  justify-content: space-between;
+  font-size: .85rem;
+  margin-bottom: .25rem;
+  color: #374151;
+}
+
+.quota__bar {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.quota__seg {
+  height: 100%;
+  transition: width .2s ease;
+}
+
+.quota__seg--blocked  { background: #9ca3af; }
+.quota__seg--reserved { background: #f59e0b; }
+.quota__seg--free     { background: #22c55e; }
+
+.quota__legend {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  margin-top: 4px;
+  color: #4b5563;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.dot--blocked  { background: #9ca3af; }
+.dot--reserved { background: #f59e0b; }
+.dot--free     { background: #22c55e; }

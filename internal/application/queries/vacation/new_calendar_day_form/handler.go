@@ -1,4 +1,4 @@
-package new_holiday_form
+package new_calendar_day_form
 
 import (
 	"context"
@@ -6,13 +6,14 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 )
 
+// TODO
 type Handler struct {
-	holidayRepo ports.HolidayRepository
+	calendarDayRepo ports.CalendarDayRepository
 }
 
-func NewHandler(holidayRepo ports.HolidayRepository) *Handler {
+func NewHandler(calendarDayRepo ports.CalendarDayRepository) *Handler {
 	return &Handler{
-		holidayRepo: holidayRepo,
+		calendarDayRepo: calendarDayRepo,
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	Addr              string        `envconfig:"ADDR" default:":8085"`
+	Addr              string        `envconfig:"ADDR" default:":8080"`
 	ReadTimeout       time.Duration `envconfig:"READ_TIMEOUT" default:"5s"`
 	WriteTimeout      time.Duration `envconfig:"WRITE_TIMEOUT" default:"10s"`
 	IdleTimeout       time.Duration `envconfig:"IDLE_TIMEOUT" default:"30s"`

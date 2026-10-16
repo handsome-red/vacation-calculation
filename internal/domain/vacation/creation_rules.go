@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 )
 
 // Минимальные бизнес-константы, используемые при валидации отпуска.
@@ -72,7 +74,7 @@ type vacationPeriod struct {
 // fmt.Errorf с человекочитаемым пояснением. Любая из них удовлетворяет
 // errors.Is(err, ErrBasicVacationRules).
 func ValidateCreation(
-	start, end Date,
+	start, end date.Date,
 	year YearStat,
 	vacations []*Vacation,
 	calc WorkYearCalculator,

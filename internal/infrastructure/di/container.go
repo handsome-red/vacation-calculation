@@ -12,7 +12,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacations"
-	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/new_holiday"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/new_calendar_day"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/shift/shift_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/list_users"
@@ -21,7 +21,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
-	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/new_holiday_form"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/new_calendar_day_form"
 
 	"github.com/handsome-red/vacation-calculation/internal/config"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
@@ -30,7 +30,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/persistence/sqlite"
 	"github.com/jmoiron/sqlx"
 
-	excel "github.com/handsome-red/vacation-calculation/internal/infrastructure/exporter/exel"
+	"github.com/handsome-red/vacation-calculation/internal/infrastructure/exporter/exel"
 )
 
 type Container struct {
@@ -61,11 +61,11 @@ type Container struct {
 	ExportReportUseCase     *export_report.Handler
 
 	// Use Cases - Queries (User)
-	GetUserUseCase        *get_user.Handler
-	ListUsersUseCase      *list_users.Handler
-	GetCalendarUseCase    *get_calendar.Handler
-	NewHolidayFormUseCase *new_holiday_form.Handler
-	NewHolidayUseCase     *new_holiday.Handler
+	GetUserUseCase            *get_user.Handler
+	ListUsersUseCase          *list_users.Handler
+	GetCalendarUseCase        *get_calendar.Handler
+	NewCalendarDayFormUseCase *new_calendar_day_form.Handler
+	NewCalendarDayUseCase     *new_calendar_day.Handler
 
 	// Use Cases - Commands (Shift)
 	CreateShiftUseCase *create_shift.Handler
@@ -91,7 +91,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	var shiftRepo ports.ShiftRepository = sqlite.NewShiftRepository(db)
 
 	var vacationRepo ports.VacationRepository = sqlite.NewVacationRepository(db)
-	var holidayRepo ports.HolidayRepository = sqlite.NewHolidayRepository(db)
+	var calendarDayRepo ports.CalendarDayRepository = sqlite.NewCalendarDayRepository(db)
 
 	var exporter ports.ReportExporter = excel.NewReportExporter()
 
@@ -108,11 +108,11 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	changeVacationStatusUseCase := change_status.NewHandler(vacationRepo)
 	getUserVacationsUseCase := get_user_vacations.NewHandler(vacationRepo)
 	getVacationFormUseCase := get_vacation_form.NewHandler(userRepo, vacationRepo, shiftRepo, wc)
-	getCalendarUseCase := get_calendar.NewHandler(holidayRepo, vacationRepo, shiftRepo)
-	newHolidayFormUseCase := new_holiday_form.NewHandler(holidayRepo)
+	getCalendarUseCase := get_calendar.NewHandler(calendarDayRepo)
+	newCalendarDayFormUseCase := new_calendar_day_form.NewHandler(calendarDayRepo)
 	exportReportUseCase := export_report.NewHandler(userRepo, vacationRepo, departmentRepo, districtRepo, wc, exporter)
 
-	newHolidayUseCase := new_holiday.NewHandler(holidayRepo)
+	newCalendarDayUseCase := new_calendar_day.NewHandler(calendarDayRepo)
 
 	createShiftUseCase := create_shift.NewHandler(shiftRepo)
 	shiftFormUseCase := shift_form.NewHandler()
@@ -141,8 +141,8 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		GetUserVacationsUseCase:     getUserVacationsUseCase,
 		GetVacationFormUseCase:      getVacationFormUseCase,
 		GetCalendarUseCase:          getCalendarUseCase,
-		NewHolidayFormUseCase:       newHolidayFormUseCase,
-		NewHolidayUseCase:           newHolidayUseCase,
+		NewCalendarDayFormUseCase:   newCalendarDayFormUseCase,
+		NewCalendarDayUseCase:       newCalendarDayUseCase,
 		CreateShiftUseCase:          createShiftUseCase,
 		ShiftFormUseCase:            shiftFormUseCase,
 		ExportReportUseCase:         exportReportUseCase,

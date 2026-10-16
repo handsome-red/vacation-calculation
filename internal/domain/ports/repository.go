@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
+	"github.com/handsome-red/vacation-calculation/internal/domain/calendar"
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 	// "github.com/handsome-red/vacation-calculation/internal/domain/vacation"
@@ -70,14 +72,15 @@ type VacationRepository interface {
 	FindByUserIDInRange(
 		ctx context.Context,
 		userID user.UserID,
-		from, to vacation.Date,
+		from, to date.Date,
 	) ([]*vacation.Vacation, error)
 }
 
-type HolidayRepository interface {
-	Save(ctx context.Context, h vacation.Holiday) error
-	ListInRange(ctx context.Context, from, to vacation.Date) ([]vacation.Holiday, error)
-	ListByYear(ctx context.Context, year int) ([]vacation.Holiday, error)
+type CalendarDayRepository interface {
+	Save(ctx context.Context, d calendar.Exception) error
+	ListInRange(ctx context.Context, from, to date.Date) ([]calendar.Exception, error)
+	ListByYear(ctx context.Context, year int) ([]calendar.Exception, error)
+	Delete(ctx context.Context, d date.Date) error
 }
 
 type AuthRepository interface {

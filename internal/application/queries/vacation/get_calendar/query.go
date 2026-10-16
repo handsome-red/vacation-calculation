@@ -1,11 +1,12 @@
 package get_calendar
 
-import "github.com/handsome-red/vacation-calculation/internal/domain/vacation"
+import (
+	"github.com/handsome-red/vacation-calculation/internal/domain/calendar"
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
+)
 
 type Query struct {
-	UserID string
-	Year   int
-	Month  int
+	Year int
 }
 
 type EventKind string
@@ -19,19 +20,9 @@ type Event struct {
 	Kind     EventKind // "vacation" | "shift"
 	SubKind  string    // для сдвига: "unpaid_long" | "parental_leave" | "absenteeism"; для отпуска — статус
 	Title    string    // "Отпуск 14 дн." / "Прогул 3 дн."
-	From, To vacation.Date
-}
-
-type Day struct {
-	Date        vacation.Date
-	IsWeekend   bool
-	IsHoliday   bool
-	HolidayName string
-	Events      []Event
+	From, To date.Date
 }
 
 type Result struct {
-	Year  int
-	Month int
-	Days  []Day
+	Calendar calendar.Calendar
 }

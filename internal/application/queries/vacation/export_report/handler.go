@@ -35,8 +35,8 @@ func NewHandler(
 }
 
 func (h *Handler) Handle(ctx context.Context, q Query) ([]byte, error) {
-	// from := vacation.NewDate(time.Date(q.Year, 1, 1, 0, 0, 0, 0, time.UTC))
-	// to   := vacation.NewDate(time.Date(q.Year, 12, 31, 0, 0, 0, 0, time.UTC))
+	// from := date.NewDate(time.Date(q.Year, 1, 1, 0, 0, 0, 0, time.UTC))
+	// to   := date.NewDate(time.Date(q.Year, 12, 31, 0, 0, 0, 0, time.UTC))
 
 	// users, err := h.listUsers(ctx, q.DistrictCode)
 	// if err != nil { return nil, err }

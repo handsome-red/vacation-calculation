@@ -15,16 +15,16 @@ type Templates struct {
 }
 
 var pages = map[string]string{
-	"login.html":            "templates/login.html",
-	"calendar.html":         "templates/calendar.html",
-	"get_holiday_form.html": "templates/get_holiday_form.html",
-	"home.html":             "templates/home.html",
-	"register_user.html":    "templates/register_user.html",
-	"user.html":             "templates/user.html",
-	"users.html":            "templates/users.html",
-	"vacations.html":        "templates/vacations.html",
-	"vacation_form.html":    "templates/vacation_form.html",
-	"shift_form.html":       "templates/shift_form.html",
+	"login.html":                 "templates/login.html",
+	"calendar.html":              "templates/calendar.html",
+	"get_calendar_day_form.html": "templates/get_calendar_day_form.html",
+	"home.html":                  "templates/home.html",
+	"register_user.html":         "templates/register_user.html",
+	"user.html":                  "templates/user.html",
+	"users.html":                 "templates/users.html",
+	"vacations.html":             "templates/vacations.html",
+	"vacation_form.html":         "templates/vacation_form.html",
+	"shift_form.html":            "templates/shift_form.html",
 }
 
 func NewTemplates() (*Templates, error) {

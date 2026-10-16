@@ -1,4 +1,4 @@
-package vacation
+package date
 
 import (
 	"database/sql/driver"
@@ -9,10 +9,24 @@ import (
 
 const dateLayout = "2006-01-02"
 
+var DateFormat = "02.01.2006"
+
 type Date struct {
 	year  int
 	month time.Month
 	day   int
+}
+
+func New(
+	year int,
+	month time.Month,
+	day int,
+) Date {
+	return Date{
+		year:  year,
+		month: month,
+		day:   day,
+	}
 }
 
 func (d Date) Value() (driver.Value, error) {
@@ -38,12 +52,12 @@ func (d *Date) Scan(src any) error {
 		*d = Date{year: v.Year(), month: v.Month(), day: v.Day()}
 		return nil
 	default:
-		return fmt.Errorf("vacation.Date: cannot scan type %T", src)
+		return fmt.Errorf("date.Date: cannot scan type %T", src)
 	}
 
 	parsed, err := ParseDate(s)
 	if err != nil {
-		return fmt.Errorf("vacation.Date: scan %q: %w", s, err)
+		return fmt.Errorf("date.Date: scan %q: %w", s, err)
 	}
 	*d = parsed
 	return nil

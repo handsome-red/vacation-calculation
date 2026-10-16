@@ -8,30 +8,7 @@
         <div class="card-header">
             <h2>Баланс отпусков</h2>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Рабочий год</th>
-                    <th>Ежегодный отпуск</th>
-                    <th>За выслугу лет</th>
-                    <th>За ненормированный служебный день</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .YearStats}}
-                <tr>
-                    <td>{{.Year}}</td>
-                    <td>{{.Base}}{{.BaseUse}}</td>
-                    <td>{{.Seniority}}{{.SeniorityUse}}</td>
-                    <td>{{.Irregular}}{{.IrregularUse}}</td>
-                </tr>
-                {{else}}
-                <tr>
-                    <td colspan="4">Нет данных о рабочих годах</td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+        <div id="quota-app"></div>
     </section>
 {{ else }}
     <p class="muted">Нет активного рабочего года — баланс недоступен</p>
@@ -52,4 +29,7 @@
         <button type="submit">Создать</button>
     </p>
 </form>
+
+<script id="app-data" type="application/json">{{ .AppDataJSON }}</script>
+<script src="/static/js/vacation_form.js" type="module"></script>
 {{ end }}

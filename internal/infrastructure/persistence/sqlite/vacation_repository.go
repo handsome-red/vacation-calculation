@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 	"github.com/jmoiron/sqlx"
@@ -105,7 +106,7 @@ func (r *vacationRepository) FindByUserID(ctx context.Context, userID user.UserI
 func (r *vacationRepository) FindByUserIDInRange(
 	ctx context.Context,
 	userID user.UserID,
-	from, to vacation.Date,
+	from, to date.Date,
 ) ([]*vacation.Vacation, error) {
 	const q = `
         SELECT id, user_id, start_date, end_date, status, created_at, updated_at
