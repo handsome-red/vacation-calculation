@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/calendar"
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 )
@@ -22,34 +23,24 @@ func NewHandler(
 }
 
 func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
-	if q.Month < 1 || q.Month > 12 {
-		return nil, fmt.Errorf("invalid month: %d", q.Month)
-	}
 	if q.Year < 1900 || q.Year > 2200 {
 		return nil, fmt.Errorf("invalid year: %d", q.Year)
 	}
 
-	// Границы месяца: [first, last] включительно.
-	first, err := date.NewDate(q.Year, time.Month(q.Month), 1)
-	if err != nil {
-		return nil, fmt.Errorf("month first day: %w", err)
-	}
-	lastDay := time.Date(q.Year, time.Month(q.Month)+1, 0, 0, 0, 0, 0, time.UTC).Day()
-	last, err := date.NewDate(q.Year, time.Month(q.Month), lastDay)
-	if err != nil {
-		return nil, fmt.Errorf("month last day: %w", err)
-	}
+	start := date.New(q.Year, time.January, 1)
+	end := date.New(q.Year,  time.December, 31)
 
-	calendarDays, err := h.calendarDayRepo.ListInRange(ctx, first, last)
+	exceptionsDays, err := h.calendarDayRepo.ListInRange(ctx, start, end)
 	if err != nil {
 		return nil, fmt.Errorf("calendar days: %w", err)
 	}
 
-	calendarByDate := make(map[string]date.Date, len(calendarDays))
-	for _, cd := range calendarDays {
-		calendarByDate[cd.Date()] = cd
+	calendarByDate := make(map[string]calendar.Exception, len(exceptionsDays))
+	for _, cd := range exceptionsDays {
+		calendarByDate[cd.Date().ISO()] = cd
 	}
 
+	lastDay := time.Date(q.Year, time.Month(q.Month)+1, 0, 0, 0, 0, 0, time.UTC).Day()
 	days := make([]Day, 0, lastDay)
 	for d := 1; d <= lastDay; d++ {
 		date, err := date.NewDate(q.Year, time.Month(q.Month), d)
@@ -68,10 +59,10 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 
 		if cd, ok := calendarByDate[key]; ok {
 			switch cd.DayType() {
-			case date.DateHoliday:
+			case calendar.DayTypeHoliday:
 				day.IsHoliday = true
 				day.HolidayName = cd.Name()
-			case date.DateWorkSaturday:
+			case calendar.DayTypeWorking:
 				day.IsWorkSaturday = true
 				day.WorkSaturdayName = cd.Name()
 			}

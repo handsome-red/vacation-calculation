@@ -15,6 +15,7 @@ type User struct {
 	birthDate       BirthDate       // Дата рождения
 	position        Position        // Должность
 	hiredAt         HiredDate       // Дата приема на работу
+	experienceDays  int				// Дней стажа до приема на работу
 	department      Department      // Территориальный отдел
 	district        District        // Район/Отдел
 	workdayDuration WorkdayDuration // Продолжительность рабочего дня
@@ -37,6 +38,7 @@ type UserParams struct {
 	BirthDate       BirthDate
 	Position        Position
 	HiredAt         HiredDate
+	ExperienceDays  int
 	Department      Department
 	District        District
 	WorkdayDuration WorkdayDuration
@@ -54,6 +56,7 @@ func NewUser(
 	birthDate BirthDate,
 	position Position,
 	hiredAt HiredDate,
+	experienceDays int,
 	department Department,
 	district District,
 	workdayDuration WorkdayDuration,
@@ -72,6 +75,7 @@ func NewUser(
 		birthDate:       birthDate,
 		position:        position,
 		hiredAt:         hiredAt,
+		experienceDays:  experienceDays,
 		department:      department,
 		district:        district,
 		workdayDuration: workdayDuration,
@@ -96,6 +100,7 @@ func ReconstructUser(p UserParams) *User {
 		birthDate:       p.BirthDate,
 		position:        p.Position,
 		hiredAt:         p.HiredAt,
+		experienceDays:  p.ExperienceDays,
 		department:      p.Department,
 		district:        p.District,
 		workdayDuration: p.WorkdayDuration,
@@ -240,6 +245,10 @@ func (u *User) CreatedAt() time.Time {
 
 func (u *User) UpdatedAt() time.Time {
 	return u.updatedAt
+}
+
+func (u *User) ExperienceDays() int {
+    return u.experienceDays
 }
 
 func (u *User) Initials() string {

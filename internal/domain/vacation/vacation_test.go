@@ -360,8 +360,11 @@ func TestFindYearStat_AbsenteeismShifts(t *testing.T) {
 		mustShift(t, ShiftKindAbsenteeism, d(2024, 4, 1), d(2024, 4, 10)), // 10
 	}
 
-	got := NewWorkYearCalculator().FindYearStat(hiredAt, now, false, shifts,
+	got, err := NewWorkYearCalculator().FindYearStat(hiredAt, now, false, shifts,
 		func(at time.Time) int { return 0 })
+	if err != nil {
+		t.Fatalf("FindYearStat failed: %v", err)
+	}
 
 	if len(got) != 2 {
 		t.Fatalf("ожидали 2 года, получили %d", len(got))

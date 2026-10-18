@@ -35,7 +35,7 @@ func (r *calendarDayRepository) Save(ctx context.Context, d calendar.Exception) 
 			name     = EXCLUDED.name
 	`
 
-	_, err := r.db.ExecContext(ctx, q, d.Date(), string(d.DayType()), d.Name())
+	_, err := r.db.ExecContext(ctx, q, d.Date().ISO(), string(d.DayType()), d.Name())
 	if err != nil {
 		return fmt.Errorf("save calendar day %q: %w", d.Date().ISO(), err)
 	}
@@ -84,11 +84,11 @@ func (r *calendarDayRepository) Delete(ctx context.Context, date date.Date) erro
 func rowsToCalendarDays(rows []calendarDayRow) ([]calendar.Exception, error) {
 	out := make([]calendar.Exception, 0, len(rows))
 	for _, row := range rows {
-		d, err := row.toDomain()
+		e, err := row.toDomain()
 		if err != nil {
 			return nil, fmt.Errorf("calendar day row %q: %w", row.Date, err)
 		}
-		out = append(out, d)
+		out = append(out, e)
 	}
 	return out, nil
 }

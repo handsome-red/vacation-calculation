@@ -41,7 +41,7 @@ func TestRegisterUserCanLogIn(t *testing.T) {
 	created, err := register.Handle(ctx, register_user.Command{
 		Email: email, Password: password, FirstName: "Иван", LastName: "Иванов",
 		MiddleName: "Иванович", BirthDate: "1990-01-01", HiredAt: "2020-01-01",
-		Position: "employee", DistrictCode: "kazan", DepartmentCode: "epidemiological_supervision",
+		Position: "software_engineer", DistrictCode: "kazan", DepartmentCode: "epidemiological_supervision",
 		WorkdayDuration: 8,
 	})
 	if err != nil {
@@ -101,7 +101,7 @@ func TestRegistrationFormCreatesUserWhoCanLogIn(t *testing.T) {
 		"email": {email}, "password": {password}, "first_name": {"Иван"},
 		"last_name": {"Иванов"}, "middle_name": {"Иванович"},
 		"birth_date": {"1990-01-01"}, "hired_at": {"2020-01-01"},
-		"position": {"employee"}, "district": {"kazan"},
+		"position": {"software_engineer"}, "district": {"kazan"},
 		"department": {"epidemiological_supervision"}, "workday_duration": {"8"},
 	}
 	req := httptest.NewRequest(http.MethodPost, "/user/register", strings.NewReader(form.Encode()))

@@ -5,6 +5,7 @@ import "github.com/handsome-red/vacation-calculation/internal/domain/date"
 type Query struct {
 	UserID string
 	Year   int
+	Month  int
 }
 
 type EventKind string

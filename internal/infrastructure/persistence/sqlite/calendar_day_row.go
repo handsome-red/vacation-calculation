@@ -1,8 +1,7 @@
 package sqlite
 
 import (
-	"fmt"
-
+	"github.com/handsome-red/vacation-calculation/internal/domain/calendar"
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 )
 
@@ -12,10 +11,14 @@ type calendarDayRow struct {
 	Name    string `db:"name"`
 }
 
-func (r calendarDayRow) toDomain() (date.Date, error) {
-	date, err := date.ParseDate(r.Date)
+func (r calendarDayRow) toDomain() (calendar.Exception, error) {
+	d, err := date.ParseDate(r.Date)
 	if err != nil {
-		return date.Date{}, fmt.Errorf("parse date: %w", err)
+		return calendar.Exception{}, err
 	}
-	return date.NewCalendarDay(date, date.DateType(r.DayType), r.Name)
+	dt, err := calendar.ParseDayType(r.DayType)
+	if err != nil {
+		return calendar.Exception{}, err
+	}
+	return calendar.NewException(d, dt, r.Name)
 }

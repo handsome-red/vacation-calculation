@@ -78,7 +78,9 @@ type VacationRepository interface {
 
 type CalendarDayRepository interface {
 	Save(ctx context.Context, d calendar.Exception) error
+	// ListInRange возвращает все исключения календаря за период [from, to] включительно
 	ListInRange(ctx context.Context, from, to date.Date) ([]calendar.Exception, error)
+	// ListByYear возвращает все исключения календаря за календарный год
 	ListByYear(ctx context.Context, year int) ([]calendar.Exception, error)
 	Delete(ctx context.Context, d date.Date) error
 }

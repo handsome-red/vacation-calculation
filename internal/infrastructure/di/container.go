@@ -12,7 +12,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacations"
-	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/new_calendar_day"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/calendar/new_exception"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/shift/shift_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/list_users"

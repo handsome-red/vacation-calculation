@@ -24,6 +24,7 @@ type Form struct {
 	MiddleName      string
 	Email           string
 	BirthDate       string
+Experience 			int
 	HiredAt         string
 	WorkdayDuration int
 	IsInvalid       bool

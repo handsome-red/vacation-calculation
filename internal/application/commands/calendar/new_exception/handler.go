@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/calendar"
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
-	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type Handler struct {
@@ -21,17 +21,17 @@ func NewHandler(calendarDayRepo ports.CalendarDayRepository) *Handler {
 
 func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 
-	date, err := date.ParseDate(cmd.Date)
+	d, err := date.ParseDate(cmd.Date)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse date %s: %w", cmd.Date, err)
 	}
 
-	dayType := date.DateType(cmd.Type)
-	if !dayType.Valid() {
-		return nil, fmt.Errorf("invalid day type %q", cmd.Type)
+	t, err := calendar.ParseDayType(cmd.Type)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse day type %s: %w", cmd.Type, err)
 	}
 
-	holiday, err := vacation.NewCalendarDay(date, dayType, cmd.Name)
+	holiday, err := calendar.NewException(d, t, cmd.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create holiday %s: %w", cmd.Name, err)
 	}

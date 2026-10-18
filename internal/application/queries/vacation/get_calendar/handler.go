@@ -33,11 +33,15 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 
 	exMap := make(map[date.Date]calendar.Exception, len(exceptions))
 	for _, e := range exceptions {
-		exMap[e.Date] = calendar.Exception{
-			Date:    e.Date,
-			DayType: e.DayType,
-			Name:    e.Name,
+		e, err := calendar.NewException(
+			e.Date(),
+			e.DayType(),
+			e.Name(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("create exception: %w", err)
 		}
+		exMap[e.Date()] = e
 	}
 
 	cal, err := calendar.BuildYear(q.Year, exMap)

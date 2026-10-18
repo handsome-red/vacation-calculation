@@ -1,0 +1,20 @@
+{{define "title"}}Календарь {{.Year}}{{end}}
+
+{{define "content"}}
+<div class="container">
+    <h1>Производственный календарь <span id="year-label">{{.Year}}</span></h1>
+
+    <form id="year-form" method="get" action="/calendar" class="year-switch">
+        <label>
+            Год:
+            <input type="number" name="year" value="{{.Year}}" min="2000" max="2100">
+        </label>
+        <button type="submit">Показать</button>
+    </form>
+
+    <div id="calendar" class="calendar" data-year="{{.Year}}">
+        <p class="muted">Загрузка…</p>
+    </div>
+</div>
+<script src="/static/js/year_calendar.js" defer></script>
+{{end}}

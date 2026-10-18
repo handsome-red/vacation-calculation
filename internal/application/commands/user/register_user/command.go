@@ -9,6 +9,7 @@ type Command struct {
 	DepartmentCode  string
 	BirthDate       string
 	Position        string
+	Experience		int
 	HiredAt         string
 	DistrictCode    string
 	WorkdayDuration int

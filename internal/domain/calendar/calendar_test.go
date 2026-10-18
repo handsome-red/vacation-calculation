@@ -1,8 +1,8 @@
 package calendar
 
 import (
-	"reflect"
 	"testing"
+	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 )
@@ -12,7 +12,6 @@ func TestBuildYear(t *testing.T) {
 		name        string
 		year        int
 		exceptions  map[date.Date]Exception
-		expected    Calendar
 		expectedErr bool
 	}{
 		{
@@ -20,14 +19,12 @@ func TestBuildYear(t *testing.T) {
 			year:        2026,
 			exceptions:  nil,
 			expectedErr: false,
-			expected:    Calendar{},
 		},
 		{
-			name:        "2026 без исключений",
+			name:        "2026 без исключений (пустая карта)",
 			year:        2026,
 			exceptions:  map[date.Date]Exception{},
 			expectedErr: false,
-			expected:    Calendar{},
 		},
 	}
 
@@ -43,8 +40,13 @@ func TestBuildYear(t *testing.T) {
 			if got.Year != tt.year {
 				t.Errorf("%s: got year %d, want %d", tt.name, got.Year, tt.year)
 			}
-			if !reflect.DeepEqual(got, tt.expected) {
-				t.Errorf("%s: got %+v, want %+v", tt.name, got, tt.expected)
+			if len(got.Month) != 12 {
+				t.Errorf("%s: expected 12 months, got %d", tt.name, len(got.Month))
+			}
+			for i, m := range got.Month {
+				if m.Number != time.Month(i+1) {
+					t.Errorf("%s: month[%d] number = %v, want %v", tt.name, i, m.Number, time.Month(i+1))
+				}
 			}
 		})
 	}

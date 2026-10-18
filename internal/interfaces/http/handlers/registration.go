@@ -46,6 +46,11 @@ func (h *RegistrationHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	experience, err :=  strconv.Atoi(r.FormValue("experience"))
+	if err != nil {
+		experience = 0
+	}
+
 	workday, err := strconv.Atoi(r.FormValue("workday_duration"))
 	if err != nil {
 		workday = 0 // валидация ниже, в use case
@@ -61,6 +66,7 @@ func (h *RegistrationHandler) Register(w http.ResponseWriter, r *http.Request) {
 		DistrictCode:    r.FormValue("district"),
 		Position:        r.FormValue("position"),
 		BirthDate:       r.FormValue("birth_date"),
+		Experience: 	experience,
 		HiredAt:         r.FormValue("hired_at"),
 		WorkdayDuration: workday,
 		IsInvalid:       r.FormValue("is_invalid") == "true",

@@ -49,6 +49,10 @@
             {{end}}
         </select>
 
+        <p><label>Стаж в днях до устройства на работу<br>
+                <input type="number" name="experience" value="{{.Form.Experience}}" min="0" max="36500" step="1" required>
+            </label></p>
+
         <p><label>Дата приема на работу<br>
                 <input type="date" name="hired_at" value="{{.Form.HiredAt}}" max="{{.Today}}" required>
             </label></p>

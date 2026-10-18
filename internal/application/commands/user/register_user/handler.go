@@ -101,6 +101,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 		birthDate,
 		position,
 		hiredAt,
+		cmd.Experience,
 		department,
 		district,
 		workdayDuration,

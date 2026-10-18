@@ -33,11 +33,18 @@ func BuildYear(year int, exceptions map[date.Date]Exception) (Calendar, error) {
 		for d := 1; d <= daysInMonth; d++ {
 			d := date.New(year, month, d)
 
-			e := exceptions[d]
+			kind := defaultDayType(d)
+			name := ""
+
+			if e, ok := exceptions[d]; ok {
+				kind = e.DayType()
+				name = e.Name()
+			}
+
 			days = append(days, Day{
 				Date: d,
-				Kind: e.DayType,
-				Name: e.Name,
+				Kind: kind,
+				Name: name,
 			})
 		}
 
@@ -51,4 +58,13 @@ func BuildYear(year int, exceptions map[date.Date]Exception) (Calendar, error) {
 		Year:  year,
 		Month: months,
 	}, nil
+}
+
+func defaultDayType(d date.Date) DayType {
+	wd := d.Time().Weekday()
+	if wd == time.Saturday || wd == time.Sunday {
+		return DayTypeWeekend
+	}
+
+	return  DayTypeWorking
 }

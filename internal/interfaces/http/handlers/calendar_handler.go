@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/new_calendar_day"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/calendar/new_exception"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/new_calendar_day_form"
@@ -69,6 +69,7 @@ func (h *CalendarHandler) GetUserCalendar(w http.ResponseWriter, r *http.Request
 	result, err := h.getUserCalendarUseCase.Handle(r.Context(), get_user_calendar.Query{
 		UserID: userID,
 		Year:   year,
+		Month:  month,
 	})
 	if err != nil {
 		h.logger.Error(r.Context(), "get user calendar failed",
@@ -78,7 +79,7 @@ func (h *CalendarHandler) GetUserCalendar(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	if err := json.NewEncoder(w).Encode(dto.ToCalendarResponse(result)); err != nil {
+	if err := json.NewEncoder(w).Encode(dto.ToUserCalendarResponse(result)); err != nil {
 		h.logger.Error(r.Context(), "encode calendar response", "error", err)
 		return
 	}
@@ -120,6 +121,24 @@ func (h *CalendarHandler) GetCalendar(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error(r.Context(), "encode calendar response", "error", err)
 		return
 	}
+}
+
+func (h *CalendarHandler) GetCalendarPage(w http.ResponseWriter, r *http.Request) {
+    year := time.Now().Year()
+    if y := r.URL.Query().Get("year"); y != "" {
+        if v, err := strconv.Atoi(y); err == nil {
+            year = v
+        }
+    }
+
+    data := map[string]any{
+        "Title": "Календарь",
+        "Year":  year,
+    }
+    if err := h.templates.Render(w, "calendar_page.html", data); err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
 }
 
 func (h *CalendarHandler) GetCalendarDayForm(w http.ResponseWriter, r *http.Request) {

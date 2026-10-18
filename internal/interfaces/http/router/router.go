@@ -144,6 +144,7 @@ func (r *Router) registerPublic(mux chi.Router) {
 		private.With(authmiddleware.RequireAdmin).Post("/user/register", r.registrationHandler.Register)
 		private.With(authmiddleware.RequireAdmin).Get("/users", r.userHandler.ListUsersPage)
 		private.Get("/users/{id}", r.userHandler.GetUserPage)
+		private.Get("/calendar", r.calendarHandler.GetCalendarPage)
 	})
 }
 
@@ -170,7 +171,7 @@ func (r *Router) registerAPI(mux chi.Router) {
 	}
 
 	if r.calendarHandler != nil {
-		mux.Get("/calendar", r.calendarHandler.GetUserCalendar)
+		mux.Get("/calendar", r.calendarHandler.GetCalendar)
 	}
 
 	if r.shiftHandler != nil {
