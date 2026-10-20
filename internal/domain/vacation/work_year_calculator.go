@@ -12,6 +12,20 @@ type WorkYearCalculator struct{}
 
 func NewWorkYearCalculator() WorkYearCalculator { return WorkYearCalculator{} }
 
+type UsedVacation struct {
+	Kind Kind      // base | seniority | irregular
+	Days int       // календарных дней, попавших в рабочий год
+	From time.Time // начало отпуска (обрезка по границам года)
+	To   time.Time // конец отпуска (обрезка)
+}
+
+type UsedByKind struct {
+	Base      int // суммарно календарных дней
+	Seniority int
+	Irregular int
+	Items     []UsedVacation // для отчёта: по каждому отпуску
+}
+
 type YearStat struct {
 	From      time.Time // начало рабочего года (включительно)
 	To        time.Time // конец рабочего года (исключительно)
@@ -221,8 +235,14 @@ func shiftCoverage(shift []Shift, from, to time.Time) int {
 	return total
 }
 
-func UsedDaysInYear(vacations []*Vacation, year YearStat) int {
-	total := 0
+func UsedDaysInYear(vacations []*Vacation, year YearStat) UsedByKind {
+	result := UsedByKind{
+		Base:      0,
+		Seniority: 0,
+		Irregular: 0,
+		Items:     make([]UsedVacation, 0, len(vacations)),
+	}
+
 	for _, v := range vacations {
 		if v == nil {
 			continue
@@ -231,12 +251,38 @@ func UsedDaysInYear(vacations []*Vacation, year YearStat) int {
 		if v.Status() == StatusDraft {
 			continue
 		}
+
+		lastDay := year.To.AddDate(0, 0, -1)
+
 		oStart := MaxTime(v.StartDate().Time(), year.From)
-		oEnd := MinTime(v.EndDate().Time(), year.To.AddDate(0, 0, -1))
+		oEnd := MinTime(v.EndDate().Time(), lastDay)
 		if oEnd.Before(oStart) {
 			continue
 		}
-		total += DaysInclusive(oStart, oEnd)
+		days := DaysInclusive(oStart, oEnd)
+		if days <= 0 {
+			continue
+		}
+
+		kind := v.Kind()
+
+		switch kind {
+		case KindBase:
+			result.Base += days
+		case KindSeniority:
+			result.Seniority += days
+		case KindIrregular:
+			result.Irregular += days
+		default:
+			continue
+		}
+
+		result.Items = append(result.Items, UsedVacation{
+			Kind: kind,
+			Days: days,
+			From: oStart,
+			To:   oEnd,
+		})
 	}
-	return total
+	return result
 }

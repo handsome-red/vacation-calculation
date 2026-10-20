@@ -39,6 +39,11 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 		return nil, fmt.Errorf("%w: некорректный идентификатор пользователя %q", vacation.ErrInvalidInput, cmd.UserID)
 	}
 
+	kind, err := vacation.NewKind(cmd.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("%w: некореектный тип отпуска", err)
+	}
+
 	startDate, err := date.ParseDate(cmd.Periods[0].StartDate)
 	if err != nil {
 		return nil, fmt.Errorf("%w: не удалось разобрать дату начала %q", vacation.ErrInvalidInput, cmd.Periods[0].StartDate)

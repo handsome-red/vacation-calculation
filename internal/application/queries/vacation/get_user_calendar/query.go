@@ -1,11 +1,13 @@
 package get_user_calendar
 
-import "github.com/handsome-red/vacation-calculation/internal/domain/date"
+import (
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
+	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
+)
 
 type Query struct {
 	UserID string
 	Year   int
-	Month  int
 }
 
 type EventKind string
@@ -32,7 +34,9 @@ type Day struct {
 }
 
 type Result struct {
-	Year  int
-	Month int
-	Days  []Day
+	Year      int
+	Month     int
+	Days      []Day
+	Vacations []*vacation.Vacation
+	// TODO: Add shifts
 }

@@ -10,6 +10,7 @@ import (
 type Vacation struct {
 	id        VacationID
 	status    VacationStatus
+	kind      Kind
 	userID    user.UserID
 	startDate date.Date
 	endDate   date.Date
@@ -21,6 +22,7 @@ type Vacation struct {
 type VacationParams struct {
 	ID             VacationID
 	VacationStatus VacationStatus
+	Kind           Kind
 	UserID         user.UserID
 	StartDate      date.Date
 	EndDate        date.Date
@@ -32,6 +34,7 @@ type VacationParams struct {
 func NewVacation(
 	id VacationID,
 	userID user.UserID,
+	kind Kind,
 	startDate date.Date,
 	endDate date.Date,
 	now time.Time,
@@ -116,10 +119,13 @@ func (v *Vacation) Status() VacationStatus         { return v.status }
 func (v *Vacation) CreatedAt() time.Time           { return v.createdAt }
 func (v *Vacation) UpdatedAt() time.Time           { return v.updatedAt }
 
+func (v *Vacation) Kind() Kind { return v.kind }
+
 func ReconstructVacation(p VacationParams) *Vacation {
 	return &Vacation{
 		id:        p.ID,
 		status:    p.VacationStatus,
+		kind:      p.Kind,
 		userID:    p.UserID,
 		startDate: p.StartDate,
 		endDate:   p.EndDate,

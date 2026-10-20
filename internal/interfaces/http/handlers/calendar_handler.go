@@ -15,8 +15,8 @@ import (
 )
 
 type CalendarHandler struct {
-	getUserCalendarUseCase    *get_user_calendar.Handler
 	getCalendarUseCase        *get_calendar.Handler
+	getUserCalendarUseCase    *get_user_calendar.Handler
 	newCalendarDayUseCase     *new_calendar_day.Handler
 	newCalendarDayFormUseCase *new_calendar_day_form.Handler
 	templates                 *Templates
@@ -25,6 +25,7 @@ type CalendarHandler struct {
 
 func NewCalendarHandler(
 	getCalendarUseCase *get_calendar.Handler,
+	userCalendarUseCase *get_user_calendar.Handler,
 	newCalendarDayUseCase *new_calendar_day.Handler,
 	newCalendarDayFormUseCase *new_calendar_day_form.Handler,
 	templates *Templates,
@@ -32,6 +33,7 @@ func NewCalendarHandler(
 ) *CalendarHandler {
 	return &CalendarHandler{
 		getCalendarUseCase:        getCalendarUseCase,
+		getUserCalendarUseCase:    userCalendarUseCase,
 		newCalendarDayUseCase:     newCalendarDayUseCase,
 		newCalendarDayFormUseCase: newCalendarDayFormUseCase,
 		templates:                 templates,
@@ -56,24 +58,13 @@ func (h *CalendarHandler) GetUserCalendar(w http.ResponseWriter, r *http.Request
 		year = v
 	}
 
-	month := int(time.Now().Month())
-	if s := r.URL.Query().Get("month"); s != "" {
-		v, err := strconv.Atoi(s)
-		if err != nil || v < 1 || v > 12 {
-			http.Error(w, "invalid month", http.StatusBadRequest)
-			return
-		}
-		month = v
-	}
-
 	result, err := h.getUserCalendarUseCase.Handle(r.Context(), get_user_calendar.Query{
 		UserID: userID,
 		Year:   year,
-		Month:  month,
 	})
 	if err != nil {
 		h.logger.Error(r.Context(), "get user calendar failed",
-			"user_id", userID, "year", year, "month", month, "error", err)
+			"user_id", userID, "year", year, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -96,22 +87,12 @@ func (h *CalendarHandler) GetCalendar(w http.ResponseWriter, r *http.Request) {
 		year = v
 	}
 
-	month := int(time.Now().Month())
-	if s := r.URL.Query().Get("month"); s != "" {
-		v, err := strconv.Atoi(s)
-		if err != nil || v < 1 || v > 12 {
-			http.Error(w, "invalid month", http.StatusBadRequest)
-			return
-		}
-		month = v
-	}
-
 	result, err := h.getCalendarUseCase.Handle(r.Context(), get_calendar.Query{
 		Year: year,
 	})
 	if err != nil {
 		h.logger.Error(r.Context(), "get user calendar failed",
-			"year", year, "month", month, "error", err)
+			"year", year, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -124,21 +105,21 @@ func (h *CalendarHandler) GetCalendar(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CalendarHandler) GetCalendarPage(w http.ResponseWriter, r *http.Request) {
-    year := time.Now().Year()
-    if y := r.URL.Query().Get("year"); y != "" {
-        if v, err := strconv.Atoi(y); err == nil {
-            year = v
-        }
-    }
+	year := time.Now().Year()
+	if y := r.URL.Query().Get("year"); y != "" {
+		if v, err := strconv.Atoi(y); err == nil {
+			year = v
+		}
+	}
 
-    data := map[string]any{
-        "Title": "Календарь",
-        "Year":  year,
-    }
-    if err := h.templates.Render(w, "calendar_page.html", data); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
+	data := map[string]any{
+		"Title": "Календарь",
+		"Year":  year,
+	}
+	if err := h.templates.Render(w, "calendar_page.html", data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *CalendarHandler) GetCalendarDayForm(w http.ResponseWriter, r *http.Request) {

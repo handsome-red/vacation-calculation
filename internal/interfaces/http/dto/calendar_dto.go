@@ -5,6 +5,8 @@ import (
 
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_calendar"
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
+	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type CalendarResponse struct {
@@ -14,9 +16,9 @@ type CalendarResponse struct {
 }
 
 type UserCalendarResponse struct {
-	Year  int        `json:"year"`
-	Month int        `json:"month"`
-	Days  []UDayDTO  `json:"days"`
+	Year  int       `json:"year"`
+	Month int       `json:"month"`
+	Days  []UDayDTO `json:"days"`
 }
 
 type MonthDTO struct {
@@ -24,21 +26,37 @@ type MonthDTO struct {
 	Days  []CalendarDay `json:"days"`
 }
 
+type CalendarEvent struct {
+	Kind    string `json:"kind"` // "vacation" | "shift"
+	SubKind string `json:"subKind,omitempty"`
+	Title   string `json:"title"`
+	From    string `json:"from"`
+	To      string `json:"to"`
+}
+
 type CalendarDay struct {
-	Date        string `json:"date"`               // "2026-11-04"
-	Day         int    `json:"day"`                // 4
-	IsWeekend   bool   `json:"isWeekend"`
-	IsHoliday   bool   `json:"isHoliday"`
-	HolidayName string `json:"holidayName,omitempty"`
+	Date        string          `json:"date"` // "2026-11-04"
+	Day         int             `json:"day"`  // 4
+	IsWeekend   bool            `json:"isWeekend"`
+	IsHoliday   bool            `json:"isHoliday"`
+	HolidayName string          `json:"holidayName,omitempty"`
+	Events      []CalendarEvent `json:"events,omitempty"`
+}
+
+type UEventDTO struct {
+	Kind    string `json:"kind"` // "vacation" | "shift"
+	SubKind string `json:"subKind,omitempty"`
+	Title   string `json:"title"`
+	From    string `json:"from"`
+	To      string `json:"to"`
 }
 
 type UDayDTO struct {
-	Date             string `json:"date"`
-	IsWeekend        bool   `json:"isWeekend"`
-	IsHoliday        bool   `json:"isHoliday"`
-	HolidayName      string `json:"holidayName,omitempty"`
-	IsWorkSaturday   bool   `json:"isWorkSaturday"`
-	WorkSaturdayName string `json:"workSaturdayName,omitempty"`
+	Date        string      `json:"date"`
+	IsWeekend   bool        `json:"isWeekend"`
+	IsHoliday   bool        `json:"isHoliday"`
+	HolidayName string      `json:"holidayName,omitempty"`
+	Events      []UEventDTO `json:"events,omitempty"`
 }
 
 func ToCalendarResponse(r *get_calendar.Result) CalendarResponse {
@@ -73,12 +91,13 @@ func ToUserCalendarResponse(r *get_user_calendar.Result) UserCalendarResponse {
 	days := make([]UDayDTO, len(r.Days))
 	for i, d := range r.Days {
 		days[i] = UDayDTO{
-			Date:             d.Date.ISO(),
-			IsWeekend:        d.IsWeekend,
-			IsHoliday:        d.IsHoliday,
-			HolidayName:      d.HolidayName,
-			IsWorkSaturday:   d.IsWorkSaturday,
-			WorkSaturdayName: d.WorkSaturdayName,
+			Date:        d.Date.ISO(),
+			IsWeekend:   d.IsWeekend,
+			IsHoliday:   d.IsHoliday,
+			HolidayName: d.HolidayName,
+			// IsWorkSaturday:   d.IsWorkSaturday,
+			// WorkSaturdayName: d.WorkSaturdayName,
+			Events: eventsForDay(d.Date, r.Vacations),
 		}
 	}
 
@@ -87,6 +106,23 @@ func ToUserCalendarResponse(r *get_user_calendar.Result) UserCalendarResponse {
 		Month: r.Month,
 		Days:  days,
 	}
+}
+
+func eventsForDay(date date.Date, vacation []*vacation.Vacation) []UEventDTO {
+	result := make([]UEventDTO, 0, 1)
+
+	for _, v := range vacation {
+		if !date.Before(v.StartDate()) && !date.After(v.EndDate()) {
+			result = append(result, UEventDTO{
+				Kind:    "vacation",
+				SubKind: v.Status().String(),
+				Title:   "отпуск",
+				From:    v.StartDate().ISO(),
+				To:      v.EndDate().ISO(),
+			})
+		}
+	}
+	return result
 }
 
 // ToMonthDays converts user calendar Result into a list of days for rendering as month-based grid

@@ -71,6 +71,10 @@ func (d Date) Before(start Date) bool {
 	return d.Time().Before(start.Time())
 }
 
+func (d Date) After(start Date) bool {
+	return d.Time().After(start.Time())
+}
+
 func (d Date) String() string {
 	return fmt.Sprintf("%d.%d.%d", d.day, d.month, d.year)
 }
@@ -93,6 +97,11 @@ func (d Date) Day() int          { return d.day }
 
 func (d Date) Time() time.Time {
 	return time.Date(d.year, d.month, d.day, 0, 0, 0, 0, time.UTC)
+}
+
+func (d Date) AddDay() Date {
+	result := d.Time().AddDate(0, 0, 1)
+	return New(result.Year(), result.Month(), result.Day())
 }
 
 func ParseDate(s string) (Date, error) {

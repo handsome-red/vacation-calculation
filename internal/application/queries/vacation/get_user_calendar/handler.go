@@ -8,17 +8,21 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/calendar"
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
+	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
 
 type Handler struct {
 	calendarDayRepo ports.CalendarDayRepository
+	vacationRepo    ports.VacationRepository
 }
 
 func NewHandler(
 	calendarDayRepo ports.CalendarDayRepository,
+	vacationRepo ports.VacationRepository,
 ) *Handler {
 	return &Handler{
 		calendarDayRepo: calendarDayRepo,
+		vacationRepo:    vacationRepo,
 	}
 }
 
@@ -28,11 +32,21 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 	}
 
 	start := date.New(q.Year, time.January, 1)
-	end := date.New(q.Year,  time.December, 31)
+	end := date.New(q.Year, time.December, 31)
 
 	exceptionsDays, err := h.calendarDayRepo.ListInRange(ctx, start, end)
 	if err != nil {
 		return nil, fmt.Errorf("calendar days: %w", err)
+	}
+
+	userID, err := user.ParseUserID(q.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("parse user id: %w", err)
+	}
+
+	vacations, err := h.vacationRepo.FindByUserIDInRange(ctx, userID, date.New(q.Year, time.January, 1), date.New(q.Year, time.December, 31))
+	if err != nil {
+		return nil, fmt.Errorf("vacations: %w", err)
 	}
 
 	calendarByDate := make(map[string]calendar.Exception, len(exceptionsDays))
@@ -40,20 +54,22 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 		calendarByDate[cd.Date().ISO()] = cd
 	}
 
-	lastDay := time.Date(q.Year, time.Month(q.Month)+1, 0, 0, 0, 0, 0, time.UTC).Day()
-	days := make([]Day, 0, lastDay)
-	for d := 1; d <= lastDay; d++ {
-		date, err := date.NewDate(q.Year, time.Month(q.Month), d)
-		if err != nil {
-			return nil, fmt.Errorf("day %d: %w", d, err)
-		}
-		key := date.ISO()
+	daysInYear := 365
+	if isLeapYear(q.Year) {
+		daysInYear = 366
+	}
 
-		wd := date.Time().Weekday()
+	days := make([]Day, 0, daysInYear)
+
+	cur := start
+	for i := 0; i <= daysInYear; i++ {
+		key := cur.ISO()
+
+		wd := cur.Time().Weekday()
 		isWeekend := wd == time.Saturday || wd == time.Sunday
 
 		day := Day{
-			Date:      date,
+			Date:      cur,
 			IsWeekend: isWeekend,
 		}
 
@@ -69,11 +85,16 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 		}
 
 		days = append(days, day)
+		cur = cur.AddDay()
 	}
 
 	return &Result{
-		Year:  q.Year,
-		Month: q.Month,
-		Days:  days,
+		Year:      q.Year,
+		Days:      days,
+		Vacations: vacations,
 	}, nil
+}
+
+func isLeapYear(y int) bool {
+	return (y%4 == 0 && y%100 != 0) || y%400 == 0
 }

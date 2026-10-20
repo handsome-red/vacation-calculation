@@ -23,7 +23,7 @@
 <form method="POST" action="/api/v1/users/{{ .Cmd.UserID }}/vacations">
     <input type="hidden" name="user_id" value="{{ .Cmd.UserID }}">
 
-    {{ template "calendar" .Calendar }}
+   {{ template "vacation_picker" . }}
 
     <p>
         <button type="submit">Создать</button>
@@ -32,4 +32,5 @@
 
 <script id="app-data" type="application/json">{{ .AppDataJSON }}</script>
 <script src="/static/js/vacation_form.js" type="module"></script>
+<script src="/static/js/vacation_picker.js" defer></script>
 {{ end }}

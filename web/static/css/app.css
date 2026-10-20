@@ -175,3 +175,21 @@
     background: transparent;
     pointer-events: none;
 }
+
+.day.selected { background: #dbeafe; color: #1e40af; font-weight: 600; }
+.day.pending  { outline: 2px dashed #2563eb; outline-offset: -2px; }
+.day.busy     { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+.day.busy::after { content: "•"; color: #ef4444; margin-left: 2px; }
+
+.periods { margin: 16px 0; }
+.period-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;
+    margin-bottom: 6px; background: #f9fafb;
+}
+.period-row button {
+    margin-left: auto; border: none; background: transparent;
+    cursor: pointer; color: #b91c1c; font-size: 14px;
+}
+#confirm-btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+#confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }

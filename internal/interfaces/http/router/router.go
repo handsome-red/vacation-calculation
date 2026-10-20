@@ -83,6 +83,7 @@ func NewRouter(
 	)
 	r.calendarHandler = handlers.NewCalendarHandler(
 		container.GetCalendarUseCase,
+		container.UserCalendarUseCase,
 		container.NewCalendarDayUseCase,
 		container.NewCalendarDayFormUseCase,
 		templates,

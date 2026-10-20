@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/auth/login"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/calendar/new_exception"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/shift/create_shift"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/deactivate_user"
@@ -12,13 +13,13 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacations"
-	"github.com/handsome-red/vacation-calculation/internal/application/commands/calendar/new_exception"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/shift/shift_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/list_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/export_report"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_calendar"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/new_calendar_day_form"
@@ -64,6 +65,7 @@ type Container struct {
 	GetUserUseCase            *get_user.Handler
 	ListUsersUseCase          *list_users.Handler
 	GetCalendarUseCase        *get_calendar.Handler
+	UserCalendarUseCase       *get_user_calendar.Handler
 	NewCalendarDayFormUseCase *new_calendar_day_form.Handler
 	NewCalendarDayUseCase     *new_calendar_day.Handler
 
@@ -109,6 +111,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	getUserVacationsUseCase := get_user_vacations.NewHandler(vacationRepo)
 	getVacationFormUseCase := get_vacation_form.NewHandler(userRepo, vacationRepo, shiftRepo, wc)
 	getCalendarUseCase := get_calendar.NewHandler(calendarDayRepo)
+	userCalendarUseCase := get_user_calendar.NewHandler(calendarDayRepo, vacationRepo)
 	newCalendarDayFormUseCase := new_calendar_day_form.NewHandler(calendarDayRepo)
 	exportReportUseCase := export_report.NewHandler(userRepo, vacationRepo, departmentRepo, districtRepo, wc, exporter)
 
@@ -141,6 +144,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		GetUserVacationsUseCase:     getUserVacationsUseCase,
 		GetVacationFormUseCase:      getVacationFormUseCase,
 		GetCalendarUseCase:          getCalendarUseCase,
+		UserCalendarUseCase:         userCalendarUseCase,
 		NewCalendarDayFormUseCase:   newCalendarDayFormUseCase,
 		NewCalendarDayUseCase:       newCalendarDayUseCase,
 		CreateShiftUseCase:          createShiftUseCase,

@@ -1,6 +1,7 @@
 package create_vacations
 
 type Period struct {
+	Kind      string
 	StartDate string
 	EndDate   string
 }

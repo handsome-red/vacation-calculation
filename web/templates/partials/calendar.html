@@ -1,12 +1,14 @@
-{{ define "calendar" }}
-<div class="calendar-widget"
-     data-user-id="{{ .UserID }}"
-     data-year="{{ .Year }}"
-     data-month="{{ .Month }}"
-     data-from-field="{{ .FromField }}"
-     data-to-field="{{ .ToField }}">
+{{ define "vacation_picker" }}
+<div id="calendar" class="calendar"
+     data-user-id="{{ .Cmd.UserID }}"
+     data-year="{{ .Year }}">
+    <p class="muted">Загрузка…</p>
 </div>
 
-<input type="hidden" name="{{ .FromField }}" id="{{ .FromField }}" value="">
-<input type="hidden" name="{{ .ToField }}"   id="{{ .ToField }}"   value="">
+<h2>Выбранные периоды</h2>
+<div id="selected-periods" class="periods">
+    <p class="muted">Пока ничего не выбрано</p>
+</div>
+
+<button id="confirm-btn" type="button" disabled>Подтвердить</button>
 {{ end }}
