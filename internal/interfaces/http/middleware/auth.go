@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 )
@@ -89,6 +90,14 @@ func (m *AuthMiddleware) Require(next http.Handler) http.Handler {
 func UserFromContext(ctx context.Context) (*user.User, bool) {
 	u, ok := ctx.Value(userCtxKey).(*user.User)
 	return u, ok
+}
+
+func CallerFromContext(ctx context.Context) (auth.Caller, bool) {
+	u, ok := UserFromContext(ctx)
+	if !ok || u == nil {
+		return auth.Caller{}, false
+	}
+	return auth.Caller{UserID: u.ID(), IsAdmin: u.IsAdmin()}, true
 }
 
 // RequireAdmin разрешает доступ только суперадминистратору после Require.

@@ -17,6 +17,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
+	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/middleware"
 	authmiddleware "github.com/handsome-red/vacation-calculation/internal/interfaces/http/middleware"
 )
 
@@ -96,13 +97,35 @@ func (h *VacationHandler) CreateVacation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cmd := create_vacations.Command{
-		UserID: r.FormValue("user_id"),
-		// Periods[0].StartDate: r.FormValue("start_date"),
-		// EndDate:   r.FormValue("end_date"),
+	caller, ok := middleware.CallerFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Необходим вход", http.StatusUnauthorized)
+		return
 	}
 
-	_, err := h.createVacationUseCase.Handle(r.Context(), cmd)
+	starts := r.Form["start_date"]
+	ends := r.Form["end_date"]
+	kinds := r.Form["kind"]
+	if len(starts) == 0 || len(starts) != len(ends) || len(starts) != len(kinds) {
+		http.Error(w, "некорректный список периодов", http.StatusBadRequest)
+		return
+	}
+
+	periods := make([]create_vacations.Period, 0, len(starts))
+	for i := range starts {
+		periods = append(periods, create_vacations.Period{
+			Kind:      kinds[i],
+			StartDate: starts[i],
+			EndDate:   ends[i],
+		})
+	}
+
+	cmd := create_vacations.Command{
+		UserID:  r.FormValue("user_id"),
+		Periods: periods,
+	}
+
+	_, err := h.createVacationUseCase.Handle(r.Context(), cmd, caller)
 	if err != nil {
 		if errors.Is(err, vacation.ErrBasicVacationRules) {
 			http.Error(w, vacation.ErrBasicVacationRules.Error(), http.StatusBadRequest)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -33,16 +34,20 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
+func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (*Result, error) {
+
 	userID, err := user.ParseUserID(cmd.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: некорректный идентификатор пользователя %q", vacation.ErrInvalidInput, cmd.UserID)
 	}
 
-	kind, err := vacation.NewKind(cmd.Kind)
-	if err != nil {
-		return nil, fmt.Errorf("%w: некореектный тип отпуска", err)
+	// Не админ не может оформлять чужой отпуск
+	if !caller.IsAdmin && caller.UserID != userID {
+		return nil, fmt.Errorf("%w: нельзя оформлять отпуск другому пользователю")
 	}
+
+	var warnings []W
+	//
 
 	startDate, err := date.ParseDate(cmd.Periods[0].StartDate)
 	if err != nil {
@@ -129,4 +134,24 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	return &Result{
 		VacationID: vacationID.String(),
 	}, nil
+}
+
+func ParseVacations(periods []Period) []error {
+	var warnings []error
+	for _, p := range periods {
+		start, err := date.ParseDate(p.StartDate)
+		if err != nil {
+			warnings = append(warnings, fmt.Errorf("parse date: %w", err))
+		}
+
+		end, err := date.ParseDate(p.EndDate)
+		if err != nil {
+			warnings = append(warnings, fmt.Errorf("parse date: %w", err))
+		}
+
+		kind, err := vacation.NewKind(p.Kind)
+		if err != nil {
+			warnings = append(warnings, fmt.Errorf("parse kind: %w", err))
+		}
+	}
 }
