@@ -92,53 +92,31 @@ func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *VacationHandler) CreateVacation(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "invalid form", http.StatusBadRequest)
-		return
-	}
-
 	caller, ok := middleware.CallerFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Необходим вход", http.StatusUnauthorized)
 		return
 	}
 
-	starts := r.Form["start_date"]
-	ends := r.Form["end_date"]
-	kinds := r.Form["kind"]
-	if len(starts) == 0 || len(starts) != len(ends) || len(starts) != len(kinds) {
-		http.Error(w, "некорректный список периодов", http.StatusBadRequest)
+	var cmd create_vacations.Command
+	if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
-	}
-
-	periods := make([]create_vacations.Period, 0, len(starts))
-	for i := range starts {
-		periods = append(periods, create_vacations.Period{
-			Kind:      kinds[i],
-			StartDate: starts[i],
-			EndDate:   ends[i],
-		})
-	}
-
-	cmd := create_vacations.Command{
-		UserID:  r.FormValue("user_id"),
-		Periods: periods,
 	}
 
 	_, err := h.createVacationUseCase.Handle(r.Context(), cmd, caller)
 	if err != nil {
-		if errors.Is(err, vacation.ErrBasicVacationRules) {
-			http.Error(w, vacation.ErrBasicVacationRules.Error(), http.StatusBadRequest)
+		if errors.Is(err, vacation.ErrInvalidInput) ||
+			errors.Is(err, vacation.ErrBasicVacationRules) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	h.logger.Info(r.Context(), "vacation create successfuly")
-
-	redirectURL := "/users/" + cmd.UserID
-	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+	h.logger.Info(r.Context(), "vacation created successfully")
+	http.Redirect(w, r, "/users/"+cmd.UserID, http.StatusSeeOther)
 }
 
 func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request) {

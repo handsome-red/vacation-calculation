@@ -16,6 +16,7 @@ type vacationRow struct {
 	UserID    string    `db:"user_id"`
 	StartDate date.Date `db:"start_date"`
 	EndDate   date.Date `db:"end_date"`
+	Kind      string    `db:"kind"`
 	Status    string    `db:"status"`
 	CreatedAt string    `db:"created_at"`
 	UpdatedAt string    `db:"updated_at"`
@@ -41,6 +42,11 @@ func (r vacationRow) toDomain() (*vacation.Vacation, error) {
 
 	endDate := r.EndDate
 
+	kind, err := vacation.NewKind(r.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("invalid kind: %w", err)
+	}
+
 	status, err := vacation.ParseStatus(r.Status)
 	if err != nil {
 		return nil, fmt.Errorf("invalid status: %w", err)
@@ -61,6 +67,7 @@ func (r vacationRow) toDomain() (*vacation.Vacation, error) {
 		UserID:         userID,
 		StartDate:      startDate,
 		EndDate:        endDate,
+		Kind:           kind,
 		VacationStatus: status,
 		CreatedAt:      createdAt.UTC(),
 		UpdatedAt:      updatedAt.UTC(),

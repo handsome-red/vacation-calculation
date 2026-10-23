@@ -65,6 +65,12 @@ type vacationPeriod struct {
 	from, to time.Time
 }
 
+type CreationPeriod struct {
+	Kind  Kind
+	Start date.Date
+	End   date.Date
+}
+
 // ValidateCreation проверяет запрошенный период отпуска [start, end] относительно
 // рабочего года сотрудника и уже оформленных отпусков.
 //
@@ -74,43 +80,56 @@ type vacationPeriod struct {
 // fmt.Errorf с человекочитаемым пояснением. Любая из них удовлетворяет
 // errors.Is(err, ErrBasicVacationRules).
 func ValidateCreation(
-	start, end date.Date,
+	periods []CreationPeriod,
 	year YearStat,
 	vacations []*Vacation,
 	calc WorkYearCalculator,
 ) error {
-	from, to := start.Time(), end.Time()
 
-	// 1. Границы рабочего года. year.To — исключающая граница.
+	if len(periods) == 0 {
+		return fmt.Errorf("%w: не передан ни один период", ErrInvalidInput)
+	}
+
 	lastDayOfYear := year.To.AddDate(0, 0, -1)
-	if from.Before(year.From) || !to.Before(year.To) {
-		return fmt.Errorf(
-			"%w: запрошенный период %s–%s выходит за границы рабочего года %s–%s",
-			ErrOutsideWorkYear,
-			from.Format("02.01.2006"),
-			to.Format("02.01.2006"),
-			year.From.Format("02.01.2006"),
-			lastDayOfYear.Format("02.01.2006"),
-		)
-	}
+	totalDays := 0
+	hasLongPart := false
 
-	// 2. Минимальная длительность.
-	days := DaysInclusive(from, to)
-	if days < MinVacationDays {
-		return fmt.Errorf(
-			"%w: запрошено %d дн., минимум — %d дн.",
-			ErrTooShort, days, MinVacationDays,
-		)
-	}
+	// Границы года
+	for _, p := range periods {
+		from, to := p.Start.Time(), p.End.Time()
+		if from.Before(year.From) || !to.Before(year.To) {
+			return fmt.Errorf(
+				"%w: запрошенный период %s–%s выходит за границы рабочего года %s–%s",
+				ErrOutsideWorkYear,
+				from.Format("02.01.2006"),
+				to.Format("02.01.2006"),
+				year.From.Format("02.01.2006"),
+				lastDayOfYear.Format("02.01.2006"),
+			)
 
-	annual := year.Base + year.Seniority + year.Irregular
-	reserved := 0
-	usedAtStart := 0
-	hasLongPart := days >= LongPartDays
+		}
+		// 2. Минимальная длительность.
+		days := DaysInclusive(from, to)
+		if days < MinVacationDays {
+			return fmt.Errorf(
+				"%w: запрошено %d дн., минимум — %d дн.",
+				ErrTooShort, days, MinVacationDays,
+			)
+		}
+
+		totalDays += days
+		if days >= LongPartDays {
+			hasLongPart = true
+		}
+
+	}
 
 	// Периоды, среди которых ищем свободные окна: сначала сам новый отпуск,
 	// затем все действующие отпуска сотрудника.
-	periods := []vacationPeriod{{from: from, to: to}}
+	periods := []vacationPeriod{{
+		from: from,
+		to:   to,
+	}}
 
 	for _, v := range vacations {
 		if v == nil || v.Status() == StatusCancelled {

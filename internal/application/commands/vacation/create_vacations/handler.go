@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
-	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
@@ -46,32 +45,14 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 		return nil, fmt.Errorf("%w: нельзя оформлять отпуск другому пользователю")
 	}
 
-	var warnings []W
-	//
-
-	startDate, err := date.ParseDate(cmd.Periods[0].StartDate)
-	if err != nil {
-		return nil, fmt.Errorf("%w: не удалось разобрать дату начала %q", vacation.ErrInvalidInput, cmd.Periods[0].StartDate)
-	}
-
-	endDate, err := date.ParseDate(cmd.Periods[0].EndDate)
-	if err != nil {
-		return nil, fmt.Errorf("%w: не удалось разобрать дату окончания %q", vacation.ErrInvalidInput, cmd.Periods[0].EndDate)
-	}
-
-	vacationID := vacation.NewVacationID()
-	now := time.Now()
-
-	newVacation, err := vacation.NewVacation(vacationID, userID, startDate, endDate, now)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", vacation.ErrInvalidInput, err)
-	}
+	p := cmd.Periods[0]
+	startDate, endDate := p.Start, p.End
 
 	// 1. Минимальная длительность.
-	if days := vacation.DaysInclusive(startDate.Time(), endDate.Time()); days < 7 {
-		return nil, fmt.Errorf("%w: запрошено %d дн., минимальная длительность отпуска — 7 дней",
-			vacation.ErrTooShort, days)
-	}
+	// if days := vacation.DaysInclusive(startDate.Time(), endDate.Time()); days < 7 {
+	// 	return nil, fmt.Errorf("%w: запрошено %d дн., минимальная длительность отпуска — 7 дней",
+	// 		vacation.ErrTooShort, days)
+	// }
 
 	u, err := h.userRepo.FindByID(ctx, userID)
 	if err != nil {
@@ -110,9 +91,8 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 	// 3. Поиск подходящего рабочего года.
 	var matched *vacation.YearStat
 	for i := range stats {
-		year := stats[i]
-		if !startDate.Time().Before(year.From) && startDate.Time().Before(year.To) {
-			matched = &year
+		if !startDate.Time().Before(stats[i].From) && startDate.Time().Before(stats[i].To) {
+			matched = &stats[i]
 			break
 		}
 	}
@@ -127,6 +107,12 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 		return nil, err
 	}
 
+	vacationID := vacation.NewVacationID()
+	newVacation, err := vacation.NewVacation(vacationID, userID, p.Kind, startDate, endDate, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", vacation.ErrInvalidInput, err)
+	}
+
 	if err := h.vacationRepo.Save(ctx, newVacation); err != nil {
 		return nil, fmt.Errorf("failed to save vacation: %w", err)
 	}
@@ -134,24 +120,4 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 	return &Result{
 		VacationID: vacationID.String(),
 	}, nil
-}
-
-func ParseVacations(periods []Period) []error {
-	var warnings []error
-	for _, p := range periods {
-		start, err := date.ParseDate(p.StartDate)
-		if err != nil {
-			warnings = append(warnings, fmt.Errorf("parse date: %w", err))
-		}
-
-		end, err := date.ParseDate(p.EndDate)
-		if err != nil {
-			warnings = append(warnings, fmt.Errorf("parse date: %w", err))
-		}
-
-		kind, err := vacation.NewKind(p.Kind)
-		if err != nil {
-			warnings = append(warnings, fmt.Errorf("parse kind: %w", err))
-		}
-	}
 }

@@ -69,10 +69,10 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 
 		used := vacation.UsedDaysInYear(vacations, last)
 		totalEntitlement := last.Base + last.Seniority + last.Irregular
-		available := totalEntitlement - used
+		available := totalEntitlement - used.Base
 
 		result.Total = totalEntitlement
-		result.Used = used
+		result.Used = used.Base
 		result.Available = available
 	}
 

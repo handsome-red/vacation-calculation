@@ -203,14 +203,35 @@
     if (btn) {
         btn.addEventListener("click", async () => {
             if (state.periods.length === 0) return;
+            btn.disabled = true;
 
-            // Пока — проверка, что клиент собрал периоды правильно.
-            // На следующем шаге заменим на fetch POST.
-            console.log("periods to send:", JSON.stringify(state.periods, null, 2));
-            alert(
-                `Будет отправлено периодов: ${state.periods.length}\n` +
-                state.periods.map((p) => `${p.from} — ${p.to}`).join("\n")
-            );
+            const payload = {
+                userId: userId,
+                periods: state.periods.map((p) => ({
+                    kind: "base",
+                    startDate: p.from,
+                    endDate: p.to,
+                })),
+            };
+
+            try {
+                const res = await fetch(`/api/v1/users/${userId}/vacations`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!res.ok) {
+                    alert(await res.text());
+                    btn.disabled = false;
+                    return;
+                }
+
+                window.location.href = `/users/${userId}`;
+            } catch (err) {
+                alert("Ошибка сети: " + err.message);
+                btn.disabled = false;
+            }
         });
     }
 

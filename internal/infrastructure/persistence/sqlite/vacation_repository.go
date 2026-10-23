@@ -24,16 +24,17 @@ func NewVacationRepository(db *sqlx.DB) *vacationRepository {
 func (r *vacationRepository) Save(ctx context.Context, v *vacation.Vacation) error {
 	const q = `
 		INSERT INTO vacations (
-			id, user_id, start_date, end_date,
+			id, user_id, start_date, end_date, kind,
 			status, created_at, updated_at
 		)
-		VALUES (?, ?, ?, ?, ?,
+		VALUES (?, ?, ?, ?, ?, ?,
 				strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
 				strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 		ON CONFLICT (id) DO UPDATE SET
 			user_id    = EXCLUDED.user_id,
 			start_date = EXCLUDED.start_date,
 			end_date   = EXCLUDED.end_date,
+			kind       = EXCLUDED.kind,
 			status     = EXCLUDED.status,
 			updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 	`
@@ -45,6 +46,7 @@ func (r *vacationRepository) Save(ctx context.Context, v *vacation.Vacation) err
 		v.UserID().String(),
 		v.StartDate().Time().Format("2006-01-02"),
 		v.EndDate().Time().Format("2006-01-02"),
+		string(v.Kind()), // ← добавили
 		v.Status().ISO(),
 	)
 	if err != nil {
@@ -56,10 +58,10 @@ func (r *vacationRepository) Save(ctx context.Context, v *vacation.Vacation) err
 
 func (r *vacationRepository) FindByID(ctx context.Context, userID user.UserID, id vacation.VacationID) (*vacation.Vacation, error) {
 	const q = `
-		SELECT id, user_id, start_date, end_date, status, created_at, updated_at
-		FROM vacations
-		WHERE user_id = ? AND id = ?
-		LIMIT 1
+		SELECT id, user_id, start_date, end_date, kind, status, created_at, updated_at
+			FROM vacations
+			WHERE user_id = ? AND id = ?
+			LIMIT 1
 	`
 
 	var row vacationRow
@@ -80,7 +82,7 @@ func (r *vacationRepository) FindByID(ctx context.Context, userID user.UserID, i
 
 func (r *vacationRepository) FindByUserID(ctx context.Context, userID user.UserID) ([]*vacation.Vacation, error) {
 	const q = `
-		SELECT id, user_id, start_date, end_date, status, created_at, updated_at
+		SELECT id, user_id, start_date, end_date, kind, status, created_at, updated_at
 		FROM vacations
 		WHERE user_id = ?
 		ORDER BY start_date
@@ -109,7 +111,7 @@ func (r *vacationRepository) FindByUserIDInRange(
 	from, to date.Date,
 ) ([]*vacation.Vacation, error) {
 	const q = `
-        SELECT id, user_id, start_date, end_date, status, created_at, updated_at
+        SELECT id, user_id, start_date, end_date, kind, status, created_at, updated_at
         FROM vacations
         WHERE user_id = ?
           AND end_date   >= ?

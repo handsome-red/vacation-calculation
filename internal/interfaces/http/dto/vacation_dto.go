@@ -28,6 +28,12 @@ type VacationBlock struct {
 	Stats []YearStat
 }
 
+type periodJSON struct {
+	Kind  string `json:"kind"`
+	Start string `json:"start"`
+	End   string `json:"end"`
+}
+
 var dateFormat = "02.01.2006"
 
 func ToYearStats(stats []vacation.YearStat) []YearStat {

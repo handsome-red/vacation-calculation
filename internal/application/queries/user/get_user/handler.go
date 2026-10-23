@@ -74,7 +74,7 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 	if len(stats) > 0 {
 		last := stats[len(stats)-1]
 		used := vacation.UsedDaysInYear(vacations, last)
-		current, err = h.workYearCalc.CurrentYear(stats, now, used)
+		current, err = h.workYearCalc.CurrentYear(stats, now, used.Base+used.Irregular+used.Seniority)
 		if err != nil {
 			return nil, err
 		}

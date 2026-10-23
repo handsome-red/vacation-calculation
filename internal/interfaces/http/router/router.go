@@ -106,18 +106,17 @@ func (r *Router) Build() (http.Handler, error) {
 
 	// 2. API v1 (с аутентификацией)
 	root.Route("/api/v1", func(api chi.Router) {
-		// if r.authMW != nil { // Middleware применяется ко всей группе /api/v1
-		// 	api.Use(r.authMW)
-		// }
+		if r.authMW != nil { // Middleware применяется ко всей группе /api/v1
+			api.Use(r.authMW)
+		}
 		r.registerAPI(api)
 	})
 
 	// 3. Админка (аутентификация + проверка роли)
 	root.Route("/admin", func(admin chi.Router) {
-		// if r.authMW != nil {
-		// 	admin.Use(r.authMW)
-		// }
-		// admin.Use(adminRoleMW) // Если нужна проверка роли
+		if r.authMW != nil {
+			admin.Use(r.authMW)
+		}
 		r.registerAdmin(admin)
 	})
 

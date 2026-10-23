@@ -61,6 +61,7 @@ func NewVacation(
 		userID:    userID,
 		startDate: startDate,
 		endDate:   endDate,
+		kind:      kind,
 		createdAt: now.UTC(),
 		updatedAt: now.UTC(),
 	}, nil
