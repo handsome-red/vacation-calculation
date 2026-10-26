@@ -4,10 +4,23 @@ type Query struct {
 	UserID string
 }
 
+type Quota struct {
+	Total   int
+	Blocked int
+}
+
+type YearStat struct {
+	Year      string
+	Base      Quota
+	Seniority Quota
+	Irregular Quota
+}
+
 type Result struct {
 	UserID        string
-	Total         int  // Base + Irregular + Seniority — полное ежегодное право
-	Used          int  // уже использовано в текущем рабочем году
-	Available     int  // Total - Used — сколько можно взять
-	HasActiveYear bool // есть ли активный рабочий год
+	Total         int
+	Used          int
+	Available     int
+	HasActiveYear bool
+	YearStats     []YearStat
 }

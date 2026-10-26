@@ -114,7 +114,9 @@
         const busy = state.busyDates.has(d.date);
         if (busy) day.classList.add("busy");
 
-        if (isInSelected(d.date)) day.classList.add("selected");
+        if (isInSelected(d.date)) {
+            day.classList.add("selected");
+        }
         if (state.pendingStart === d.date) day.classList.add("pending");
 
         const selectable = !d.isWeekend && !d.isHoliday && !busy;
@@ -125,7 +127,18 @@
         return day;
     }
 
+    function isInSelected(date) {
+        return state.periods.some((p) => date >= p.from && date <= p.to);
+    }
+
+    function isReserved(date) {
+        return state.periods.some((p) => date >= p.from && date <= p.to);
+    }
+
     function onDayClick(date) {
+        // нельзя начать с занятого/выходного дня
+        if (!isSelectable(date)) return;
+
         if (!state.pendingStart) {
             state.pendingStart = date;
             render();
@@ -136,19 +149,16 @@
             ? [date, state.pendingStart]
             : [state.pendingStart, date];
 
-        // внутри периода не должно быть выходных/праздников/занятых
-        const bad = datesBetween(from, to).find((iso) => {
-            const info = state.dayByDate.get(iso);
-            return !info || info.isWeekend || info.isHoliday || state.busyDates.has(iso);
-        });
-        if (bad) {
-            alert(`День ${bad} недоступен для отпуска`);
+        // блокируем только занятые дни (чужие отпуска).
+        const busy = datesBetween(from, to).find((iso) => state.busyDates.has(iso));
+        if (busy) {
+            alert(`День ${busy} занят другим отпуском`);
             state.pendingStart = null;
             render();
             return;
         }
 
-        // не должно пересекаться с уже выбранными
+        // не должно пересекаться с уже выбранными в текущей заявке
         if (state.periods.some((p) => overlaps(p, { from, to }))) {
             alert("Период пересекается с уже выбранным");
             state.pendingStart = null;
@@ -159,10 +169,15 @@
         state.periods.push({ from, to });
         state.pendingStart = null;
         render();
+        notifyPeriodsChanged();
     }
 
-    function isInSelected(date) {
-        return state.periods.some((p) => date >= p.from && date <= p.to);
+    function isSelectable(date) {
+        if (state.busyDates.has(date)) return false;
+        const info = state.dayByDate.get(date);
+        if (!info) return false;
+        // выходные/праздники выбирать нельзя как границу, но внутри периода — можно
+        return !info.isWeekend && !info.isHoliday;
     }
 
     function renderPeriods() {
@@ -179,8 +194,8 @@
                 const row = document.createElement("div");
                 row.className = "period-row";
 
-                const days = datesBetween(p.from, p.to).length;
-                row.textContent = `${p.from} — ${p.to} (${days} дн.)`;
+                const workDays = countWorkDays(p.from, p.to);
+                row.textContent = `${p.from} — ${p.to} (${workDays} раб. дн.)`;
 
                 const del = document.createElement("button");
                 del.type = "button";
@@ -189,6 +204,7 @@
                 del.addEventListener("click", () => {
                     state.periods.splice(i, 1);
                     render();
+                    notifyPeriodsChanged();
                 });
                 row.appendChild(del);
 
@@ -197,6 +213,16 @@
         }
 
         btn.disabled = state.periods.length === 0;
+    }
+
+    function countWorkDays(from, to) {
+        let n = 0;
+        for (const iso of datesBetween(from, to)) {
+            const info = state.dayByDate.get(iso);
+            if (!info) continue;
+            if (!info.isWeekend && !info.isHoliday) n++;
+        }
+        return n;
     }
 
     const btn = document.getElementById("confirm-btn");
@@ -254,6 +280,17 @@
             d.setUTCDate(d.getUTCDate() + 1);
         }
         return out;
+    }
+
+    function notifyPeriodsChanged() {
+        const totalWork = state.periods.reduce(
+            (sum, p) => sum + countWorkDays(p.from, p.to),
+            0
+        );
+        console.log("periods-changed:", totalWork, state.periods);
+        window.dispatchEvent(new CustomEvent("periods-changed", {
+            detail: { periods: state.periods.slice(), totalWork },
+        }));
     }
 
     function overlaps(a, b) {

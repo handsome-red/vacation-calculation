@@ -30,4 +30,6 @@ var (
 
 	ErrCalcInvalidTime = errors.New("hired after now")
 	ErrCalcEmptyStats  = errors.New("empty status")
+
+	ErrForbidden = errors.New("действие запрещено")
 )

@@ -1,5 +1,3 @@
-import { reservedDays } from './storage.js';
-
 const TYPE_LABELS = {
   base: 'Ежегодный отпуск',
   seniority: 'За выслугу лет',
@@ -9,7 +7,7 @@ const TYPE_LABELS = {
 function createQuotaBar(year, type, quota) {
   const total = quota.total;
   const blocked = quota.blocked;
-  const reserved = reservedDays(year, type);
+  const reserved = quota.reserved || 0;
   const free = Math.max(0, total - blocked - reserved);
 
   const pct = (n) => total === 0 ? 0 : (n / total) * 100;

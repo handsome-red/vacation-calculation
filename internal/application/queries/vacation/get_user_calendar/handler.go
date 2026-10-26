@@ -9,6 +9,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
+	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type Handler struct {
@@ -88,10 +89,22 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 		cur = cur.AddDay()
 	}
 
+	activeVacations := make([]*vacation.Vacation, 0, len(vacations))
+	for _, v := range vacations {
+		if v == nil {
+			continue
+		}
+		switch v.Status() {
+		case vacation.StatusCancelled:
+			continue
+		}
+		activeVacations = append(activeVacations, v)
+	}
+
 	return &Result{
 		Year:      q.Year,
 		Days:      days,
-		Vacations: vacations,
+		Vacations: activeVacations,
 	}, nil
 }
 

@@ -19,8 +19,7 @@ type Command struct {
 }
 
 type Result struct {
-	VacationID string
-	Error      error
+	VacationIDs []string
 }
 
 func (c Command) Validate() error {

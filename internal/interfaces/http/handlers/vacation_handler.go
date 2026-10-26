@@ -21,6 +21,22 @@ import (
 	authmiddleware "github.com/handsome-red/vacation-calculation/internal/interfaces/http/middleware"
 )
 
+type quotaDTO struct {
+	Total   int `json:"total"`
+	Blocked int `json:"blocked"`
+}
+type yearStatDTO struct {
+	Year      string   `json:"year"`
+	Base      quotaDTO `json:"base"`
+	Seniority quotaDTO `json:"seniority"`
+	Irregular quotaDTO `json:"irregular"`
+}
+type appData struct {
+	UserID        string        `json:"userId"`
+	HasActiveYear bool          `json:"hasActiveYear"`
+	YearStats     []yearStatDTO `json:"yearStats"`
+}
+
 type vacationStatusOption struct {
 	Code  string
 	Label string
@@ -134,59 +150,27 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	now := time.Now()
-
-	type Quota struct {
-		Total   int `json:"total"`
-		Blocked int `json:"blocked"`
+	yearStats := make([]yearStatDTO, len(result.YearStats))
+	for i, y := range result.YearStats {
+		yearStats[i] = yearStatDTO{
+			Year:      y.Year,
+			Base:      quotaDTO{Total: y.Base.Total, Blocked: y.Base.Blocked},
+			Seniority: quotaDTO{Total: y.Seniority.Total, Blocked: y.Seniority.Blocked},
+			Irregular: quotaDTO{Total: y.Irregular.Total, Blocked: y.Irregular.Blocked},
+		}
 	}
 
-	type YearStat struct {
-		Year      string `json:"year"`
-		Base      Quota  `json:"base"`
-		Seniority Quota  `json:"seniority"`
-		Irregular Quota  `json:"irregular"`
-	}
-
-	type AppData struct {
-		UserID        string     `json:"userId"`
-		HasActiveYear bool       `json:"hasActiveYear"`
-		YearStats     []YearStat `json:"yearStats"`
-	}
-
-	YearStats := []YearStat{
-		{
-			Year:      "01.01.24-01.01.25",
-			Base:      Quota{Total: 30, Blocked: 28},
-			Seniority: Quota{Total: 0, Blocked: 0},
-			Irregular: Quota{Total: 3, Blocked: 3},
-		},
-		{
-			Year:      "01.01.25-01.01.26",
-			Base:      Quota{Total: 30, Blocked: 8},
-			Seniority: Quota{Total: 1, Blocked: 1},
-			Irregular: Quota{Total: 3, Blocked: 2},
-		},
-		{
-			Year:      "01.01.26-01.01.27",
-			Base:      Quota{Total: 30, Blocked: 0},
-			Seniority: Quota{Total: 1, Blocked: 0},
-			Irregular: Quota{Total: 3, Blocked: 0},
-		},
-	}
-
-	appData := AppData{
+	raw, err := json.Marshal(appData{
 		UserID:        result.UserID,
 		HasActiveYear: result.HasActiveYear,
-		YearStats:     YearStats,
-	}
-
-	raw, err := json.Marshal(appData)
+		YearStats:     yearStats,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	now := time.Now()
 	data := map[string]any{
 		"Cmd":   create_vacations.Command{UserID: result.UserID},
 		"Error": "",
@@ -198,8 +182,7 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 			ToField:   "end_date",
 		},
 		"Balance":     struct{ HasActiveYear bool }{result.HasActiveYear},
-		"YearStats":   YearStats,        // оставим для серверного рендера таблицы (пока)
-		"AppDataJSON": template.JS(raw), // <- это уйдёт в <script>
+		"AppDataJSON": template.JS(raw),
 	}
 
 	if err := h.templates.Render(w, "vacation_form.html", data); err != nil {

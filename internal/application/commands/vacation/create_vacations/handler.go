@@ -34,25 +34,18 @@ func NewHandler(
 }
 
 func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (*Result, error) {
+	if err := cmd.Validate(); err != nil {
+		return nil, err
+	}
 
 	userID, err := user.ParseUserID(cmd.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: некорректный идентификатор пользователя %q", vacation.ErrInvalidInput, cmd.UserID)
 	}
 
-	// Не админ не может оформлять чужой отпуск
 	if !caller.IsAdmin && caller.UserID != userID {
-		return nil, fmt.Errorf("%w: нельзя оформлять отпуск другому пользователю")
+		return nil, fmt.Errorf("%w: нельзя оформлять отпуск другому пользователю", vacation.ErrForbidden)
 	}
-
-	p := cmd.Periods[0]
-	startDate, endDate := p.Start, p.End
-
-	// 1. Минимальная длительность.
-	// if days := vacation.DaysInclusive(startDate.Time(), endDate.Time()); days < 7 {
-	// 	return nil, fmt.Errorf("%w: запрошено %d дн., минимальная длительность отпуска — 7 дней",
-	// 		vacation.ErrTooShort, days)
-	// }
 
 	u, err := h.userRepo.FindByID(ctx, userID)
 	if err != nil {
@@ -63,18 +56,33 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 		return nil, fmt.Errorf("failed to list shifts: %w", err)
 	}
 
-	// 2. Дата начала раньше даты найма.
 	hiredAt := u.HiredAt().Time()
-	if startDate.Time().Before(hiredAt) {
-		return nil, fmt.Errorf("%w: начало отпуска %s раньше даты приёма на работу %s",
-			vacation.ErrBeforeHireDate,
-			startDate.Time().Format("02.01.2006"),
-			hiredAt.Format("02.01.2006"))
+
+	// 2. Дата начала каждого периода >= даты найма.
+	for i, p := range cmd.Periods {
+		if p.Start.Time().Before(hiredAt) {
+			return nil, fmt.Errorf("%w: период #%d: начало %s раньше даты приёма на работу %s",
+				vacation.ErrBeforeHireDate, i+1,
+				p.Start.Time().Format("02.01.2006"),
+				hiredAt.Format("02.01.2006"))
+		}
+	}
+
+	// Самый ранний и самый поздний концы — для расчёта рабочего года.
+	earliestStart := cmd.Periods[0].Start.Time()
+	latestEnd := cmd.Periods[0].End.Time()
+	for _, p := range cmd.Periods[1:] {
+		if p.Start.Time().Before(earliestStart) {
+			earliestStart = p.Start.Time()
+		}
+		if p.End.Time().After(latestEnd) {
+			latestEnd = p.End.Time()
+		}
 	}
 
 	stats, err := h.workYearCalc.FindYearStat(
 		hiredAt,
-		endDate.Time().AddDate(0, 0, 1),
+		latestEnd.AddDate(0, 0, 1),
 		u.IsIrregular(),
 		shifts,
 		h.workYearCalc.SeniorityAtFromHired(hiredAt),
@@ -88,10 +96,10 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 		return nil, fmt.Errorf("failed to list vacations: %w", err)
 	}
 
-	// 3. Поиск подходящего рабочего года.
+	// 3. Поиск рабочего года по самому раннему периоду.
 	var matched *vacation.YearStat
 	for i := range stats {
-		if !startDate.Time().Before(stats[i].From) && startDate.Time().Before(stats[i].To) {
+		if !earliestStart.Before(stats[i].From) && earliestStart.Before(stats[i].To) {
 			matched = &stats[i]
 			break
 		}
@@ -99,25 +107,41 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 	if matched == nil {
 		return nil, fmt.Errorf("%w: дата начала %s не попадает ни в один рабочий год сотрудника",
 			vacation.ErrNoSuitableWorkYear,
-			startDate.Time().Format("02.01.2006"))
+			earliestStart.Format("02.01.2006"))
 	}
 
-	// 4. Все правила ValidateCreation — уже с конкретными текстами.
-	if err := vacation.ValidateCreation(startDate, endDate, *matched, vacations, h.workYearCalc); err != nil {
+	// 4. Доменная валидация по всем периодам.
+	domainPeriods := make([]vacation.CreationPeriod, len(cmd.Periods))
+	for i, p := range cmd.Periods {
+		domainPeriods[i] = vacation.CreationPeriod{
+			Kind:  p.Kind,
+			Start: p.Start,
+			End:   p.End,
+		}
+	}
+	if err := vacation.ValidateCreation(domainPeriods, *matched, vacations, h.workYearCalc); err != nil {
 		return nil, err
 	}
 
-	vacationID := vacation.NewVacationID()
-	newVacation, err := vacation.NewVacation(vacationID, userID, p.Kind, startDate, endDate, time.Now())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", vacation.ErrInvalidInput, err)
+	// 5. Создание и сохранение всех частей.
+	newVacations := make([]*vacation.Vacation, 0, len(domainPeriods))
+	ids := make([]string, 0, len(domainPeriods))
+	for _, dp := range domainPeriods {
+		vacationID := vacation.NewVacationID()
+		v, err := vacation.NewVacation(vacationID, userID, dp.Kind, dp.Start, dp.End, time.Now())
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", vacation.ErrInvalidInput, err)
+		}
+		newVacations = append(newVacations, v)
+		ids = append(ids, vacationID.String())
 	}
 
-	if err := h.vacationRepo.Save(ctx, newVacation); err != nil {
-		return nil, fmt.Errorf("failed to save vacation: %w", err)
+	// TODO: SaveBatch — одной транзакцией. Пока цикл:
+	for _, v := range newVacations {
+		if err := h.vacationRepo.Save(ctx, v); err != nil {
+			return nil, fmt.Errorf("failed to save vacation: %w", err)
+		}
 	}
 
-	return &Result{
-		VacationID: vacationID.String(),
-	}, nil
+	return &Result{VacationIDs: ids}, nil
 }

@@ -19,7 +19,7 @@ const (
 	LongPartDays = 14
 
 	// MinGapDays — минимальное количество свободных дней между частями отпуска.
-	MinGapDays = 14
+	MinGapDays = 7
 )
 
 var (
@@ -91,143 +91,129 @@ func ValidateCreation(
 	}
 
 	lastDayOfYear := year.To.AddDate(0, 0, -1)
-	totalDays := 0
-	hasLongPart := false
 
-	// Границы года
-	for _, p := range periods {
+	newPeriods := make([]vacationPeriod, 0, len(periods))
+	totalDays := 0
+
+	for i, p := range periods {
 		from, to := p.Start.Time(), p.End.Time()
 		if from.Before(year.From) || !to.Before(year.To) {
 			return fmt.Errorf(
-				"%w: запрошенный период %s–%s выходит за границы рабочего года %s–%s",
-				ErrOutsideWorkYear,
-				from.Format("02.01.2006"),
-				to.Format("02.01.2006"),
-				year.From.Format("02.01.2006"),
-				lastDayOfYear.Format("02.01.2006"),
+				"%w: период #%d %s–%s выходит за границы рабочего года %s–%s",
+				ErrOutsideWorkYear, i+1,
+				from.Format("02.01.2006"), to.Format("02.01.2006"),
+				year.From.Format("02.01.2006"), lastDayOfYear.Format("02.01.2006"),
 			)
-
 		}
-		// 2. Минимальная длительность.
+
 		days := DaysInclusive(from, to)
 		if days < MinVacationDays {
 			return fmt.Errorf(
-				"%w: запрошено %d дн., минимум — %d дн.",
-				ErrTooShort, days, MinVacationDays,
+				"%w: период #%d: запрошено %d дн., минимум — %d дн.",
+				ErrTooShort, i+1, days, MinVacationDays,
 			)
 		}
-
 		totalDays += days
-		if days >= LongPartDays {
-			hasLongPart = true
-		}
-
+		newPeriods = append(newPeriods, vacationPeriod{from: from, to: to})
 	}
 
-	// Периоды, среди которых ищем свободные окна: сначала сам новый отпуск,
-	// затем все действующие отпуска сотрудника.
-	periods := []vacationPeriod{{
-		from: from,
-		to:   to,
-	}}
-
+	existingPeriods := make([]vacationPeriod, 0, len(vacations))
+	all := make([]vacationPeriod, 0, len(newPeriods)+len(vacations))
+	all = append(all, newPeriods...)
 	for _, v := range vacations {
 		if v == nil || v.Status() == StatusCancelled {
 			continue
 		}
+		vp := vacationPeriod{from: v.StartDate().Time(), to: v.EndDate().Time()}
+		existingPeriods = append(existingPeriods, vp)
+		all = append(all, vp)
+	}
 
-		otherStart := v.StartDate().Time()
-		otherEnd := v.EndDate().Time()
-		periods = append(periods, vacationPeriod{from: otherStart, to: otherEnd})
+	mergedAll, err := mergePeriods(all)
+	if err != nil {
+		return err
+	}
 
-		// 3. Пересечение с существующим отпуском.
-		if !otherEnd.Before(from) && !otherStart.After(to) {
-			return fmt.Errorf(
-				"%w: пересечение с отпуском %s–%s",
-				ErrOverlapsExisting,
-				otherStart.Format("02.01.2006"),
-				otherEnd.Format("02.01.2006"),
-			)
-		}
+	mergedExisting, err := mergePeriods(existingPeriods)
+	if err != nil {
+		return err
+	}
 
-		// 4. Недостаточный разрыв с соседним отпуском.
-		// Свободные дни между частями: otherEnd+1 .. from-1 (или to+1 .. otherStart-1).
-		if otherEnd.Before(from) {
-			gap := int(from.Sub(otherEnd).Hours()/24) - 1
-			if gap < MinGapDays {
-				return fmt.Errorf(
-					"%w: до предыдущего отпуска %s–%s всего %d свободных дн. (нужно %d)",
-					ErrGapTooSmall,
-					otherStart.Format("02.01.2006"),
-					otherEnd.Format("02.01.2006"),
-					gap, MinGapDays,
-				)
-			}
-		} else if otherStart.After(to) {
-			gap := int(otherStart.Sub(to).Hours()/24) - 1
-			if gap < MinGapDays {
-				return fmt.Errorf(
-					"%w: после запрошенного отпуска до следующего %s–%s всего %d свободных дн. (нужно %d)",
-					ErrGapTooSmall,
-					otherStart.Format("02.01.2006"),
-					otherEnd.Format("02.01.2006"),
-					gap, MinGapDays,
-				)
-			}
-		}
-
-		// Накопление зарезервированных дней в рамках рабочего года.
-		clippedStart := MaxTime(otherStart, year.From)
-		clippedEnd := MinTime(otherEnd, lastDayOfYear)
-		if clippedEnd.Before(clippedStart) {
-			continue
-		}
-
-		reservedDays := DaysInclusive(clippedStart, clippedEnd)
-		reserved += reservedDays
-		if clippedStart.Before(from) {
-			usedAtStart += DaysInclusive(
-				clippedStart,
-				MinTime(clippedEnd, from.AddDate(0, 0, -1)),
-			)
-		}
-		if reservedDays >= LongPartDays {
+	hasLongPart := false
+	for _, m := range mergedAll {
+		if DaysInclusive(m.from, m.to) >= LongPartDays {
 			hasLongPart = true
+			break
 		}
 	}
 
-	// 5. Превышение годовой нормы по зарезервированным дням.
-	if days > annual-reserved {
+	annual := year.Base + year.Seniority + year.Irregular
+	reserved := 0
+	for _, m := range mergedExisting {
+		cs := MaxTime(m.from, year.From)
+		ce := MinTime(m.to, lastDayOfYear)
+		if ce.Before(cs) {
+			continue
+		}
+		reserved += DaysInclusive(cs, ce)
+	}
+
+	// ── 6. Разрывы MinGapDays между склеенными интервалами ───────────────
+	for i := 1; i < len(mergedAll); i++ {
+		gap := int(mergedAll[i].from.Sub(mergedAll[i-1].to).Hours()/24) - 1
+		if gap < MinGapDays {
+			return fmt.Errorf(
+				"%w: между отпусками %s–%s и %s–%s всего %d свободных дн. (нужно %d)",
+				ErrGapTooSmall,
+				mergedAll[i-1].from.Format("02.01.2006"), mergedAll[i-1].to.Format("02.01.2006"),
+				mergedAll[i].from.Format("02.01.2006"), mergedAll[i].to.Format("02.01.2006"),
+				gap, MinGapDays,
+			)
+		}
+	}
+
+	// ── 7. Годовая норма ─────────────────────────────────────────────────
+	if totalDays > annual-reserved {
 		return fmt.Errorf(
-			"%w: запрошено %d дн., доступно %d из %d (уже зарезервировано %d)",
-			ErrExceedsAnnual,
-			days, annual-reserved, annual, reserved,
+			"%w: запрошено %d дн. суммарно, доступно %d из %d (уже зарезервировано %d)",
+			ErrExceedsAnnual, totalDays, annual-reserved, annual, reserved,
 		)
 	}
 
-	// 6. Проверка через калькулятор рабочего года.
-	info, err := calc.CurrentYear([]YearStat{year}, from, usedAtStart)
+	// ── 8. Проверка через калькулятор рабочего года ─────────────────────
+	earliestStart := newPeriods[0].from
+	for _, p := range newPeriods[1:] {
+		if p.from.Before(earliestStart) {
+			earliestStart = p.from
+		}
+	}
+	usedAtStart := usedAtBefore(mergedExisting, earliestStart)
+	info, err := calc.CurrentYear([]YearStat{year}, earliestStart, usedAtStart)
 	if err != nil {
 		return fmt.Errorf("не удалось рассчитать остаток отпуска: %w", err)
 	}
-	if float64(days) > info.Remaining {
+	if float64(totalDays) > info.Remaining {
 		return fmt.Errorf(
-			"%w: запрошено %d дн., остаток по расчёту — %.1f дн.",
-			ErrExceedsAnnual, days, info.Remaining,
+			"%w: запрошено %d дн. суммарно, остаток по расчёту — %.1f дн.",
+			ErrExceedsAnnual, totalDays, info.Remaining,
 		)
 	}
 
-	// 7. Обязательная непрерывная часть длиной не менее LongPartDays.
-	// Для коротких отпусков (< LongPartDays) проверяем, что её ещё можно
-	// разместить в оставшемся рабочем году с учётом свободных окон и разрывов.
+	// ── 9. Обязательная непрерывная часть ────────────────────────────────
 	if !hasLongPart {
-		if annual-reserved-days < LongPartDays {
+		if annual-reserved-totalDays < LongPartDays {
 			return fmt.Errorf(
-				"%w: после этого отпуска по годовой норме останется %d дн. — недостаточно для непрерывной части %d дн.",
-				ErrNoLongPart, annual-reserved-days, LongPartDays,
+				"%w: после этой заявки по годовой норме останется %d дн. — недостаточно для непрерывной части %d дн.",
+				ErrNoLongPart, annual-reserved-totalDays, LongPartDays,
 			)
 		}
-		if !hasRoomForLongPart(periods, to, year.To) {
+		latestEnd := newPeriods[0].to
+		for _, p := range newPeriods[1:] {
+			if p.to.After(latestEnd) {
+				latestEnd = p.to
+			}
+		}
+		if !hasRoomForLongPart(mergedAll, latestEnd, year.To) {
 			return fmt.Errorf(
 				"%w: в оставшемся рабочем году нет свободного окна длиной %d дн. с учётом разрывов",
 				ErrNoLongPart, LongPartDays,
@@ -245,42 +231,93 @@ func ValidateCreation(
 // periods должен включать новый отпуск и все действующие отпуска сотрудника.
 // after — последний день нового отпуска (включительно).
 // yearEnd — исключающая граница рабочего года (как year.To).
-func hasRoomForLongPart(periods []vacationPeriod, after, yearEnd time.Time) bool {
+func hasRoomForLongPart(merged []vacationPeriod, after, yearEnd time.Time) bool {
+	cursor := after
+	for _, m := range merged {
+		// Пропускаем склейки, которые закончились до курсора.
+		if m.to.Before(cursor) {
+			continue
+		}
+		// Если курсор внутри/до начала склейки — считаем свободный кусок.
+		if m.from.After(cursor) {
+			freeEnd := m.from.AddDate(0, 0, -1)
+			if DaysInclusive(cursor, freeEnd) >= LongPartDays {
+				return true
+			}
+		}
+		// Сдвигаем курсор за склейку.
+		if m.to.AddDate(0, 0, 1).After(cursor) {
+			cursor = m.to.AddDate(0, 0, 1)
+		}
+	}
+	// Хвост после последней склейки.
+	if cursor.Before(yearEnd) {
+		freeEnd := yearEnd.AddDate(0, 0, -1)
+		if DaysInclusive(cursor, freeEnd) >= LongPartDays {
+			return true
+		}
+	}
+	return false
+}
+
+// Helpers
+func mergePeriods(periods []vacationPeriod) ([]vacationPeriod, error) {
 	if len(periods) == 0 {
-		return false
+		return nil, nil
 	}
 
-	// Работаем по копии, чтобы не мутировать входной слайс.
 	sorted := make([]vacationPeriod, len(periods))
 	copy(sorted, periods)
 	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].from.Equal(sorted[j].from) {
+			return sorted[i].to.Before(sorted[j].to)
+		}
 		return sorted[i].from.Before(sorted[j].from)
 	})
 
-	lastDay := yearEnd.AddDate(0, 0, -1)
+	merged := make([]vacationPeriod, 0, len(sorted))
 
-	// Кандидат — первый день после нового отпуска + обязательный разрыв.
-	candidate := after.AddDate(0, 0, MinGapDays+1)
-
-	for _, period := range sorted {
-		// Пропускаем периоды, которые закончились до after.
-		if !period.to.After(after) {
-			continue
-		}
-
-		// Если между candidate и началом периода умещается LongPartDays
-		// с учётом разрыва MinGapDays до самого периода — окно найдено.
-		windowEnd := period.from.AddDate(0, 0, -MinGapDays-1)
-		if DaysInclusive(candidate, windowEnd) >= LongPartDays {
-			return true
-		}
-
-		// Иначе сдвигаем кандидата за конец периода + разрыв.
-		if next := period.to.AddDate(0, 0, MinGapDays+1); next.After(candidate) {
-			candidate = next
+	cur := vacationPeriod{from: sorted[0].from, to: sorted[0].to}
+	for _, p := range sorted[1:] {
+		switch {
+		// Пересечение - ошибка
+		case p.from.Before(cur.to) || p.from.Equal(cur.to):
+			return nil, fmt.Errorf(
+				"%w: период %s–%s пересекается с %s–%s",
+				ErrOverlapsExisting,
+				p.from.Format("02.01.2006"), p.to.Format("02.01.2006"),
+				cur.from.Format("02.01.2006"), cur.to.Format("02.01.2006"),
+			)
+		// Встык — склеиваем
+		case p.from.Equal(cur.to.AddDate(0, 0, 1)):
+			cur.to = p.to
+		// Разрыв — новый интервал
+		default:
+			merged = append(merged, cur)
+			cur = vacationPeriod{from: p.from, to: p.to}
 		}
 	}
+	merged = append(merged, cur)
 
-	// Проверяем окно до конца рабочего года.
-	return DaysInclusive(candidate, lastDay) >= LongPartDays
+	return merged, nil
+}
+
+// usedAtBefore — сколько дней из склейки занято строго до момента t
+// (в пределах того же интервала — обрезаем по t-1).
+func usedAtBefore(merged []vacationPeriod, t time.Time) int {
+	used := 0
+	for _, m := range merged {
+		if !m.from.Before(t) {
+			continue
+		}
+		end := m.to
+		if !end.Before(t) {
+			end = t.AddDate(0, 0, -1)
+		}
+		if end.Before(m.from) {
+			continue
+		}
+		used += DaysInclusive(m.from, end)
+	}
+	return used
 }
