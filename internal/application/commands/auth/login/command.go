@@ -6,6 +6,7 @@ type Command struct {
 }
 
 type Result struct {
-	UserID string
-	Email  string
+	UserID  string
+	Email   string
+	IsAdmin bool
 }

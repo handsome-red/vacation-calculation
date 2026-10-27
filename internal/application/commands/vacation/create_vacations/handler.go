@@ -85,7 +85,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 		latestEnd.AddDate(0, 0, 1),
 		u.IsIrregular(),
 		shifts,
-		h.workYearCalc.SeniorityAtFromHired(hiredAt),
+		h.workYearCalc.SeniorityAtFromHired(hiredAt, u.ExperienceDays()),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate work years: %w", err)
@@ -119,6 +119,9 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 			End:   p.End,
 		}
 	}
+
+	domainPeriods = vacation.MergeCreationPeriods(domainPeriods)
+
 	if err := vacation.ValidateCreation(domainPeriods, *matched, vacations, h.workYearCalc); err != nil {
 		return nil, err
 	}

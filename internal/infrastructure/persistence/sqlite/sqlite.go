@@ -46,10 +46,11 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 		INSERT INTO users (
 			id, status, last_name, first_name, middle_name,
 			birth_date, position, hired_at,
+			experience,
 			department_code, district_code,
 			email, is_invalid, password, workday_duration
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (id) DO UPDATE SET
 			status           = EXCLUDED.status,
 			last_name        = EXCLUDED.last_name,
@@ -58,6 +59,7 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 			birth_date       = EXCLUDED.birth_date,
 			position         = EXCLUDED.position,
 			hired_at         = EXCLUDED.hired_at,
+			experience       = EXCLUDED.experience,      -- ← добавить
 			department_code  = EXCLUDED.department_code,
 			district_code    = EXCLUDED.district_code,
 			email            = EXCLUDED.email,
@@ -77,6 +79,7 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 		u.BirthDate().ISO(),
 		u.Position().String(),
 		u.HiredAt().Time().Format("2006-01-02"),
+		u.ExperienceDays(), // ← добавить
 		u.Department().Code,
 		u.District().Code(),
 		u.Email().Value(),

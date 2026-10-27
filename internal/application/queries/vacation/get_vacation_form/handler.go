@@ -51,7 +51,7 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 	hiredAt := u.HiredAt().Time()
 
 	stats, err := h.workYearCalc.FindYearStat(
-		hiredAt, now, u.IsIrregular(), shifts, h.workYearCalc.SeniorityAtFromHired(hiredAt),
+		hiredAt, now, u.IsIrregular(), shifts, h.workYearCalc.SeniorityAtFromHired(hiredAt, u.ExperienceDays()),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate year stat: %w", err)

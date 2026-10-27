@@ -52,7 +52,8 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	}
 
 	return &Result{
-		UserID: u.ID().String(),
-		Email:  u.Email().Value(),
+		UserID:  u.ID().String(),
+		Email:   u.Email().Value(),
+		IsAdmin: u.IsAdmin(),
 	}, nil
 }

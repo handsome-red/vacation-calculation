@@ -57,7 +57,11 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ошибка входа", http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	if result.IsAdmin {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
+
+	http.Redirect(w, r, "/users/"+result.UserID, http.StatusSeeOther)
 }
 
 func (h *LoginHandler) Logout(w http.ResponseWriter, r *http.Request) {

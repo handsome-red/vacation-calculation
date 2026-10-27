@@ -85,20 +85,6 @@ func (c WorkYearCalculator) FindYearStat(
 	return result, nil
 }
 
-// Использовано отпускных
-// func (c WorkYearCalculator) UsedVacationDays(from, to time.Time, vacation []Vacation) int {
-// 	used := 0
-// 	for _, v := range vacation {
-// 		used += DaysInclusive(v.StartDate().Time(), v.EndDate().Time())
-// 	}
-
-// }
-
-// // Смотрим сколько осталось отпускных
-// func (c WorkYearCalculator) FindRemaining(now time.Time, stat YearStat, vacation []Vacation) int {
-
-// }
-
 func DaysInclusive(start, end time.Time) int {
 	start = start.UTC()
 	end = end.UTC()
@@ -145,9 +131,10 @@ func (c WorkYearCalculator) CurrentYear(stats []YearStat, now time.Time, used in
 	}, nil
 }
 
-func (c WorkYearCalculator) SeniorityAtFromHired(hiredAt time.Time) func(at time.Time) int {
+func (c WorkYearCalculator) SeniorityAtFromHired(hiredAt time.Time, priorDays int) func(at time.Time) int {
 	return func(at time.Time) int {
-		return seniorityForExperience(fullYears(hiredAt, at))
+		years := fullYears(hiredAt, at) + priorDays/365
+		return seniorityForExperience(years)
 	}
 }
 
