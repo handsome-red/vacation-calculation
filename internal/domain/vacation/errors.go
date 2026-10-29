@@ -1,6 +1,9 @@
 package vacation
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrIDEmpty = errors.New("id is empty")
@@ -10,6 +13,7 @@ var (
 	ErrStartDateEmpty     = errors.New("start date is empty")
 	ErrEndDateEmpty       = errors.New("end date is empty")
 	ErrEndDateBeforeStart = errors.New("end date is before start date")
+	ErrWorkYearStartEmpty = errors.New("work year start is empty")
 	ErrStatusInvalid      = errors.New("status is invalid")
 
 	ErrCalendarDayDateEmpty   = errors.New("calendar day date is empty")
@@ -19,9 +23,11 @@ var (
 
 	ErrStatusNotFound = errors.New("status not found")
 
-	ErrVacationNotRejectable = errors.New("vacation is not rejectable")
-	ErrVacationNotEditable   = errors.New("vacation is not editable")
-	ErrVacationNotApprovable = errors.New("vacation is not approvable")
+	ErrVacationNotRejectable   = errors.New("vacation is not rejectable")
+	ErrVacationNotEditable     = errors.New("vacation is not editable")
+	ErrVacationNotApprovable   = errors.New("vacation is not approvable")
+	ErrVacationNotTransferable = fmt.Errorf("%w: перенести можно только черновик или утверждённый отпуск", ErrInvalidInput)
+	ErrTransferReasonEmpty     = fmt.Errorf("%w: укажите причину переноса", ErrInvalidInput)
 
 	ErrInvalidEmployeeID = errors.New("invalid employee id")
 	ErrInvalidDateRange  = errors.New("start date must be before end date")

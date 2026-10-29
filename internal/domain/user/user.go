@@ -178,6 +178,12 @@ func (u *User) isAdmin() bool {
 	return u != nil && u.superadmin
 }
 
+// GrantAdmin делает пользователя суперадминистратором.
+func (u *User) GrantAdmin() {
+	u.superadmin = true
+	u.updatedAt = time.Now().UTC()
+}
+
 // IsAdmin сообщает, является ли пользователь суперадминистратором.
 func (u *User) IsAdmin() bool {
 	return u.isAdmin()

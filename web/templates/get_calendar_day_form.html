@@ -1,16 +1,10 @@
+{{define "title"}}Новый день календаря{{end}}
 
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Создать новый праздник</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
-    <h1>Создать новый праздник</h1>
+{{define "content"}}
+<div class="container">
+    <h1>Добавить день в производственный календарь</h1>
 
-    <p><a href="/admin/holidays">← К списку</a></p>
+    <p><a href="/calendar">← К календарю</a></p>
 
     {{if .Errors}}
     <ul style="color:#b00">
@@ -20,21 +14,27 @@
 
     <form method="POST" action="/admin/holidays">
         <p>
-            <label for="date">Дата праздника</label><br>
-            <input type="date" id="date" name="date"
-                   value="{{.Form.Date}}" required>
+            <label for="date">Дата</label><br>
+            <input type="date" id="date" name="date" value="{{.Form.Date}}" required>
+        </p>
+
+        <p>
+            <label for="day_type">Тип дня</label><br>
+            <select id="day_type" name="day_type" required>
+                <option value="holiday" {{if eq .Form.Type "holiday"}}selected{{end}}>Праздничный (нерабочий) день</option>
+                <option value="working" {{if eq .Form.Type "working"}}selected{{end}}>Рабочий выходной</option>
+            </select>
         </p>
 
         <p>
             <label for="name">Название</label><br>
-            <input type="text" id="name" name="name"
-                   value="{{.Form.Name}}" maxlength="200" required>
+            <input type="text" id="name" name="name" value="{{.Form.Name}}" maxlength="200" required>
         </p>
 
         <p>
-            <button type="submit">Создать</button>
-            <a href="/admin/holidays">Отмена</a>
+            <button type="submit">Сохранить</button>
+            <a href="/calendar">Отмена</a>
         </p>
     </form>
-</body>
-</html>
+</div>
+{{end}}

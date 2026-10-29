@@ -16,10 +16,18 @@ type Period struct {
 type Command struct {
 	UserID  string   `json:"userId"`
 	Periods []Period `json:"periods"`
+	// ExcludeVacationID — отпуск, который не учитывается при проверках и расчёте
+	// квот (переносимый). Заполняется только сервером, не из запроса.
+	ExcludeVacationID string `json:"-"`
 }
 
 type Result struct {
 	VacationIDs []string
+	Allocations []vacation.Allocation
+	// Warnings — правила, которые обошёл администратор.
+	Warnings []string
+	// Notices — предупреждения для всех: дни года используются позже срока переноса.
+	Notices []string
 }
 
 func (c Command) Validate() error {

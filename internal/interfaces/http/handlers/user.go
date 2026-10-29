@@ -89,6 +89,7 @@ type userPageData struct {
 
 	YearStats []yearStatView
 	Current   currentYearView
+	Warnings  []string
 }
 
 type yearStatView struct {
@@ -113,6 +114,7 @@ type currentYearView struct {
 	Used      int
 	Available int
 	Remaining float64
+	Carryover int
 	Today     string
 }
 
@@ -135,6 +137,7 @@ func assembleUserPageData(result *get_user.Result) *userPageData {
 		IsInvalid:       u.IsInvalid(),
 		Experience:      u.ExperienceLabel(),
 		Initials:        u.Initials(),
+		Warnings:        result.Warnings,
 	}
 
 	if pos := u.Position(); pos != "" {
@@ -176,6 +179,7 @@ func assembleUserPageData(result *get_user.Result) *userPageData {
 			Used:      c.Used,
 			Available: totalEntitlement - c.Used,
 			Remaining: c.Remaining,
+			Carryover: result.Carryover,
 			Today:     c.Today.Format("02.01.2006"),
 		}
 	}

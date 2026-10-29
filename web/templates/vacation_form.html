@@ -1,13 +1,22 @@
 {{ define "title" }}Создать отпуск{{ end }}
 
 {{ define "content" }}
+<div class="container">
 <h1>Создать отпуск</h1>
 
 {{ if .Balance.HasActiveYear }}
     <section class="card card--balance" style="margin-bottom: 1rem;">
         <div class="card-header">
             <h2>Баланс отпусков</h2>
+            <span>Доступно на сегодня: <strong>{{ .Balance.Available }} дн.</strong></span>
         </div>
+        {{ if .Warnings }}
+        <div class="notices">
+            <p>Срок переноса неиспользованного отпуска — не позднее 12 месяцев после окончания рабочего года:</p>
+            <ul>{{ range .Warnings }}<li>{{ . }}</li>{{ end }}</ul>
+        </div>
+        {{ end }}
+        <p class="muted">Дни списываются с самого раннего рабочего года, где остались неиспользованные дни: сначала основной отпуск, затем за ненормированный день, затем за выслугу лет.</p>
         <div id="quota-app"></div>
     </section>
 {{ else }}
@@ -20,15 +29,10 @@
 </ul>
 {{ end }}
 
-<form method="POST" action="/api/v1/users/{{ .Cmd.UserID }}/vacations">
-    <input type="hidden" name="user_id" value="{{ .Cmd.UserID }}">
+{{ template "vacation_picker" . }}
 
-   {{ template "vacation_picker" . }}
-
-    <p>
-        <button type="submit">Создать</button>
-    </p>
-</form>
+<p><a href="/users/{{ .Cmd.UserID }}">← К карточке сотрудника</a></p>
+</div>
 
 <script id="app-data" type="application/json">{{ .AppDataJSON }}</script>
 <script src="/static/js/vacation_form.js" type="module"></script>

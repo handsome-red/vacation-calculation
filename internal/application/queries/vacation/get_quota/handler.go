@@ -34,8 +34,7 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 		return nil, fmt.Errorf("parse user id: %w", err)
 	}
 
-	u, err := h.userRepo.FindByID(ctx, uid)
-	if err != nil {
+	if _, err := h.userRepo.FindByID(ctx, uid); err != nil {
 		return nil, fmt.Errorf("user: %w", err)
 	}
 
@@ -44,14 +43,12 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 		return nil, fmt.Errorf("vacations: %w", err)
 	}
 
+	// TODO: разложить заблокированные дни по рабочим годам и видам отпуска
 	blockedBase := 0
 	for _, v := range vacations {
 		blockedBase += workingDaysInRange(v.StartDate(), v.EndDate())
 	}
-
-	baseTotal := 30
-	seniorityTotal := 0
-	irregularTotal := 0
+	_ = blockedBase
 
 	return &Result{
 		Years: []YearQuota{},

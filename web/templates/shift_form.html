@@ -1,6 +1,7 @@
 {{ define "title" }}Создание сдвига{{ end }}
 
 {{ define "content" }}
+<div class="container">
 <h1>Новый сдвиг рабочего года</h1>
 
 {{ if .Error }}
@@ -36,7 +37,8 @@
 
     <div class="actions">
         <button type="submit">Сохранить</button>
-        <a href="/api/v1/users/{{ .Cmd.UserID }}">Отмена</a>
+        <a href="/users/{{ .Cmd.UserID }}">Отмена</a>
     </div>
 </form>
+</div>
 {{ end }}

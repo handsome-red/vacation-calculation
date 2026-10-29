@@ -63,7 +63,7 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 	days := make([]Day, 0, daysInYear)
 
 	cur := start
-	for i := 0; i <= daysInYear; i++ {
+	for i := 0; i < daysInYear; i++ {
 		key := cur.ISO()
 
 		wd := cur.Time().Weekday()
@@ -79,6 +79,9 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 			case calendar.DayTypeHoliday:
 				day.IsHoliday = true
 				day.HolidayName = cd.Name()
+			case calendar.DayTypeWeekend:
+				day.IsWeekend = true
+				day.HolidayName = cd.Name()
 			case calendar.DayTypeWorking:
 				day.IsWorkSaturday = true
 				day.WorkSaturdayName = cd.Name()
@@ -91,11 +94,7 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 
 	activeVacations := make([]*vacation.Vacation, 0, len(vacations))
 	for _, v := range vacations {
-		if v == nil {
-			continue
-		}
-		switch v.Status() {
-		case vacation.StatusCancelled:
+		if v == nil || !v.Status().IsActive() {
 			continue
 		}
 		activeVacations = append(activeVacations, v)

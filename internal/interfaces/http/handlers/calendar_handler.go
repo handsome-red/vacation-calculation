@@ -10,6 +10,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/new_calendar_day_form"
+	"github.com/handsome-red/vacation-calculation/internal/domain/calendar"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/dto"
 )
@@ -122,6 +123,11 @@ func (h *CalendarHandler) GetCalendarPage(w http.ResponseWriter, r *http.Request
 	}
 }
 
+type calendarDayFormData struct {
+	Form   new_calendar_day.Command
+	Errors []string
+}
+
 func (h *CalendarHandler) GetCalendarDayForm(w http.ResponseWriter, r *http.Request) {
 	// TODO Добавить отображение календаря
 	if _, err := h.newCalendarDayFormUseCase.Handle(r.Context(), new_calendar_day_form.Query{}); err != nil {
@@ -129,7 +135,8 @@ func (h *CalendarHandler) GetCalendarDayForm(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if err := h.templates.Render(w, "get_calendar_day_form.html", nil); err != nil {
+	data := calendarDayFormData{Form: new_calendar_day.Command{Type: string(calendar.DayTypeHoliday)}}
+	if err := h.templates.Render(w, "get_calendar_day_form.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -141,19 +148,21 @@ func (h *CalendarHandler) NewCalendarDay(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	dateStr := r.FormValue("date")
-	name := r.FormValue("name")
-
 	cmd := new_calendar_day.Command{
-		Date: dateStr,
-		Name: name,
+		Date: r.FormValue("date"),
+		Type: r.FormValue("day_type"),
+		Name: r.FormValue("name"),
 	}
 
 	result, err := h.newCalendarDayUseCase.Handle(r.Context(), cmd)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		data := calendarDayFormData{Form: cmd, Errors: []string{err.Error()}}
+		if err := h.templates.Render(w, "get_calendar_day_form.html", data); err != nil {
+			h.logger.Error(r.Context(), "render calendar day form", "error", err)
+		}
 		return
 	}
 
-	_ = result
+	http.Redirect(w, r, "/calendar?year="+result.Date[:4], http.StatusSeeOther)
 }

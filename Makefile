@@ -9,7 +9,7 @@ test-cover:
 	go tool cover -html=coverage.out
 
 build:
-	go build -o bin/app ./app/exe
+	go build -o bin/app ./cmd/api
 
 run:
 	go run ./cmd/api

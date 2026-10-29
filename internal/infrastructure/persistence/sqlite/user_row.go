@@ -17,6 +17,7 @@ type userRow struct {
 	BirthDate       string `db:"birth_date"`
 	Position        string `db:"position"`
 	HiredAt         string `db:"hired_at"`
+	Experience      int    `db:"experience"`
 	DepartmentCode  string `db:"department_code"`
 	DepartmentTitle string `db:"department_title"`
 	DistrictCode    string `db:"district_code"`
@@ -97,6 +98,7 @@ func (r *userRow) toDomain() (*user.User, error) {
 		BirthDate:       birthDate,
 		Position:        position,
 		HiredAt:         hiredAt,
+		ExperienceDays:  r.Experience,
 		Department:      department,
 		District:        district,
 		WorkdayDuration: workdayDuration,

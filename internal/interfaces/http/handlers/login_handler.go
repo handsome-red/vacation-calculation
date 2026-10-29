@@ -59,6 +59,7 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	if result.IsAdmin {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
 
 	http.Redirect(w, r, "/users/"+result.UserID, http.StatusSeeOther)

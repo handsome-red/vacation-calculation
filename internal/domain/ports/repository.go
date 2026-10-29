@@ -41,6 +41,7 @@ type UserQueryRepository interface {
 	FindByID(ctx context.Context, id user.UserID) (*user.User, error)
 	FindByEmail(ctx context.Context, email user.Email) (*user.User, error)
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
+	ExistsAdmin(ctx context.Context) (bool, error)
 	FindUsers(ctx context.Context, q Query) ([]*user.User, int, error)
 }
 
@@ -69,11 +70,25 @@ type VacationRepository interface {
 	Save(ctx context.Context, vacation *vacation.Vacation) error
 	FindByID(ctx context.Context, userID user.UserID, id vacation.VacationID) (*vacation.Vacation, error)
 	FindByUserID(ctx context.Context, userID user.UserID) ([]*vacation.Vacation, error)
+	// FindApprovedEndingFrom — утверждённые отпуска всех сотрудников, не закончившиеся к from.
+	FindApprovedEndingFrom(ctx context.Context, from date.Date) ([]*vacation.Vacation, error)
 	FindByUserIDInRange(
 		ctx context.Context,
 		userID user.UserID,
 		from, to date.Date,
 	) ([]*vacation.Vacation, error)
+}
+
+// ReminderRepository — журнал отправленных уведомлений о начале отпуска,
+// по каждому получателю (сотрудник, отдел кадров).
+type ReminderRepository interface {
+	WasSent(ctx context.Context, userID user.UserID, start date.Date, recipient string) (bool, error)
+	MarkSent(ctx context.Context, userID user.UserID, start, end date.Date, recipient, email string, at time.Time) error
+}
+
+type TransferRepository interface {
+	Save(ctx context.Context, t vacation.Transfer) error
+	ListByUser(ctx context.Context, userID user.UserID) ([]vacation.Transfer, error)
 }
 
 type CalendarDayRepository interface {

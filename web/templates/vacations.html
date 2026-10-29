@@ -11,23 +11,35 @@
     <table>
         <thead>
             <tr>
-                <th>Индикатор</th>
+                <th></th>
                 <th>Дата начала отпуска</th>
                 <th>Дата конца отпуска</th>
+                <th>Вид отпуска</th>
+                <th>Рабочий год (с)</th>
                 <th>Статус</th>
+                <th>Перенос</th>
                 {{if .IsAdmin}}<th>Изменить статус</th>
                 <th>Действия</th>{{end}}
             </tr>
         </thead>
         <tbody>
             {{range $v := .Vacations}}
-            <tr>
-                <td>{{.Color}}</td>
+            <tr{{if eq .StatusCode "TRANSFERRED"}} class="row-transferred"{{end}}>
+                <td><span class="status-dot status-dot--{{.StatusCode}}" title="{{.Status}}"></span></td>
                 <td>{{.StartDate}}</td>
                 <td>{{.EndDate}}</td>
+                <td>{{.Kind}}</td>
+                <td>{{.WorkYear}}</td>
                 <td>{{.Status}}</td>
+                <td class="transfer-info">
+                    {{with .Transfer}}
+                    <div>{{.Summary}}</div>
+                    <div class="muted">{{.Date}} · {{.Reason}}</div>
+                    {{end}}
+                </td>
                 {{if $.IsAdmin}}
                 <td>
+                    {{if ne .StatusCode "TRANSFERRED"}}
                     <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/status">
                         <select name="status" aria-label="Новый статус отпуска" required>
                             <option value="" selected disabled>Выберите статус</option>
@@ -37,23 +49,28 @@
                         </select>
                         <button type="submit" class="btn btn-sm">Сохранить</button>
                     </form>
+                    {{end}}
                 </td>
                 <td>
                     {{if eq .StatusCode "DRAFT"}}
                     <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/approve"
                         style="display:inline;">
-                        <button type="submit" class="btn btn-sm">Approve</button>
+                        <button type="submit" class="btn btn-sm">Утвердить</button>
                     </form>
+                    {{end}}
+                    {{if .IsActive}}
+                    <a class="btn btn-sm" href="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/transfer">Перенести</a>
                     {{end}}
                 </td>
                 {{end}}
             </tr>
             {{else}}
             <tr>
-                <td colspan="{{if $.IsAdmin}}6{{else}}4{{end}}">Нет отпусков</td>
+                <td colspan="{{if $.IsAdmin}}9{{else}}7{{end}}">Нет отпусков</td>
             </tr>
             {{end}}
         </tbody>
     </table>
+    <p><a href="/users/{{.UserID}}">← К карточке сотрудника</a></p>
 </div>
 {{end}}

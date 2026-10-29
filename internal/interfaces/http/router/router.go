@@ -28,6 +28,7 @@ type Router struct {
 	userHandler         *handlers.UserHandler
 	vacationHandler     *handlers.VacationHandler
 	shiftHandler        *handlers.ShiftHandler
+	transferHandler     *handlers.TransferHandler
 	calendarHandler     *handlers.CalendarHandler
 }
 
@@ -76,6 +77,12 @@ func NewRouter(
 		templates,
 		logger,
 	)
+	r.transferHandler = handlers.NewTransferHandler(
+		container.TransferVacationUseCase,
+		container.GetTransferFormUseCase,
+		templates,
+		logger,
+	)
 	r.shiftHandler = handlers.NewShiftHandler(
 		container.CreateShiftUseCase,
 		container.ShiftFormUseCase,
@@ -117,6 +124,7 @@ func (r *Router) Build() (http.Handler, error) {
 		if r.authMW != nil {
 			admin.Use(r.authMW)
 		}
+		admin.Use(authmiddleware.RequireAdmin)
 		r.registerAdmin(admin)
 	})
 
@@ -143,7 +151,7 @@ func (r *Router) registerPublic(mux chi.Router) {
 		private.With(authmiddleware.RequireAdmin).Get("/user/register", r.registrationHandler.Form)
 		private.With(authmiddleware.RequireAdmin).Post("/user/register", r.registrationHandler.Register)
 		private.With(authmiddleware.RequireAdmin).Get("/users", r.userHandler.ListUsersPage)
-		private.Get("/users/{id}", r.userHandler.GetUserPage)
+		private.With(authmiddleware.RequireSelfOrAdmin("id")).Get("/users/{id}", r.userHandler.GetUserPage)
 		private.Get("/calendar", r.calendarHandler.GetCalendarPage)
 	})
 }
@@ -152,22 +160,27 @@ func (r *Router) registerAPI(mux chi.Router) {
 	// Здесь все пути БЕЗ префикса /api/v1, потому что мы уже внутри Route("/api/v1")
 
 	// Reuse pre-initialized handlers from the router
+	selfOrAdmin := authmiddleware.RequireSelfOrAdmin("userId")
+
 	if r.userHandler != nil {
-		mux.Get("/users/{id}", r.userHandler.GetUser)
+		mux.With(authmiddleware.RequireSelfOrAdmin("id")).Get("/users/{id}", r.userHandler.GetUser)
 		mux.With(authmiddleware.RequireAdmin).Delete("/users/{id}", r.userHandler.DeactivateUser)
 		mux.With(authmiddleware.RequireAdmin).Get("/users", r.userHandler.ListUsers)
 	}
 
 	if r.vacationHandler != nil {
-		mux.Get("/users/{userId}/vacations", r.vacationHandler.GetVacations)
-		mux.Get("/users/{userId}/vacations/new", r.vacationHandler.GetVacationForm)
-		mux.Post("/users/{userId}/vacations", r.vacationHandler.CreateVacation)
+		mux.With(selfOrAdmin).Get("/users/{userId}/vacations", r.vacationHandler.GetVacations)
+		mux.With(selfOrAdmin).Get("/users/{userId}/vacations/new", r.vacationHandler.GetVacationForm)
+		mux.With(selfOrAdmin).Post("/users/{userId}/vacations", r.vacationHandler.CreateVacation)
+		mux.With(selfOrAdmin).Post("/users/{userId}/vacations/preview", r.vacationHandler.PreviewVacation)
 		mux.With(authmiddleware.RequireAdmin).Post("/users/{userId}/vacations/{id}/approve", r.vacationHandler.ApproveVacation)
 		mux.With(authmiddleware.RequireAdmin).Post("/users/{userId}/vacations/{id}/status", r.vacationHandler.ChangeVacationStatus)
+		mux.With(authmiddleware.RequireAdmin).Get("/users/{userId}/vacations/{id}/transfer", r.transferHandler.Form)
+		mux.With(authmiddleware.RequireAdmin).Post("/users/{userId}/vacations/{id}/transfer", r.transferHandler.Transfer)
 	}
 
 	if r.calendarHandler != nil {
-		mux.Get("/users/{userId}/calendar", r.calendarHandler.GetUserCalendar)
+		mux.With(selfOrAdmin).Get("/users/{userId}/calendar", r.calendarHandler.GetUserCalendar)
 	}
 
 	if r.calendarHandler != nil {
@@ -181,6 +194,6 @@ func (r *Router) registerAPI(mux chi.Router) {
 }
 
 func (r *Router) registerAdmin(mux chi.Router) {
-	mux.Get("/holidays", r.calendarHandler.NewCalendarDay)
+	mux.Get("/holidays", r.calendarHandler.GetCalendarDayForm)
 	mux.Post("/holidays", r.calendarHandler.NewCalendarDay)
 }

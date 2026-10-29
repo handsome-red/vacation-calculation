@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -98,6 +100,25 @@ func CallerFromContext(ctx context.Context) (auth.Caller, bool) {
 		return auth.Caller{}, false
 	}
 	return auth.Caller{UserID: u.ID(), IsAdmin: u.IsAdmin()}, true
+}
+
+// RequireSelfOrAdmin пропускает администратора или пользователя, чей ID указан
+// в параметре маршрута param. Применяется после Require.
+func RequireSelfOrAdmin(param string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			u, ok := UserFromContext(r.Context())
+			if !ok || u == nil {
+				http.Error(w, "Необходим вход", http.StatusUnauthorized)
+				return
+			}
+			if !u.IsAdmin() && !strings.EqualFold(chi.URLParam(r, param), u.ID().String()) {
+				http.Error(w, "Доступ запрещён", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // RequireAdmin разрешает доступ только суперадминистратору после Require.

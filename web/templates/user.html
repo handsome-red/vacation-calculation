@@ -8,9 +8,7 @@
             <section class="card card--profile">
                 <div class="card-header">
                     <h2>Общая статистика</h2>
-                    {{if .IsAdmin}}
-                    <a class="btn" href="/users/{{.UserID}}/vacations/new">Редактировать</a>
-                    {{end}}
+                    <a class="btn" href="/api/v1/users/{{.UserID}}/vacations/new">Оформить отпуск</a>
                 </div>  
                 <table>
                     <tbody>
@@ -118,7 +116,7 @@
                         </td>
                     </tr>
                 {{else}}
-                    <tr><td colspan="6">Отпусков пока нет</td></tr>
+                    <tr><td colspan="6">Рабочих лет пока нет</td></tr>
                 {{end}}
                 </tbody>
             </table>
@@ -149,12 +147,16 @@
                         <td>{{printf "%.1f" .Current.Earned}} дн.</td>
                     </tr>
                     <tr>
-                        <th>Использовано в этом году</th>
+                        <th>Списано из квоты этого года</th>
                         <td>{{ .Current.Used }} дн.</td>
                     </tr>
                     <tr>
                         <th>Остаток</th>
                         <td>{{ printf "%.1f" .Current.Remaining }} дн.</td>
+                    </tr>
+                    <tr>
+                        <th>Не использовано за прошлые годы</th>
+                        <td>{{ .Current.Carryover }} дн.</td>
                     </tr>
                     {{else}}
                     <tr>
@@ -164,7 +166,13 @@
                     {{end}}
                     <tr>
                         <th>Предупреждения</th>
-                        <td>нет</td>
+                        <td>
+                            {{if .Warnings}}
+                            <ul class="warning-list">
+                                {{range .Warnings}}<li>{{.}}</li>{{end}}
+                            </ul>
+                            {{else}}нет{{end}}
+                        </td>
                     </tr>
                 </tbody>
             </table>

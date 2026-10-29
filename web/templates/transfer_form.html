@@ -1,0 +1,42 @@
+{{define "title"}}Перенос отпуска{{end}}
+
+{{define "content"}}
+<div class="container">
+    <h1>Перенос отпуска</h1>
+
+    <table class="transfer-current">
+        <tbody>
+            <tr><th>Текущие даты</th><td>{{.Vacation.Period}}</td></tr>
+            <tr><th>Вид отпуска</th><td>{{.Vacation.Kind}}</td></tr>
+            <tr><th>Статус</th><td>{{.Vacation.Status}}</td></tr>
+        </tbody>
+    </table>
+
+    {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+
+    {{if .Vacation.Transferable}}
+    <form method="POST" action="/api/v1/users/{{.Vacation.UserID}}/vacations/{{.Vacation.VacationID}}/transfer" class="transfer-form">
+        <p>
+            <label for="new_start">Новая дата начала</label>
+            <input type="date" id="new_start" name="new_start" value="{{.NewStart}}" required>
+        </p>
+        <p>
+            <label for="new_end">Новая дата окончания</label>
+            <input type="date" id="new_end" name="new_end" value="{{.NewEnd}}" required>
+        </p>
+        <p>
+            <label for="reason">Причина переноса</label>
+            <textarea id="reason" name="reason" rows="3" maxlength="1000" required>{{.Reason}}</textarea>
+        </p>
+        <p class="muted">
+            Исходный отпуск останется в истории со статусом «Перенесён». На новые даты будет создан отпуск
+            с тем же статусом; дни заново распределятся по рабочим годам. Правила предоставления отпуска
+            для администратора не обязательны — кроме пересечения с другими отпусками.
+        </p>
+        <p><button type="submit" class="btn">Перенести</button></p>
+    </form>
+    {{end}}
+
+    <p><a href="/api/v1/users/{{.Vacation.UserID}}/vacations">← К списку отпусков</a></p>
+</div>
+{{end}}

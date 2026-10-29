@@ -24,19 +24,21 @@ func NewVacationRepository(db *sqlx.DB) *vacationRepository {
 func (r *vacationRepository) Save(ctx context.Context, v *vacation.Vacation) error {
 	const q = `
 		INSERT INTO vacations (
-			id, user_id, start_date, end_date, kind,
-			status, created_at, updated_at
+			id, user_id, start_date, end_date, kind, work_year_start,
+			transferred_from, status, created_at, updated_at
 		)
-		VALUES (?, ?, ?, ?, ?, ?,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?,
 				strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
 				strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 		ON CONFLICT (id) DO UPDATE SET
-			user_id    = EXCLUDED.user_id,
-			start_date = EXCLUDED.start_date,
-			end_date   = EXCLUDED.end_date,
-			kind       = EXCLUDED.kind,
-			status     = EXCLUDED.status,
-			updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+			user_id         = EXCLUDED.user_id,
+			start_date      = EXCLUDED.start_date,
+			end_date        = EXCLUDED.end_date,
+			kind            = EXCLUDED.kind,
+			work_year_start = EXCLUDED.work_year_start,
+			transferred_from = EXCLUDED.transferred_from,
+			status         = EXCLUDED.status,
+			updated_at      = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 	`
 
 	_, err := r.db.ExecContext(
@@ -44,9 +46,11 @@ func (r *vacationRepository) Save(ctx context.Context, v *vacation.Vacation) err
 		q,
 		v.ID().String(),
 		v.UserID().String(),
-		v.StartDate().Time().Format("2006-01-02"),
-		v.EndDate().Time().Format("2006-01-02"),
-		string(v.Kind()), // ← добавили
+		v.StartDate().ISO(),
+		v.EndDate().ISO(),
+		string(v.Kind()),
+		v.WorkYearStart().ISO(),
+		nullableID(v.TransferredFrom()),
 		v.Status().ISO(),
 	)
 	if err != nil {
@@ -56,9 +60,16 @@ func (r *vacationRepository) Save(ctx context.Context, v *vacation.Vacation) err
 	return nil
 }
 
+func nullableID(id vacation.VacationID) sql.NullString {
+	if id.IsZero() {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: id.String(), Valid: true}
+}
+
 func (r *vacationRepository) FindByID(ctx context.Context, userID user.UserID, id vacation.VacationID) (*vacation.Vacation, error) {
 	const q = `
-		SELECT id, user_id, start_date, end_date, kind, status, created_at, updated_at
+		SELECT id, user_id, start_date, end_date, kind, work_year_start, transferred_from, status, created_at, updated_at
 			FROM vacations
 			WHERE user_id = ? AND id = ?
 			LIMIT 1
@@ -82,7 +93,7 @@ func (r *vacationRepository) FindByID(ctx context.Context, userID user.UserID, i
 
 func (r *vacationRepository) FindByUserID(ctx context.Context, userID user.UserID) ([]*vacation.Vacation, error) {
 	const q = `
-		SELECT id, user_id, start_date, end_date, kind, status, created_at, updated_at
+		SELECT id, user_id, start_date, end_date, kind, work_year_start, transferred_from, status, created_at, updated_at
 		FROM vacations
 		WHERE user_id = ?
 		ORDER BY start_date
@@ -105,13 +116,37 @@ func (r *vacationRepository) FindByUserID(ctx context.Context, userID user.UserI
 	return result, nil
 }
 
+func (r *vacationRepository) FindApprovedEndingFrom(ctx context.Context, from date.Date) ([]*vacation.Vacation, error) {
+	const q = `
+		SELECT id, user_id, start_date, end_date, kind, work_year_start, transferred_from, status, created_at, updated_at
+		FROM vacations
+		WHERE status = 'APPROVED' AND end_date >= ?
+		ORDER BY user_id, start_date
+	`
+
+	var rows []vacationRow
+	if err := r.db.SelectContext(ctx, &rows, q, from.ISO()); err != nil {
+		return nil, fmt.Errorf("find approved vacations: %w", err)
+	}
+
+	result := make([]*vacation.Vacation, 0, len(rows))
+	for _, row := range rows {
+		v, err := row.toDomain()
+		if err != nil {
+			return nil, fmt.Errorf("vacation row %q: %w", row.ID, err)
+		}
+		result = append(result, v)
+	}
+	return result, nil
+}
+
 func (r *vacationRepository) FindByUserIDInRange(
 	ctx context.Context,
 	userID user.UserID,
 	from, to date.Date,
 ) ([]*vacation.Vacation, error) {
 	const q = `
-        SELECT id, user_id, start_date, end_date, kind, status, created_at, updated_at
+        SELECT id, user_id, start_date, end_date, kind, work_year_start, transferred_from, status, created_at, updated_at
         FROM vacations
         WHERE user_id = ?
           AND end_date   >= ?

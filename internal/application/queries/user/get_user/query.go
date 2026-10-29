@@ -43,5 +43,8 @@ type Result struct {
 	User      *user.User
 	YearStats []vacation.YearStat
 	Current   vacation.CurrentYearInfo
-	Now       time.Time
+	Carryover int // неиспользованные дни прошлых рабочих лет
+	// Warnings — предупреждения о сроке переноса неиспользованного отпуска.
+	Warnings []string
+	Now      time.Time
 }

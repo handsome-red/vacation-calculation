@@ -48,9 +48,9 @@ function createQuotaBar(year, type, quota) {
   const legend = document.createElement('div');
   legend.className = 'quota__legend';
   legend.innerHTML = `
-    <span><i class="dot dot--blocked"></i>${blocked}</span>
-    <span><i class="dot dot--reserved"></i>${reserved}</span>
-    <span><i class="dot dot--free"></i>${free}</span>
+    <span><i class="dot dot--blocked"></i>списано ${blocked}</span>
+    <span><i class="dot dot--reserved"></i>в заявке ${reserved}</span>
+    <span><i class="dot dot--free"></i>свободно ${free}</span>
   `;
 
   wrap.append(header, bar, legend);
@@ -69,7 +69,8 @@ function createYearCard(stat) {
   const bars = document.createElement('div');
   bars.className = 'year-card__bars';
 
-  for (const type of ['base', 'seniority', 'irregular']) {
+  // Порядок совпадает с порядком списания внутри рабочего года.
+  for (const type of ['base', 'irregular', 'seniority']) {
     bars.append(createQuotaBar(stat.year, type, stat[type]));
   }
 

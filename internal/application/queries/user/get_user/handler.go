@@ -11,26 +11,29 @@ import (
 )
 
 type Handler struct {
-	userRepo     ports.UserRepository
-	vacationRepo ports.VacationRepository
-	shiftRepo    ports.ShiftRepository
-	workYearCalc vacation.WorkYearCalculator
-	logger       ports.Logger
+	userRepo        ports.UserRepository
+	vacationRepo    ports.VacationRepository
+	shiftRepo       ports.ShiftRepository
+	calendarDayRepo ports.CalendarDayRepository
+	workYearCalc    vacation.WorkYearCalculator
+	logger          ports.Logger
 }
 
 func NewHandler(
 	userRepo ports.UserRepository,
 	vacationRepo ports.VacationRepository,
 	shiftRepo ports.ShiftRepository,
+	calendarDayRepo ports.CalendarDayRepository,
 	workYearCalc vacation.WorkYearCalculator,
 	logger ports.Logger,
 ) *Handler {
 	return &Handler{
-		userRepo:     userRepo,
-		vacationRepo: vacationRepo,
-		shiftRepo:    shiftRepo,
-		workYearCalc: workYearCalc,
-		logger:       logger,
+		userRepo:        userRepo,
+		vacationRepo:    vacationRepo,
+		shiftRepo:       shiftRepo,
+		calendarDayRepo: calendarDayRepo,
+		workYearCalc:    workYearCalc,
+		logger:          logger,
 	}
 }
 
@@ -70,20 +73,41 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		return nil, fmt.Errorf("vacation by user id: %w", err)
 	}
 
+	exceptions, err := h.calendarDayRepo.ListInRange(ctx, vacation.DateOf(hiredAt), vacation.HolidaysRangeEnd(vacations, vacation.DateOf(now)))
+	if err != nil {
+		return nil, fmt.Errorf("calendar days: %w", err)
+	}
+	holidays := vacation.HolidaysFrom(exceptions)
+
 	var current vacation.CurrentYearInfo
+	carryover := 0
+	var warnings []string
 	if len(stats) > 0 {
 		last := stats[len(stats)-1]
-		used := vacation.UsedDaysInYear(vacations, last)
+		used := vacation.UsedDaysInYear(vacations, last, holidays)
 		current, err = h.workYearCalc.CurrentYear(stats, now, used.Base+used.Irregular+used.Seniority)
 		if err != nil {
 			return nil, err
 		}
+
+		balances, err := vacation.BuildBalances(stats, vacations, holidays, vacation.DateOf(now), h.workYearCalc, true)
+		if err != nil {
+			return nil, fmt.Errorf("balances: %w", err)
+		}
+		for _, b := range balances {
+			if !b.Year.From.Equal(last.From) {
+				carryover += b.Total()
+			}
+		}
+		warnings = vacation.CarryoverMessages(balances, vacations, stats, vacation.DateOf(now))
 	}
 
 	return &Result{
 		User:      u,
 		YearStats: stats,
 		Current:   current,
+		Carryover: carryover,
+		Warnings:  warnings,
 		Now:       now,
 	}, nil
 }

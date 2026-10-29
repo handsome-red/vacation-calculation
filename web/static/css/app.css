@@ -192,4 +192,89 @@
     cursor: pointer; color: #b91c1c; font-size: 14px;
 }
 #confirm-btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+
+/* ===== Сайдбар ===== */
+#sidebar { display: flex; flex-direction: column; min-height: 100%; }
+.sidebar-brand { margin-bottom: 24px; }
+.sidebar-brand p { opacity: .7; font-size: 13px; margin-top: 4px; }
+.nav-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    opacity: .5;
+    margin-bottom: 8px;
+}
+.nav-menu .nav-item {
+    display: block;
+    padding: 8px 10px;
+    margin: 0 -10px 2px;
+    border-radius: 6px;
+    color: #fff;
+    text-decoration: none;
+}
+.nav-menu .nav-item:hover { background: rgba(255, 255, 255, .1); }
+.sidebar-footer { margin-top: auto; padding-top: 24px; }
+.sidebar-footer button {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(255, 255, 255, .3);
+    border-radius: 6px;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+}
+.sidebar-footer button:hover { background: rgba(255, 255, 255, .1); }
+
+/* ===== Распределение дней отпуска ===== */
+.allocation { margin: 16px 0; }
+.allocation h3 { font-size: 1rem; margin-bottom: 8px; }
+.allocation-table { max-width: 720px; }
+.warnings {
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    background: #fffbeb;
+    color: #92400e;
+}
+.warnings ul { margin: 6px 0 0 18px; }
+.notices {
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border: 1px solid #93c5fd;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #1e3a8a;
+}
+.notices ul { margin: 6px 0 0 18px; }
+.warning-list { margin: 0 0 0 18px; color: #92400e; }
+.warning-list li + li { margin-top: 4px; }
+
+/* ===== Индикатор статуса отпуска ===== */
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #9ca3af;
+}
+.status-dot--DRAFT     { background: #f59e0b; }
+.status-dot--APPROVED  { background: #22c55e; }
+.status-dot--CANCELLED { background: #ef4444; }
+.status-dot--TRANSFERRED { background: #6366f1; }
+
+/* ===== Перенос отпуска ===== */
+.row-transferred td { color: #9ca3af; }
+.row-transferred td:nth-child(2),
+.row-transferred td:nth-child(3) { text-decoration: line-through; }
+.transfer-info { font-size: 13px; max-width: 280px; }
+.transfer-current { max-width: 480px; margin-bottom: 16px; }
+.transfer-form textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font: inherit;
+}
 #confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }

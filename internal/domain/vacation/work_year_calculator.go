@@ -222,7 +222,9 @@ func shiftCoverage(shift []Shift, from, to time.Time) int {
 	return total
 }
 
-func UsedDaysInYear(vacations []*Vacation, year YearStat) UsedByKind {
+// UsedDaysInYear — сколько дней каждого вида списано из квоты рабочего года year.
+// Учитываются все отпуска, кроме отменённых: черновик тоже резервирует дни.
+func UsedDaysInYear(vacations []*Vacation, year YearStat, h Holidays) UsedByKind {
 	result := UsedByKind{
 		Base:      0,
 		Seniority: 0,
@@ -230,26 +232,17 @@ func UsedDaysInYear(vacations []*Vacation, year YearStat) UsedByKind {
 		Items:     make([]UsedVacation, 0, len(vacations)),
 	}
 
+	yearStart := DateOf(year.From)
 	for _, v := range vacations {
-		if v == nil {
+		if v == nil || !v.Status().IsActive() || v.WorkYearStart() != yearStart {
 			continue
 		}
 
-		if v.Status() == StatusDraft {
-			continue
-		}
-
-		lastDay := year.To.AddDate(0, 0, -1)
-
-		oStart := MaxTime(v.StartDate().Time(), year.From)
-		oEnd := MinTime(v.EndDate().Time(), lastDay)
-		if oEnd.Before(oStart) {
-			continue
-		}
-		days := DaysInclusive(oStart, oEnd)
+		days := ChargeableDays(v.StartDate(), v.EndDate(), h)
 		if days <= 0 {
 			continue
 		}
+		oStart, oEnd := v.StartDate().Time(), v.EndDate().Time()
 
 		kind := v.Kind()
 

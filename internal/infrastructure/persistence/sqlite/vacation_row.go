@@ -2,6 +2,7 @@
 package sqlite
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -12,14 +13,16 @@ import (
 )
 
 type vacationRow struct {
-	ID        string    `db:"id"`
-	UserID    string    `db:"user_id"`
-	StartDate date.Date `db:"start_date"`
-	EndDate   date.Date `db:"end_date"`
-	Kind      string    `db:"kind"`
-	Status    string    `db:"status"`
-	CreatedAt string    `db:"created_at"`
-	UpdatedAt string    `db:"updated_at"`
+	ID              string         `db:"id"`
+	UserID          string         `db:"user_id"`
+	StartDate       date.Date      `db:"start_date"`
+	EndDate         date.Date      `db:"end_date"`
+	Kind            string         `db:"kind"`
+	WorkYearStart   date.Date      `db:"work_year_start"`
+	TransferredFrom sql.NullString `db:"transferred_from"`
+	Status          string         `db:"status"`
+	CreatedAt       string         `db:"created_at"`
+	UpdatedAt       string         `db:"updated_at"`
 }
 
 func (r vacationRow) toDomain() (*vacation.Vacation, error) {
@@ -62,14 +65,23 @@ func (r vacationRow) toDomain() (*vacation.Vacation, error) {
 		return nil, fmt.Errorf("invalid updated_at: %w", err)
 	}
 
+	var transferredFrom vacation.VacationID
+	if r.TransferredFrom.Valid {
+		if transferredFrom, err = vacation.ParseVacationID(r.TransferredFrom.String); err != nil {
+			return nil, fmt.Errorf("invalid transferred_from: %w", err)
+		}
+	}
+
 	return vacation.ReconstructVacation(vacation.VacationParams{
-		ID:             vacationID,
-		UserID:         userID,
-		StartDate:      startDate,
-		EndDate:        endDate,
-		Kind:           kind,
-		VacationStatus: status,
-		CreatedAt:      createdAt.UTC(),
-		UpdatedAt:      updatedAt.UTC(),
+		TransferredFrom: transferredFrom,
+		ID:              vacationID,
+		UserID:          userID,
+		StartDate:       startDate,
+		EndDate:         endDate,
+		WorkYearStart:   r.WorkYearStart,
+		Kind:            kind,
+		VacationStatus:  status,
+		CreatedAt:       createdAt.UTC(),
+		UpdatedAt:       updatedAt.UTC(),
 	}), nil
 }

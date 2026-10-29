@@ -27,6 +27,7 @@ type quotaDTO struct {
 }
 type yearStatDTO struct {
 	Year      string   `json:"year"`
+	Start     string   `json:"start"`
 	Base      quotaDTO `json:"base"`
 	Seniority quotaDTO `json:"seniority"`
 	Irregular quotaDTO `json:"irregular"`
@@ -34,6 +35,7 @@ type yearStatDTO struct {
 type appData struct {
 	UserID        string        `json:"userId"`
 	HasActiveYear bool          `json:"hasActiveYear"`
+	Available     int           `json:"available"`
 	YearStats     []yearStatDTO `json:"yearStats"`
 }
 
@@ -120,19 +122,78 @@ func (h *VacationHandler) CreateVacation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	_, err := h.createVacationUseCase.Handle(r.Context(), cmd, caller)
+	result, err := h.createVacationUseCase.Handle(r.Context(), cmd, caller)
 	if err != nil {
-		if errors.Is(err, vacation.ErrInvalidInput) ||
-			errors.Is(err, vacation.ErrBasicVacationRules) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), vacationErrorStatus(err))
 		return
 	}
 
+	if len(result.Warnings) > 0 {
+		h.logger.Warn(r.Context(), "vacation created by admin bypassing rules",
+			"user_id", cmd.UserID, "admin_id", caller.UserID.String(), "warnings", result.Warnings)
+	}
 	h.logger.Info(r.Context(), "vacation created successfully")
 	http.Redirect(w, r, "/users/"+cmd.UserID, http.StatusSeeOther)
+}
+
+type allocationDTO struct {
+	Start         string `json:"start"`
+	End           string `json:"end"`
+	Kind          string `json:"kind"`
+	KindLabel     string `json:"kindLabel"`
+	WorkYearStart string `json:"workYearStart"`
+	Days          int    `json:"days"`
+}
+
+// PreviewVacation возвращает распределение выбранных периодов по квотам рабочих лет,
+// ничего не сохраняя. Ошибки правил отдаются как {"error": "..."} с кодом 400.
+func (h *VacationHandler) PreviewVacation(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	caller, ok := middleware.CallerFromContext(r.Context())
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Необходим вход"})
+		return
+	}
+
+	var cmd create_vacations.Command
+	if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	result, err := h.createVacationUseCase.Preview(r.Context(), cmd, caller)
+	if err != nil {
+		w.WriteHeader(vacationErrorStatus(err))
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	out := make([]allocationDTO, 0, len(result.Allocations))
+	for _, a := range result.Allocations {
+		out = append(out, allocationDTO{
+			Start:         a.Start.ISO(),
+			End:           a.End.ISO(),
+			Kind:          string(a.Kind),
+			KindLabel:     a.Kind.Label(),
+			WorkYearStart: a.WorkYearStart.ISO(),
+			Days:          a.Days,
+		})
+	}
+	_ = json.NewEncoder(w).Encode(map[string]any{"allocations": out, "warnings": result.Warnings, "notices": result.Notices})
+}
+
+func vacationErrorStatus(err error) int {
+	switch {
+	case errors.Is(err, vacation.ErrForbidden):
+		return http.StatusForbidden
+	case errors.Is(err, vacation.ErrInvalidInput), errors.Is(err, vacation.ErrBasicVacationRules):
+		return http.StatusBadRequest
+	default:
+		return http.StatusInternalServerError
+	}
 }
 
 func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request) {
@@ -154,6 +215,7 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 	for i, y := range result.YearStats {
 		yearStats[i] = yearStatDTO{
 			Year:      y.Year,
+			Start:     y.Start,
 			Base:      quotaDTO{Total: y.Base.Total, Blocked: y.Base.Blocked},
 			Seniority: quotaDTO{Total: y.Seniority.Total, Blocked: y.Seniority.Blocked},
 			Irregular: quotaDTO{Total: y.Irregular.Total, Blocked: y.Irregular.Blocked},
@@ -163,6 +225,7 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 	raw, err := json.Marshal(appData{
 		UserID:        result.UserID,
 		HasActiveYear: result.HasActiveYear,
+		Available:     result.Available,
 		YearStats:     yearStats,
 	})
 	if err != nil {
@@ -181,8 +244,12 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 			FromField: "start_date",
 			ToField:   "end_date",
 		},
-		"Balance":     struct{ HasActiveYear bool }{result.HasActiveYear},
+		"Balance": struct {
+			HasActiveYear bool
+			Available     int
+		}{result.HasActiveYear, result.Available},
 		"AppDataJSON": template.JS(raw),
+		"Warnings":    result.Warnings,
 	}
 
 	if err := h.templates.Render(w, "vacation_form.html", data); err != nil {
@@ -201,7 +268,7 @@ func (h *VacationHandler) ApproveVacation(w http.ResponseWriter, r *http.Request
 
 	_, err := h.approveVacationUseCase.Handle(r.Context(), cmd)
 	if err != nil {
-		h.logger.Error(r.Context(), "failed to approve vacation", err)
+		h.logger.Error(r.Context(), "failed to approve vacation", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -222,7 +289,7 @@ func (h *VacationHandler) ChangeVacationStatus(w http.ResponseWriter, r *http.Re
 		Status:     r.FormValue("status"),
 	}
 	if err := h.changeStatusUseCase.Handle(r.Context(), cmd); err != nil {
-		h.logger.Error(r.Context(), "failed to change vacation status", err)
+		h.logger.Error(r.Context(), "failed to change vacation status", "error", err)
 		if errors.Is(err, vacation.ErrStatusInvalid) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

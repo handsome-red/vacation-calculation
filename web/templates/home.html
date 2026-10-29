@@ -7,16 +7,26 @@
     <h1>Учет отпусков</h1>
     <nav>
         <ul>
+            {{if .IsAdmin}}
             <li><a href="/users">Сотрудники</a></li>
             <li><a href="/user/register">Добавить сотрудника</a></li>
+            <li><a href="/admin/holidays">Добавить день в календарь</a></li>
+            {{end}}
+            <li><a href="/users/{{.UserID}}">Моя карточка</a></li>
             <li><a href="/calendar">Календарь</a></li>
         </ul>
     </nav>
 
     <h2>Отпуска</h2>
+    {{if .IsAdmin}}
     <p>
         Чтобы создать отпуск, откройте карточку сотрудника и перейдите в раздел отпусков.
         Например: <a href="/users">список сотрудников</a>.
     </p>
+    {{else}}
+    <p>
+        Чтобы оформить отпуск, откройте <a href="/api/v1/users/{{.UserID}}/vacations/new">форму отпуска</a>.
+    </p>
+    {{end}}
 </div>
 {{end}}

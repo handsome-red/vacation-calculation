@@ -12,19 +12,23 @@ const (
 	StatusDraft     VacationStatus = "DRAFT"
 	StatusApproved  VacationStatus = "APPROVED"
 	StatusCancelled VacationStatus = "CANCELLED"
+	// StatusTransferred — отпуск перенесён на другие даты; новые даты — отдельная запись.
+	StatusTransferred VacationStatus = "TRANSFERRED"
 )
 
 // TODO
-// Перенос
 // Отзыв - возврат из отпуска по производной необходимости (?)
 
-// Принято
-// Отменен
-// Перенос (?)
 var vacationStatusMap = map[VacationStatus]string{
-	StatusDraft:     "Черновик",
-	StatusApproved:  "Принято",
-	StatusCancelled: "Отменён",
+	StatusDraft:       "Черновик",
+	StatusApproved:    "Принято",
+	StatusCancelled:   "Отменён",
+	StatusTransferred: "Перенесён",
+}
+
+// IsActive — отпуск действует: занимает даты и дни квоты.
+func (v VacationStatus) IsActive() bool {
+	return v == StatusDraft || v == StatusApproved
 }
 
 func NewVacationStatus(s string) (VacationStatus, error) {

@@ -20,6 +20,19 @@ func NewKind(s string) (Kind, error) {
 	}
 }
 
+var kindLabels = map[Kind]string{
+	KindBase:      "Основной",
+	KindIrregular: "За ненормированный день",
+	KindSeniority: "За выслугу лет",
+}
+
+func (k Kind) Label() string {
+	if l, ok := kindLabels[k]; ok {
+		return l
+	}
+	return string(k)
+}
+
 type AllowanceItem struct {
 	Kind Kind
 	Days int

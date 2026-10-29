@@ -20,6 +20,10 @@ func (p *Period) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("%w: период: %v", vacation.ErrInvalidInput, err)
 	}
 
+	// Вид отпуска определяет распределение по квотам; поле оставлено для совместимости.
+	if raw.Kind == "" {
+		raw.Kind = string(vacation.KindBase)
+	}
 	kind, err := vacation.NewKind(raw.Kind)
 	if err != nil {
 		return fmt.Errorf("%w: неизвестный тип периода %q", vacation.ErrInvalidInput, raw.Kind)

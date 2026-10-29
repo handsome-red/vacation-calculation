@@ -24,7 +24,7 @@ var _ ports.UserRepository = (*userRepository)(nil)
 
 const userColumns = `
 	u.id, u.status, u.last_name, u.first_name, u.middle_name,
-	u.birth_date, u.position, u.hired_at,
+	u.birth_date, u.position, u.hired_at, u.experience,
 	u.department_code, dep.title AS department_title,
 	u.district_code,   dis.title AS district_title,
 	u.workday_duration, u.email, u.is_invalid, u.password, u.superadmin,
@@ -48,9 +48,9 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 			birth_date, position, hired_at,
 			experience,
 			department_code, district_code,
-			email, is_invalid, password, workday_duration
+			email, is_invalid, password, workday_duration, superadmin
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (id) DO UPDATE SET
 			status           = EXCLUDED.status,
 			last_name        = EXCLUDED.last_name,
@@ -59,13 +59,14 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 			birth_date       = EXCLUDED.birth_date,
 			position         = EXCLUDED.position,
 			hired_at         = EXCLUDED.hired_at,
-			experience       = EXCLUDED.experience,      -- ← добавить
+			experience       = EXCLUDED.experience,
 			department_code  = EXCLUDED.department_code,
 			district_code    = EXCLUDED.district_code,
 			email            = EXCLUDED.email,
 			is_invalid       = EXCLUDED.is_invalid,
 			password         = EXCLUDED.password,
 			workday_duration = EXCLUDED.workday_duration,
+			superadmin       = EXCLUDED.superadmin,
 			updated_at       = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 	`
 
@@ -79,18 +80,27 @@ func (ur *userRepository) Save(ctx context.Context, u *user.User) error {
 		u.BirthDate().ISO(),
 		u.Position().String(),
 		u.HiredAt().Time().Format("2006-01-02"),
-		u.ExperienceDays(), // ← добавить
+		u.ExperienceDays(),
 		u.Department().Code,
 		u.District().Code(),
 		u.Email().Value(),
 		boolToInt(u.IsInvalid()),
 		u.Password().String(),
 		u.WorkdayDuration().Int(),
+		boolToInt(u.IsAdmin()),
 	)
 	if err != nil {
 		return fmt.Errorf("saving user: %w", err)
 	}
 	return nil
+}
+
+func (ur *userRepository) ExistsAdmin(ctx context.Context) (bool, error) {
+	var exists bool
+	if err := ur.db.GetContext(ctx, &exists, `SELECT EXISTS (SELECT 1 FROM users WHERE superadmin = 1)`); err != nil {
+		return false, fmt.Errorf("check admin exists: %w", err)
+	}
+	return exists, nil
 }
 
 func (ur *userRepository) FindByID(ctx context.Context, userID user.UserID) (*user.User, error) {

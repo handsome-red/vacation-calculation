@@ -7,7 +7,7 @@ func MergeCreationPeriods(periods []CreationPeriod) []CreationPeriod {
 		return nil
 	}
 
-	sorted := make([]CreationPeriod, 0, len(periods))
+	sorted := make([]CreationPeriod, len(periods))
 	copy(sorted, periods)
 	sort.Slice(sorted, func(i, j int) bool {
 		if sorted[i].Kind != sorted[j].Kind {

@@ -71,72 +71,54 @@ type CreationPeriod struct {
 	End   date.Date
 }
 
-// ValidateCreation проверяет запрошенный период отпуска [start, end] относительно
-// рабочего года сотрудника и уже оформленных отпусков.
+// ValidateCreation проверяет календарные правила для запрошенных периодов
+// относительно уже оформленных отпусков. Достаточность квоты проверяет Allocate.
 //
+// year — рабочий год, в который попадает начало самого раннего периода;
 // year.To — исключающая граница (первый день следующего рабочего года).
 //
-// Возвращает одну из конкретных ошибок (см. блок var выше), обёрнутую через
-// fmt.Errorf с человекочитаемым пояснением. Любая из них удовлетворяет
-// errors.Is(err, ErrBasicVacationRules).
+// violations — нарушения правил предоставления отпуска (длительность, разрывы,
+// непрерывная часть). Каждое — обёрнутая ошибка из блока var выше с пояснением,
+// удовлетворяет errors.Is(err, ErrBasicVacationRules). Администратор может их обойти.
+//
+// err — ошибка, которую обойти нельзя: пустой ввод или пересечение с другим отпуском.
 func ValidateCreation(
 	periods []CreationPeriod,
 	year YearStat,
 	vacations []*Vacation,
-	calc WorkYearCalculator,
-) error {
+) (violations []error, err error) {
 
 	if len(periods) == 0 {
-		return fmt.Errorf("%w: не передан ни один период", ErrInvalidInput)
+		return nil, fmt.Errorf("%w: не передан ни один период", ErrInvalidInput)
 	}
 
-	lastDayOfYear := year.To.AddDate(0, 0, -1)
-
 	newPeriods := make([]vacationPeriod, 0, len(periods))
-	totalDays := 0
 
 	for i, p := range periods {
 		from, to := p.Start.Time(), p.End.Time()
-		if from.Before(year.From) || !to.Before(year.To) {
-			return fmt.Errorf(
-				"%w: период #%d %s–%s выходит за границы рабочего года %s–%s",
-				ErrOutsideWorkYear, i+1,
-				from.Format("02.01.2006"), to.Format("02.01.2006"),
-				year.From.Format("02.01.2006"), lastDayOfYear.Format("02.01.2006"),
-			)
-		}
 
 		days := DaysInclusive(from, to)
 		if days < MinVacationDays {
-			return fmt.Errorf(
+			violations = append(violations, fmt.Errorf(
 				"%w: период #%d: запрошено %d дн., минимум — %d дн.",
 				ErrTooShort, i+1, days, MinVacationDays,
-			)
+			))
 		}
-		totalDays += days
 		newPeriods = append(newPeriods, vacationPeriod{from: from, to: to})
 	}
 
-	existingPeriods := make([]vacationPeriod, 0, len(vacations))
 	all := make([]vacationPeriod, 0, len(newPeriods)+len(vacations))
 	all = append(all, newPeriods...)
 	for _, v := range vacations {
-		if v == nil || v.Status() == StatusCancelled {
+		if v == nil || !v.Status().IsActive() {
 			continue
 		}
-		vp := vacationPeriod{from: v.StartDate().Time(), to: v.EndDate().Time()}
-		existingPeriods = append(existingPeriods, vp)
-		all = append(all, vp)
+		all = append(all, vacationPeriod{from: v.StartDate().Time(), to: v.EndDate().Time()})
 	}
 
 	mergedAll, err := mergePeriods(all)
 	if err != nil {
-		return err
-	}
-
-	mergedExisting, err := mergePeriods(existingPeriods)
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	hasLongPart := false
@@ -147,66 +129,22 @@ func ValidateCreation(
 		}
 	}
 
-	annual := year.Base + year.Seniority + year.Irregular
-	reserved := 0
-	for _, m := range mergedExisting {
-		cs := MaxTime(m.from, year.From)
-		ce := MinTime(m.to, lastDayOfYear)
-		if ce.Before(cs) {
-			continue
-		}
-		reserved += DaysInclusive(cs, ce)
-	}
-
 	// ── 6. Разрывы MinGapDays между склеенными интервалами ───────────────
 	for i := 1; i < len(mergedAll); i++ {
 		gap := int(mergedAll[i].from.Sub(mergedAll[i-1].to).Hours()/24) - 1
 		if gap < MinGapDays {
-			return fmt.Errorf(
+			violations = append(violations, fmt.Errorf(
 				"%w: между отпусками %s–%s и %s–%s всего %d свободных дн. (нужно %d)",
 				ErrGapTooSmall,
 				mergedAll[i-1].from.Format("02.01.2006"), mergedAll[i-1].to.Format("02.01.2006"),
 				mergedAll[i].from.Format("02.01.2006"), mergedAll[i].to.Format("02.01.2006"),
 				gap, MinGapDays,
-			)
+			))
 		}
 	}
 
-	// ── 7. Годовая норма ─────────────────────────────────────────────────
-	if totalDays > annual-reserved {
-		return fmt.Errorf(
-			"%w: запрошено %d дн. суммарно, доступно %d из %d (уже зарезервировано %d)",
-			ErrExceedsAnnual, totalDays, annual-reserved, annual, reserved,
-		)
-	}
-
-	// ── 8. Проверка через калькулятор рабочего года ─────────────────────
-	earliestStart := newPeriods[0].from
-	for _, p := range newPeriods[1:] {
-		if p.from.Before(earliestStart) {
-			earliestStart = p.from
-		}
-	}
-	usedAtStart := usedAtBefore(mergedExisting, earliestStart)
-	info, err := calc.CurrentYear([]YearStat{year}, earliestStart, usedAtStart)
-	if err != nil {
-		return fmt.Errorf("не удалось рассчитать остаток отпуска: %w", err)
-	}
-	if float64(totalDays) > info.Remaining {
-		return fmt.Errorf(
-			"%w: запрошено %d дн. суммарно, остаток по расчёту — %.1f дн.",
-			ErrExceedsAnnual, totalDays, info.Remaining,
-		)
-	}
-
-	// ── 9. Обязательная непрерывная часть ────────────────────────────────
+	// ── 7. Обязательная непрерывная часть ────────────────────────────────
 	if !hasLongPart {
-		if annual-reserved-totalDays < LongPartDays {
-			return fmt.Errorf(
-				"%w: после этой заявки по годовой норме останется %d дн. — недостаточно для непрерывной части %d дн.",
-				ErrNoLongPart, annual-reserved-totalDays, LongPartDays,
-			)
-		}
 		latestEnd := newPeriods[0].to
 		for _, p := range newPeriods[1:] {
 			if p.to.After(latestEnd) {
@@ -214,14 +152,14 @@ func ValidateCreation(
 			}
 		}
 		if !hasRoomForLongPart(mergedAll, latestEnd, year.To) {
-			return fmt.Errorf(
+			violations = append(violations, fmt.Errorf(
 				"%w: в оставшемся рабочем году нет свободного окна длиной %d дн. с учётом разрывов",
 				ErrNoLongPart, LongPartDays,
-			)
+			))
 		}
 	}
 
-	return nil
+	return violations, nil
 }
 
 // hasRoomForLongPart проверяет, можно ли после даты after разместить в рабочем

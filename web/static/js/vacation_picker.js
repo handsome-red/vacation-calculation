@@ -119,8 +119,9 @@
         }
         if (state.pendingStart === d.date) day.classList.add("pending");
 
-        const selectable = !d.isWeekend && !d.isHoliday && !busy;
-        if (selectable) {
+        // Отпуск исчисляется в календарных днях: выходные и праздники выбирать можно,
+        // нельзя только дни, уже занятые другим отпуском.
+        if (!busy) {
             day.addEventListener("click", () => onDayClick(d.date));
         }
 
@@ -131,16 +132,18 @@
         return state.periods.some((p) => date >= p.from && date <= p.to);
     }
 
-    function isReserved(date) {
-        return state.periods.some((p) => date >= p.from && date <= p.to);
-    }
-
     function onDayClick(date) {
-        // нельзя начать с занятого/выходного дня
         if (!isSelectable(date)) return;
 
         if (!state.pendingStart) {
             state.pendingStart = date;
+            render();
+            return;
+        }
+
+        // Повторный клик по начальной дате отменяет начатый выбор.
+        if (date === state.pendingStart) {
+            state.pendingStart = null;
             render();
             return;
         }
@@ -173,11 +176,7 @@
     }
 
     function isSelectable(date) {
-        if (state.busyDates.has(date)) return false;
-        const info = state.dayByDate.get(date);
-        if (!info) return false;
-        // выходные/праздники выбирать нельзя как границу, но внутри периода — можно
-        return !info.isWeekend && !info.isHoliday;
+        return state.dayByDate.has(date) && !state.busyDates.has(date);
     }
 
     function renderPeriods() {
@@ -194,8 +193,12 @@
                 const row = document.createElement("div");
                 row.className = "period-row";
 
-                const workDays = countWorkDays(p.from, p.to);
-                row.textContent = `${p.from} — ${p.to} (${workDays} раб. дн.)`;
+                const calendarDays = datesBetween(p.from, p.to).length;
+                const charged = countChargeableDays(p.from, p.to);
+                const note = charged === calendarDays
+                    ? `${calendarDays} дн.`
+                    : `${calendarDays} дн., из них праздничных ${calendarDays - charged} — не списываются`;
+                row.textContent = `${formatDate(p.from)} — ${formatDate(p.to)} (${note})`;
 
                 const del = document.createElement("button");
                 del.type = "button";
@@ -203,6 +206,7 @@
                 del.title = "Удалить период";
                 del.addEventListener("click", () => {
                     state.periods.splice(i, 1);
+                    state.pendingStart = null;
                     render();
                     notifyPeriodsChanged();
                 });
@@ -212,17 +216,20 @@
             });
         }
 
-        btn.disabled = state.periods.length === 0;
+        // Разблокирует кнопку vacation_form.js — после успешного расчёта распределения.
+        if (state.periods.length === 0) btn.disabled = true;
     }
 
-    function countWorkDays(from, to) {
-        let n = 0;
-        for (const iso of datesBetween(from, to)) {
-            const info = state.dayByDate.get(iso);
-            if (!info) continue;
-            if (!info.isWeekend && !info.isHoliday) n++;
-        }
-        return n;
+    // Нерабочие праздничные дни в счёт отпуска не входят (ст. 120 ТК РФ).
+    function countChargeableDays(from, to) {
+        return datesBetween(from, to)
+            .filter((iso) => !state.dayByDate.get(iso)?.isHoliday)
+            .length;
+    }
+
+    function formatDate(iso) {
+        const [y, m, d] = iso.split("-");
+        return `${d}.${m}.${y}`;
     }
 
     const btn = document.getElementById("confirm-btn");
@@ -231,10 +238,10 @@
             if (state.periods.length === 0) return;
             btn.disabled = true;
 
+            // Вид отпуска и рабочий год определяет сервер при распределении по квотам.
             const payload = {
                 userId: userId,
                 periods: state.periods.map((p) => ({
-                    kind: "base",
                     startDate: p.from,
                     endDate: p.to,
                 })),
@@ -283,13 +290,8 @@
     }
 
     function notifyPeriodsChanged() {
-        const totalWork = state.periods.reduce(
-            (sum, p) => sum + countWorkDays(p.from, p.to),
-            0
-        );
-        console.log("periods-changed:", totalWork, state.periods);
         window.dispatchEvent(new CustomEvent("periods-changed", {
-            detail: { periods: state.periods.slice(), totalWork },
+            detail: { userId, periods: state.periods.slice() },
         }));
     }
 
