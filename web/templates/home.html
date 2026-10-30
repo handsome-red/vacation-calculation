@@ -5,12 +5,26 @@
 {{define "content"}}
 <div class="container">
     <h1>Учет отпусков</h1>
+
+    {{if .ScheduleYear}}
+    <div class="banner">
+        {{if .IsAdmin}}
+        Пора сформировать график отпусков на {{.ScheduleYear}} год — утвердить его нужно не позднее {{.ScheduleDeadline}}.
+        <a href="/admin/schedule?year={{.ScheduleYear}}">Открыть график {{.ScheduleYear}}</a>
+        {{else}}
+        Формируется график отпусков на {{.ScheduleYear}} год.
+        <a href="/api/v1/users/{{.UserID}}/vacations/new?year={{.ScheduleYear}}">Запланируйте свой отпуск на {{.ScheduleYear}} год</a>
+        {{end}}
+    </div>
+    {{end}}
+
     <nav>
         <ul>
             {{if .IsAdmin}}
             <li><a href="/users">Сотрудники</a></li>
             <li><a href="/user/register">Добавить сотрудника</a></li>
-            <li><a href="/admin/holidays">Добавить день в календарь</a></li>
+            <li><a href="/admin/schedule">График отпусков</a></li>
+            <li><a href="/admin/holidays">Праздничные дни</a></li>
             {{end}}
             <li><a href="/users/{{.UserID}}">Моя карточка</a></li>
             <li><a href="/calendar">Календарь</a></li>
@@ -25,7 +39,8 @@
     </p>
     {{else}}
     <p>
-        Чтобы оформить отпуск, откройте <a href="/api/v1/users/{{.UserID}}/vacations/new">форму отпуска</a>.
+        Чтобы оформить отпуск (ежегодный или без сохранения заработной платы), откройте
+        <a href="/api/v1/users/{{.UserID}}/vacations/new">форму отпуска</a>.
     </p>
     {{end}}
 </div>

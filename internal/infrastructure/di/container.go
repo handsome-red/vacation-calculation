@@ -8,6 +8,7 @@ import (
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/auth/login"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/calendar/new_exception"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/schedule/approve_schedule"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/shift/create_shift"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/bootstrap_admin"
@@ -16,8 +17,11 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacations"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/send_carryover_warnings"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/send_vacation_reminders"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/transfer_vacation"
+	"github.com/handsome-red/vacation-calculation/internal/application/leavecalc"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/schedule/get_schedule"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/shift/shift_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/list_users"
@@ -29,6 +33,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/new_calendar_day_form"
+	"github.com/handsome-red/vacation-calculation/internal/infrastructure/exporter/docx"
 
 	"github.com/handsome-red/vacation-calculation/internal/config"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
@@ -79,8 +84,15 @@ type Container struct {
 	NewCalendarDayFormUseCase *new_calendar_day_form.Handler
 	NewCalendarDayUseCase     *new_calendar_day.Handler
 
+	// График отпусков
+	GetScheduleUseCase     *get_schedule.Handler
+	ApproveScheduleUseCase *approve_schedule.Handler
+	ScheduleRenderer       ports.ScheduleRenderer
+
 	// Уведомления о начале отпуска; nil — почта не настроена, рассылка выключена.
 	SendRemindersUseCase *send_vacation_reminders.Handler
+	// Предупреждения о сроке использования неиспользованного отпуска; nil — почта не настроена.
+	SendCarryoverUseCase *send_carryover_warnings.Handler
 
 	// Use Cases - Commands (Shift)
 	CreateShiftUseCase *create_shift.Handler
@@ -118,16 +130,20 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 
 	bootstrapAdminUseCase := bootstrap_admin.NewHandler(userRepo, registerUserUseCase)
 
-	getUserUseCase := get_user.NewHandler(userRepo, vacationRepo, shiftRepo, calendarDayRepo, wc, log)
-	getActiveUsersUseCase := list_users.NewHandler(userRepo, log)
+	leaveService := leavecalc.NewService(vacationRepo, shiftRepo, calendarDayRepo, wc)
 
-	createVacationUseCase := create_vacations.NewHandler(vacationRepo, userRepo, shiftRepo, calendarDayRepo, wc)
+	getUserUseCase := get_user.NewHandler(userRepo, leaveService, wc, log)
+	getScheduleUseCase := get_schedule.NewHandler(userRepo, districtRepo, leaveService)
+	approveScheduleUseCase := approve_schedule.NewHandler(userRepo, vacationRepo)
+	getActiveUsersUseCase := list_users.NewHandler(userRepo, districtRepo, departmentRepo, log)
+
+	createVacationUseCase := create_vacations.NewHandler(vacationRepo, userRepo, leaveService)
 	approveVacationUseCase := approve_vacation.NewHandler(vacationRepo, userRepo)
 	changeVacationStatusUseCase := change_status.NewHandler(vacationRepo)
 	transferVacationUseCase := transfer_vacation.NewHandler(vacationRepo, transferRepo, createVacationUseCase)
 	getTransferFormUseCase := get_transfer_form.NewHandler(vacationRepo)
 	getUserVacationsUseCase := get_user_vacations.NewHandler(vacationRepo, transferRepo)
-	getVacationFormUseCase := get_vacation_form.NewHandler(userRepo, vacationRepo, shiftRepo, calendarDayRepo, wc)
+	getVacationFormUseCase := get_vacation_form.NewHandler(userRepo, leaveService)
 	getCalendarUseCase := get_calendar.NewHandler(calendarDayRepo)
 	userCalendarUseCase := get_user_calendar.NewHandler(calendarDayRepo, vacationRepo)
 	newCalendarDayFormUseCase := new_calendar_day_form.NewHandler(calendarDayRepo)
@@ -136,6 +152,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	newCalendarDayUseCase := new_calendar_day.NewHandler(calendarDayRepo)
 
 	var sendRemindersUseCase *send_vacation_reminders.Handler
+	var sendCarryoverUseCase *send_carryover_warnings.Handler
 	if cfg.SMTPHost != "" && cfg.SMTPUsername != "" && cfg.SMTPPassword != "" {
 		smtpMailer, err := mailer.NewSMTPMailer(mailer.Config{
 			Host:     cfg.SMTPHost,
@@ -161,6 +178,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		}
 		reminderRepo := sqlite.NewReminderRepository(db)
 		sendRemindersUseCase = send_vacation_reminders.NewHandler(vacationRepo, userRepo, reminderRepo, smtpMailer, hrEmails, log)
+		sendCarryoverUseCase = send_carryover_warnings.NewHandler(userRepo, leaveService, reminderRepo, smtpMailer, log)
 	}
 
 	createShiftUseCase := create_shift.NewHandler(shiftRepo)
@@ -198,6 +216,10 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		NewCalendarDayUseCase:       newCalendarDayUseCase,
 		CreateShiftUseCase:          createShiftUseCase,
 		SendRemindersUseCase:        sendRemindersUseCase,
+		SendCarryoverUseCase:        sendCarryoverUseCase,
+		GetScheduleUseCase:          getScheduleUseCase,
+		ApproveScheduleUseCase:      approveScheduleUseCase,
+		ScheduleRenderer:            docx.NewScheduleRenderer(),
 		ShiftFormUseCase:            shiftFormUseCase,
 		ExportReportUseCase:         exportReportUseCase,
 	}, nil

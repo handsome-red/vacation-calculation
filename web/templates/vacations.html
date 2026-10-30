@@ -71,6 +71,12 @@
             {{end}}
         </tbody>
     </table>
+    {{if .Hidden}}
+    <p class="muted">Показаны отпуска за последние 3 года и запланированные. Скрыто более ранних: {{.Hidden}}.
+        <a href="/api/v1/users/{{.UserID}}/vacations?all=1">Показать все</a></p>
+    {{else if .ShowAll}}
+    <p class="muted"><a href="/api/v1/users/{{.UserID}}/vacations">Только последние 3 года</a></p>
+    {{end}}
     <p><a href="/users/{{.UserID}}">← К карточке сотрудника</a></p>
 </div>
 {{end}}

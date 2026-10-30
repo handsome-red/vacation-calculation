@@ -2,6 +2,8 @@ package get_user_vacations
 
 type Query struct {
 	UserID string
+	// All — показать все отпуска; иначе только закончившиеся за последние 3 года и будущие.
+	All bool
 }
 
 type Vacations struct {
@@ -26,4 +28,6 @@ type TransferInfo struct {
 
 type Result struct {
 	Vacations []Vacations
+	// Hidden — сколько более старых отпусков скрыто (при All = false).
+	Hidden int
 }

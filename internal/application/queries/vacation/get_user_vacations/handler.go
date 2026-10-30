@@ -3,6 +3,7 @@ package get_user_vacations
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
@@ -49,8 +50,15 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		byVacation[t.VacationID().String()] = t
 	}
 
+	since := vacation.DateOf(time.Now().AddDate(-3, 0, 0))
+	hidden := 0
+
 	result := make([]Vacations, 0, len(vacations))
 	for _, v := range vacations {
+		if !query.All && v.EndDate().Before(since) {
+			hidden++
+			continue
+		}
 		item := Vacations{
 			ID:         v.ID().String(),
 			Kind:       v.Kind().Label(),
@@ -73,6 +81,7 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 
 	return &Result{
 		Vacations: result,
+		Hidden:    hidden,
 	}, nil
 }
 

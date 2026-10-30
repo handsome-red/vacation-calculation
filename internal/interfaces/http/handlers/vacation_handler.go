@@ -5,6 +5,7 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
@@ -84,8 +85,10 @@ func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	showAll := r.URL.Query().Get("all") == "1"
 	result, err := h.getUserVacationsUseCase.Handle(r.Context(), get_user_vacations.Query{
 		UserID: userID.String(),
+		All:    showAll,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -97,6 +100,8 @@ func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
 		"IsAdmin":   currentUser.IsAdmin(),
 		"UserID":    userID.String(),
 		"Vacations": result.Vacations,
+		"Hidden":    result.Hidden,
+		"ShowAll":   showAll,
 		"Statuses": []vacationStatusOption{
 			{vacation.StatusDraft.ISO(), vacation.StatusDraft.String()},
 			{vacation.StatusApproved.ISO(), vacation.StatusApproved.String()},
@@ -234,9 +239,16 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 	}
 
 	now := time.Now()
+	year := now.Year()
+	if y, err := strconv.Atoi(r.URL.Query().Get("year")); err == nil && y >= 2000 && y <= 2100 {
+		year = y
+	}
+	currentUser, _ := authmiddleware.UserFromContext(r.Context())
 	data := map[string]any{
-		"Cmd":   create_vacations.Command{UserID: result.UserID},
-		"Error": "",
+		"Year":    year,
+		"IsAdmin": currentUser != nil && currentUser.IsAdmin(),
+		"Cmd":     create_vacations.Command{UserID: result.UserID},
+		"Error":   "",
 		"Calendar": CalendarProps{
 			UserID:    result.UserID,
 			Year:      now.Year(),

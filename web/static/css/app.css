@@ -179,9 +179,41 @@
 .day.selected { background: #dbeafe; color: #1e40af; font-weight: 600; }
 .day.pending  { outline: 2px dashed #2563eb; outline-offset: -2px; }
 .day.busy     { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+.day.past     { opacity: .45; cursor: not-allowed; }
+
+.vacation-type { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; margin: 16px 0; }
+.vacation-type legend { padding: 0 6px; font-weight: 600; }
+.vacation-type label { display: inline-flex; align-items: center; gap: 6px; margin-right: 18px; }
+.vacation-type input[type="radio"] { width: auto; }
 .day.busy::after { content: "•"; color: #ef4444; margin-left: 2px; }
 
 .periods { margin: 16px 0; }
+
+/* Переключатель года в выборе дат отпуска */
+.picker-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 24px;
+}
+.picker-nav button {
+    padding: 6px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+}
+.picker-nav button:hover { background: #f3f4f6; }
+.picker-nav__year { font-size: 18px; min-width: 48px; text-align: center; }
+.picker-nav__hint {
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 14px;
+}
+.picker-nav + .calendar { margin-top: 12px; }
 .period-row {
     display: flex; align-items: center; gap: 8px;
     padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;
@@ -225,6 +257,48 @@
     cursor: pointer;
 }
 .sidebar-footer button:hover { background: rgba(255, 255, 255, .1); }
+
+/* ===== График отпусков ===== */
+.schedule-actions { display: flex; gap: 12px; align-items: center; margin: 12px 0 16px; }
+.schedule-actions .btn[disabled] { opacity: .5; cursor: not-allowed; }
+.schedule-table td { vertical-align: top; }
+.small-link { font-size: 12px; }
+.ok-mark { color: #047857; }
+.banner {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #fcd34d;
+    background: #fffbeb;
+    color: #78350f;
+}
+
+/* ===== Праздники ===== */
+.btn-light {
+    display: inline-block;
+    padding: 6px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    color: #111827;
+    text-decoration: none;
+}
+.btn-light:hover { background: #f3f4f6; }
+.btn-link-danger { border: none; background: none; color: #b91c1c; cursor: pointer; padding: 0; }
+.notice-ok { padding: 8px 12px; border-radius: 6px; background: #ecfdf5; color: #065f46; }
+.inline-form { margin: 12px 0; }
+.holidays-table { margin: 12px 0 24px; }
+.holiday-form { max-width: 480px; }
+
+/* ===== Фильтры списка сотрудников ===== */
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+.filters-grid input, .filters-grid select { padding: 8px 10px; font-size: 14px; }
+.filters-actions { display: flex; align-items: center; gap: 12px; }
+.pager { margin-top: 12px; display: flex; gap: 16px; align-items: center; }
 
 /* ===== Распределение дней отпуска ===== */
 .allocation { margin: 16px 0; }

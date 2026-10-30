@@ -1,0 +1,74 @@
+{{define "title"}}График отпусков {{.Schedule.Year}}{{end}}
+
+{{define "content"}}
+{{$s := .Schedule}}
+<div class="container">
+    <h1>График отпусков на {{$s.Year}} год</h1>
+    <p class="muted">Утвердить график нужно не позднее {{$s.Deadline}} (за две недели до начала года).</p>
+
+    <form method="GET" action="/admin/schedule" class="picker-nav">
+        <a class="btn btn-light" href="/admin/schedule?year={{.PrevYear}}&district={{$s.DistrictCode}}">← {{.PrevYear}}</a>
+        <strong class="picker-nav__year">{{$s.Year}}</strong>
+        <a class="btn btn-light" href="/admin/schedule?year={{.NextYear}}&district={{$s.DistrictCode}}">{{.NextYear}} →</a>
+        <input type="hidden" name="year" value="{{$s.Year}}">
+        <select name="district" onchange="this.form.submit()" aria-label="Территориальный отдел">
+            <option value="">Все территориальные отделы</option>
+            {{range $s.Districts}}
+            <option value="{{.Code}}" {{if eq .Code $s.DistrictCode}}selected{{end}}>{{.Title}}</option>
+            {{end}}
+        </select>
+    </form>
+
+    {{if .Approved}}<p class="notice-ok">Утверждено записей отпусков: {{.Approved}}.</p>{{end}}
+
+    <p>
+        Сотрудников: {{len $s.Rows}} · с замечаниями: <strong>{{$s.WithIssues}}</strong> · с неутверждёнными частями: {{$s.ToApprove}}
+    </p>
+
+    <div class="schedule-actions">
+        <form method="POST" action="/admin/schedule/approve"
+              onsubmit="return {{if $s.WithIssues}}confirm('У {{$s.WithIssues}} сотрудников есть замечания к графику. Утвердить всё равно?'){{else}}true{{end}}">
+            <input type="hidden" name="year" value="{{$s.Year}}">
+            <input type="hidden" name="district" value="{{$s.DistrictCode}}">
+            <button type="submit" class="btn" {{if not $s.ToApprove}}disabled{{end}}>Утвердить график</button>
+        </form>
+        <a class="btn" href="/admin/reports/schedule?year={{$s.Year}}&district={{$s.DistrictCode}}">Скачать график в Word</a>
+    </div>
+
+    <table class="schedule-table">
+        <thead>
+            <tr>
+                <th>Сотрудник</th>
+                <th>Должность</th>
+                <th>Отдел</th>
+                <th>Части отпуска</th>
+                <th>Дней</th>
+                <th>Проверка</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range $s.Rows}}
+            <tr>
+                <td><a href="/users/{{.UserID}}" class="user-link">{{.FullName}}</a></td>
+                <td>{{.Position}}</td>
+                <td>{{.Department}}</td>
+                <td>
+                    {{range .Parts}}
+                    <div>{{.Period}} ({{.Days}} дн.){{if not .Approved}} <span class="muted">— черновик</span>{{end}}</div>
+                    {{end}}
+                    <a class="small-link" href="/api/v1/users/{{.UserID}}/vacations/new?year={{$s.Year}}">запланировать</a>
+                </td>
+                <td>{{.Planned}}</td>
+                <td>
+                    {{if .Issues}}
+                    <ul class="warning-list">{{range .Issues}}<li>{{.}}</li>{{end}}</ul>
+                    {{else}}<span class="ok-mark">✓ без замечаний</span>{{end}}
+                </td>
+            </tr>
+            {{else}}
+            <tr><td colspan="6" class="muted">Нет работающих сотрудников</td></tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}

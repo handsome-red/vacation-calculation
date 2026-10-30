@@ -17,7 +17,7 @@ let previewSeq = 0;
 
 // Распределение периодов по квотам считает сервер — та же логика, что и при сохранении.
 window.addEventListener('periods-changed', async (e) => {
-    const { userId, periods } = e.detail;
+    const { userId, type, periods } = e.detail;
     const seq = ++previewSeq;
     if (confirmBtn) confirmBtn.disabled = true;
 
@@ -35,6 +35,7 @@ window.addEventListener('periods-changed', async (e) => {
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({
                 userId,
+                type,
                 periods: periods.map((p) => ({ startDate: p.from, endDate: p.to })),
             }),
         });
@@ -66,6 +67,7 @@ function withReserved(yearStats, allocations) {
         return copy;
     });
     for (const a of allocations) {
+        if (!KIND_ORDER.includes(a.kind)) continue; // административный отпуск квоту не расходует
         const stat = stats.find((y) => y.start === a.workYearStart);
         if (stat) stat[a.kind].reserved += a.days;
     }

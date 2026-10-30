@@ -24,6 +24,11 @@ type UserFilter struct {
 	DistrictTitle   string
 	DepartmentTitle string
 	TotalExperience string
+
+	DistrictCode   string
+	DepartmentCode string
+	// Positions — любая из должностей (например, все должности категории).
+	Positions []string
 }
 
 type Query struct {

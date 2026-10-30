@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/application/leavecalc"
 	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -14,26 +15,20 @@ import (
 
 // TODO: Убрать прямой импорт пакета user
 type Handler struct {
-	vacationRepo    ports.VacationRepository
-	userRepo        ports.UserRepository
-	shiftRepo       ports.ShiftRepository
-	calendarDayRepo ports.CalendarDayRepository
-	workYearCalc    vacation.WorkYearCalculator
+	vacationRepo ports.VacationRepository
+	userRepo     ports.UserRepository
+	leave        *leavecalc.Service
 }
 
 func NewHandler(
 	vacationRepo ports.VacationRepository,
 	userRepo ports.UserRepository,
-	shiftRepo ports.ShiftRepository,
-	calendarDayRepo ports.CalendarDayRepository,
-	workYearCalc vacation.WorkYearCalculator,
+	leave *leavecalc.Service,
 ) *Handler {
 	return &Handler{
-		vacationRepo:    vacationRepo,
-		userRepo:        userRepo,
-		shiftRepo:       shiftRepo,
-		calendarDayRepo: calendarDayRepo,
-		workYearCalc:    workYearCalc,
+		vacationRepo: vacationRepo,
+		userRepo:     userRepo,
+		leave:        leave,
 	}
 }
 
@@ -106,10 +101,6 @@ func (h *Handler) plan(ctx context.Context, cmd Command, caller auth.Caller) (us
 	if err != nil {
 		return user.UserID{}, nil, fmt.Errorf("failed to find user: %w", err)
 	}
-	shifts, err := h.shiftRepo.ListByUser(ctx, userID)
-	if err != nil {
-		return user.UserID{}, nil, fmt.Errorf("failed to list shifts: %w", err)
-	}
 
 	hiredAt := u.HiredAt().Time()
 
@@ -126,6 +117,7 @@ func (h *Handler) plan(ctx context.Context, cmd Command, caller auth.Caller) (us
 		}
 	}
 
+	unpaid := cmd.Type == TypeUnpaid
 	domainPeriods := make([]vacation.CreationPeriod, len(cmd.Periods))
 	for i, p := range cmd.Periods {
 		domainPeriods[i] = vacation.CreationPeriod{Kind: p.Kind, Start: p.Start, End: p.End}
@@ -143,55 +135,23 @@ func (h *Handler) plan(ctx context.Context, cmd Command, caller auth.Caller) (us
 		}
 	}
 
-	stats, err := h.workYearCalc.FindYearStat(
-		hiredAt,
-		latest.Time().AddDate(0, 0, 1),
-		u.IsIrregular(),
-		shifts,
-		h.workYearCalc.SeniorityAtFromHired(hiredAt, u.ExperienceDays()),
-	)
+	snap, err := h.leave.Load(ctx, u, latest, cmd.ExcludeVacationID)
 	if err != nil {
-		return user.UserID{}, nil, fmt.Errorf("failed to calculate work years: %w", err)
+		return user.UserID{}, nil, err
 	}
-
-	vacations, err := h.vacationRepo.FindByUserID(ctx, userID)
-	if err != nil {
-		return user.UserID{}, nil, fmt.Errorf("failed to list vacations: %w", err)
-	}
-	if cmd.ExcludeVacationID != "" {
-		kept := vacations[:0]
-		for _, v := range vacations {
-			if v.ID().String() != cmd.ExcludeVacationID {
-				kept = append(kept, v)
-			}
-		}
-		vacations = kept
-	}
-
-	exceptions, err := h.calendarDayRepo.ListInRange(ctx, vacation.DateOf(hiredAt), vacation.HolidaysRangeEnd(vacations, latest))
-	if err != nil {
-		return user.UserID{}, nil, fmt.Errorf("failed to list calendar days: %w", err)
-	}
-	holidays := vacation.HolidaysFrom(exceptions)
 
 	// 2. Рабочий год, в который попадает начало самого раннего периода.
-	var matched *vacation.YearStat
-	for i := range stats {
-		t := earliest.Time()
-		if !t.Before(stats[i].From) && t.Before(stats[i].To) {
-			matched = &stats[i]
-			break
-		}
-	}
-	if matched == nil {
+	matched, ok := snap.YearOf(earliest)
+	if !ok {
 		return user.UserID{}, nil, fmt.Errorf("%w: дата начала %s не попадает ни в один рабочий год сотрудника",
 			vacation.ErrNoSuitableWorkYear,
 			earliest.Time().Format("02.01.2006"))
 	}
 
-	// 3. Календарные правила. Пересечение с другим отпуском запрещено всем,
-	// остальные нарушения администратор может обойти — они становятся предупреждениями.
-	violations, err := vacation.ValidateCreation(domainPeriods, *matched, vacations)
+	// 3. Правила. Пересечение с другим отпуском запрещено всем, остальные нарушения
+	// администратор может обойти — они становятся предупреждениями.
+	today := vacation.DateOf(time.Now())
+	violations, err := vacation.ValidateCreation(domainPeriods, matched, snap.Vacations, snap.Holidays, today, unpaid)
 	if err != nil {
 		return user.UserID{}, nil, err
 	}
@@ -203,13 +163,30 @@ func (h *Handler) plan(ctx context.Context, cmd Command, caller auth.Caller) (us
 		warnings = append(warnings, v.Error())
 	}
 
+	// Административный отпуск квоту не расходует: по записи на период,
+	// рабочий год — тот, в который попадает начало периода.
+	if unpaid {
+		allocations := make([]vacation.Allocation, 0, len(domainPeriods))
+		for _, p := range domainPeriods {
+			y, ok := snap.YearOf(p.Start)
+			if !ok {
+				y = matched
+			}
+			allocations = append(allocations, vacation.Allocation{
+				Kind: vacation.KindUnpaid, WorkYearStart: vacation.DateOf(y.From),
+				Start: p.Start, End: p.End, Days: vacation.DaysInclusive(p.Start.Time(), p.End.Time()),
+			})
+		}
+		return userID, &Result{Allocations: allocations, Warnings: warnings, Notices: []string{}}, nil
+	}
+
 	// 4. Распределение по квотам: от самого старого года с остатком.
-	// Для сотрудника в текущем году доступны только заработанные дни.
-	balances, err := vacation.BuildBalances(stats, vacations, holidays, earliest, h.workYearCalc, true)
+	// Для сотрудника в текущем году доступны только дни, заработанные к началу отпуска.
+	balances, err := snap.Balances(earliest, true)
 	if err != nil {
 		return user.UserID{}, nil, fmt.Errorf("failed to calculate balances: %w", err)
 	}
-	allocations, _, err := vacation.Allocate(domainPeriods, balances, holidays, false)
+	allocations, _, err := vacation.Allocate(domainPeriods, balances, snap.Holidays, false)
 	if err == nil {
 		return userID, withNotices(allocations, balances, warnings), nil
 	}
@@ -220,11 +197,11 @@ func (h *Handler) plan(ctx context.Context, cmd Command, caller auth.Caller) (us
 	// Администратор: вся норма текущего года без ограничения заработанным,
 	// нехватка списывается сверх нормы.
 	warnings = append(warnings, err.Error())
-	balances, err = vacation.BuildBalances(stats, vacations, holidays, earliest, h.workYearCalc, false)
+	balances, err = snap.Balances(earliest, false)
 	if err != nil {
 		return user.UserID{}, nil, fmt.Errorf("failed to calculate balances: %w", err)
 	}
-	allocations, overdraft, err := vacation.Allocate(domainPeriods, balances, holidays, true)
+	allocations, overdraft, err := vacation.Allocate(domainPeriods, balances, snap.Holidays, true)
 	if err != nil {
 		return user.UserID{}, nil, err
 	}

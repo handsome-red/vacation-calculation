@@ -113,7 +113,7 @@ func TestValidateCreation_CollectsAllViolationsButOverlapIsHard(t *testing.T) {
 	existing, _ := NewVacation(NewVacationID(), uid, KindBase, ymd(2026, time.June, 1), ymd(2026, time.June, 7), ymd(2026, time.March, 10), time.Now())
 
 	// 3 дня (короче минимума) и вплотную к существующему отпуску (разрыв 2 дня)
-	violations, err := ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 10), End: ymd(2026, time.June, 12)}}, year, []*Vacation{existing})
+	violations, err := ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 10), End: ymd(2026, time.June, 12)}}, year, []*Vacation{existing}, Holidays{}, ymd(2026, time.January, 1), false)
 	if err != nil {
 		t.Fatalf("unexpected hard error: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestValidateCreation_CollectsAllViolationsButOverlapIsHard(t *testing.T) {
 		t.Fatalf("violations = %v, want ErrTooShort and ErrGapTooSmall", violations)
 	}
 
-	_, err = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 5), End: ymd(2026, time.June, 20)}}, year, []*Vacation{existing})
+	_, err = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 5), End: ymd(2026, time.June, 20)}}, year, []*Vacation{existing}, Holidays{}, ymd(2026, time.January, 1), false)
 	if !errors.Is(err, ErrOverlapsExisting) {
 		t.Fatalf("err = %v, want ErrOverlapsExisting", err)
 	}

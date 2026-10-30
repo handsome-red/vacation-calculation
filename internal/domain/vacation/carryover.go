@@ -63,7 +63,7 @@ func LateUses(vacations []*Vacation, stats []YearStat) []LateUse {
 
 	out := make([]LateUse, 0)
 	for _, v := range vacations {
-		if v == nil || !v.Status().IsActive() {
+		if v == nil || !v.Status().IsActive() || !v.Kind().IsAnnual() {
 			continue
 		}
 		y, ok := years[v.WorkYearStart()]
@@ -98,15 +98,19 @@ func LateAllocations(allocations []Allocation, balances []YearBalance) []LateUse
 	return out
 }
 
-// CarryoverMessages — все предупреждения о сроке переноса на дату today:
-// неиспользованные дни закончившихся лет и отпуска, запланированные позже срока.
-func CarryoverMessages(balances []YearBalance, vacations []*Vacation, stats []YearStat, today date.Date) []string {
+// CarryoverMessages — все предупреждения по сотруднику на дату today: неиспользованные
+// дни закончившихся лет, отпуска позже срока переноса и административные отпуска
+// больше 14 дней за рабочий год (shifts — с учётом WithUnpaidLeaves).
+func CarryoverMessages(balances []YearBalance, vacations []*Vacation, stats []YearStat, shifts []Shift, today date.Date) []string {
 	out := make([]string, 0)
 	for _, w := range CarryoverWarnings(balances, today) {
 		out = append(out, w.Message())
 	}
 	for _, l := range LateUses(vacations, stats) {
 		out = append(out, l.Message())
+	}
+	for _, w := range UnpaidWarnings(stats, shifts) {
+		out = append(out, w.Message())
 	}
 	return out
 }

@@ -107,17 +107,7 @@ func (c WorkYearCalculator) CurrentYear(stats []YearStat, now time.Time, used in
 	}
 
 	entitlement := current.Base + current.Seniority + current.Irregular
-	daysInYear := DaysInclusive(current.From, now)
-
-	daysInYear -= shiftCoverage(current.Shifts, current.From, now)
-	if daysInYear < 0 {
-		daysInYear = 0
-	}
-
-	months := daysInYear / 30
-	if daysInYear%30 >= 15 {
-		months++
-	}
+	months := WorkedMonths(current.From, now, shiftCoverage(current.Shifts, current.From, now))
 
 	earned := float64(entitlement) / 12.0 * float64(months)
 	remaining := earned - float64(used)
@@ -131,17 +121,42 @@ func (c WorkYearCalculator) CurrentYear(stats []YearStat, now time.Time, used in
 	}, nil
 }
 
-func (c WorkYearCalculator) SeniorityAtFromHired(hiredAt time.Time, priorDays int) func(at time.Time) int {
+// SeniorityAtFromHired — дни за выслугу лет на дату at. Начисляются только
+// государственным служащим; стаж — с даты приёма плюс стаж госслужбы до приёма (priorDays).
+func (c WorkYearCalculator) SeniorityAtFromHired(hiredAt time.Time, priorDays int, civilServant bool) func(at time.Time) int {
 	return func(at time.Time) int {
+		if !civilServant {
+			return 0
+		}
 		years := fullYears(hiredAt, at) + priorDays/365
 		return seniorityForExperience(years)
 	}
 }
 
+// seniorityForExperience: до 5 лет — 1 день, 5–10 — 5, 10–15 — 7, от 15 — 10.
+// WorkedMonths — число отработанных месяцев рабочего года с from по now включительно
+// за вычетом excludedDays (исключаемые периоды). Полные календарные месяцы считаются
+// от даты начала года; остаток меньше 15 дней отбрасывается, от 15 дней — округляется
+// до полного месяца. Не больше 12.
+func WorkedMonths(from, now time.Time, excludedDays int) int {
+	end := now.AddDate(0, 0, 1-excludedDays) // первый неотработанный день
+	if !end.After(from) {
+		return 0
+	}
+
+	months := (end.Year()-from.Year())*12 + int(end.Month()) - int(from.Month())
+	if from.AddDate(0, months, 0).After(end) {
+		months--
+	}
+	rest := int(end.Sub(from.AddDate(0, months, 0)).Hours() / 24)
+	if rest >= 15 {
+		months++
+	}
+	return min(months, 12)
+}
+
 func seniorityForExperience(years int) int {
 	switch {
-	case years < 1:
-		return 0
 	case years < 5:
 		return 1
 	case years < 10:

@@ -5,33 +5,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/application/leavecalc"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type Handler struct {
-	userRepo        ports.UserRepository
-	vacationRepo    ports.VacationRepository
-	shiftRepo       ports.ShiftRepository
-	calendarDayRepo ports.CalendarDayRepository
-	workYearCalc    vacation.WorkYearCalculator
+	userRepo ports.UserRepository
+	leave    *leavecalc.Service
 }
 
-func NewHandler(
-	userRepo ports.UserRepository,
-	vacationRepo ports.VacationRepository,
-	shiftRepo ports.ShiftRepository,
-	calendarDayRepo ports.CalendarDayRepository,
-	workYearCalc vacation.WorkYearCalculator,
-) *Handler {
-	return &Handler{
-		userRepo:        userRepo,
-		vacationRepo:    vacationRepo,
-		shiftRepo:       shiftRepo,
-		calendarDayRepo: calendarDayRepo,
-		workYearCalc:    workYearCalc,
-	}
+func NewHandler(userRepo ports.UserRepository, leave *leavecalc.Service) *Handler {
+	return &Handler{userRepo: userRepo, leave: leave}
 }
 
 func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
@@ -45,41 +31,21 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 		return nil, fmt.Errorf("failed to find user: %w", err)
 	}
 
-	shifts, err := h.shiftRepo.ListByUser(ctx, userID)
+	today := vacation.DateOf(time.Now())
+	snap, err := h.leave.Load(ctx, u, today, "")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list shifts: %w", err)
+		return nil, err
 	}
-
-	now := time.Now()
-	hiredAt := u.HiredAt().Time()
-
-	stats, err := h.workYearCalc.FindYearStat(
-		hiredAt, now, u.IsIrregular(), shifts, h.workYearCalc.SeniorityAtFromHired(hiredAt, u.ExperienceDays()),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate year stat: %w", err)
-	}
-
-	vacations, err := h.vacationRepo.FindByUserID(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list vacations: %w", err)
-	}
-
-	exceptions, err := h.calendarDayRepo.ListInRange(ctx, vacation.DateOf(hiredAt), vacation.HolidaysRangeEnd(vacations, vacation.DateOf(now)))
-	if err != nil {
-		return nil, fmt.Errorf("failed to list calendar days: %w", err)
-	}
-	holidays := vacation.HolidaysFrom(exceptions)
 
 	result := &Result{
 		UserID:        userID.String(),
-		HasActiveYear: len(stats) > 0,
+		HasActiveYear: len(snap.Stats) > 0,
 	}
 
 	// YearStats — по каждому рабочему году; Blocked — списано из квоты этого года.
-	result.YearStats = make([]YearStat, 0, len(stats))
-	for _, s := range stats {
-		used := vacation.UsedDaysInYear(vacations, s, holidays)
+	result.YearStats = make([]YearStat, 0, len(snap.Stats))
+	for _, s := range snap.Stats {
+		used := vacation.UsedDaysInYear(snap.Vacations, s, snap.Holidays)
 		result.YearStats = append(result.YearStats, YearStat{
 			Year:      formatYearRange(s),
 			Start:     vacation.DateOf(s.From).ISO(),
@@ -89,21 +55,23 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 		})
 	}
 
-	if len(stats) > 0 {
-		last := stats[len(stats)-1]
-		used := vacation.UsedDaysInYear(vacations, last, holidays)
+	if len(snap.Stats) > 0 {
+		last := snap.Stats[len(snap.Stats)-1]
+		used := vacation.UsedDaysInYear(snap.Vacations, last, snap.Holidays)
 		result.Total = last.Base + last.Seniority + last.Irregular
 		result.Used = used.Base + used.Irregular + used.Seniority
 
 		// Доступно на сегодня с учётом остатков прошлых лет.
-		balances, err := vacation.BuildBalances(stats, vacations, holidays, vacation.DateOf(now), h.workYearCalc, true)
+		balances, err := snap.Balances(today, true)
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate balances: %w", err)
 		}
 		for _, b := range balances {
 			result.Available += b.Total()
 		}
-		result.Warnings = vacation.CarryoverMessages(balances, vacations, stats, vacation.DateOf(now))
+		if result.Warnings, err = snap.Warnings(today); err != nil {
+			return nil, err
+		}
 	}
 
 	return result, nil

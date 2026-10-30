@@ -26,7 +26,7 @@ type UpcomingVacation struct {
 func UpcomingForReminder(vacations []*Vacation, today date.Date, daysBefore int) []UpcomingVacation {
 	byUser := make(map[user.UserID][]*Vacation)
 	for _, v := range vacations {
-		if v != nil && v.Status() == StatusApproved {
+		if v != nil && v.Status() == StatusApproved && v.Kind().IsAnnual() {
 			byUser[v.UserID()] = append(byUser[v.UserID()], v)
 		}
 	}

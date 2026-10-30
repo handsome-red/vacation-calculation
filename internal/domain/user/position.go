@@ -12,7 +12,14 @@ const (
 	PositionUnknown Position = ""
 
 	PositionDirector       Position = "director"
+	PositionHeadOfTerritorialDepartment Position = "head_of_territorial_department"
 	PositionDeputyDirector Position = "deputy_director"
+
+	PositionAssistant Position = "assistant"
+	PositionDeputyHead Position = "deputy_head"
+	PositionLeadSpecialist Position = "lead_specialist"
+	PositionSeniorSpecialistSecondClass Position = "senior_specialist_second_class"
+	PositionSpecialistFirstClass Position = "specialist_first_class"
 
 	// Специалисты.
 	PositionChiefSpecialistExpert Position = "chief_specialist_expert"
@@ -31,17 +38,17 @@ const (
 )
 
 var positionsMap = map[Position]string{
-	PositionDirector:              "Начальник территориального отдела", // +
+	PositionDirector: "Руководитель",  // +
+	PositionHeadOfTerritorialDepartment:              "Начальник территориального отдела", // +
 	PositionDeputyDirector:        "Заместитель начальника",            // +
 	PositionChiefSpecialistExpert: "Главный специалист-эксперт",        // +
 	PositionSpecialistExpert:      "Специалист-эксперт",                // +
 	PositionSeniorSpecialistFirst: "Старший специалист 1 разряда",
-	// Помощник +
-	// Рук  +
-	// Зам рук +
-	// Ведущий +
-	// Старший спец 2 раз
-	// Специалист 1 раз
+	PositionAssistant: "Помощник", //+
+	PositionDeputyHead: "Заместитель руководителя", //+
+	PositionLeadSpecialist: "Ведущий специалист", //+
+	PositionSeniorSpecialistSecondClass: "Старший специалист 2 разряда",
+	PositionSpecialistFirstClass: "Специалист 1 разряда ",
 
 	PositionGarageManager:    "Начальник гаража",
 	PositionDriver:           "Водитель автомобиля",
@@ -73,14 +80,73 @@ func (p Position) isIrregular() bool {
 	switch p {
 	case
 		PositionDirector,
+		PositionHeadOfTerritorialDepartment,
 		PositionDeputyDirector,
 		PositionChiefSpecialistExpert,
 		PositionSpecialistExpert,
-		PositionSeniorSpecialistFirst:
+		PositionAssistant,
+		PositionDeputyHead,
+		PositionLeadSpecialist		:
 		return true
 	default:
 		return false
 	}
+}
+
+// IsCivilServant — государственный гражданский служащий (79-ФЗ). Остальные
+// должности — прочий персонал по ТК РФ: выслуга лет госслужбы им не начисляется.
+func (p Position) IsCivilServant() bool {
+	switch p {
+	case
+		PositionGarageManager,
+		PositionDriver,
+		PositionWatchman,
+		PositionFacilityManager,
+		PositionWarehouseManager,
+		PositionDocumentClerk,
+		PositionRecordClerk,
+		PositionHandyman,
+		PositionSoftwareEngineer,
+		PositionUnknown:
+		return false
+	default:
+		return true
+	}
+}
+
+// Категория сотрудника по должности.
+const (
+	CategoryCivilServant = "civil"
+	CategoryOtherStaff   = "other"
+)
+
+func (p Position) Category() string {
+	if p.IsCivilServant() {
+		return CategoryCivilServant
+	}
+	return CategoryOtherStaff
+}
+
+func CategoryTitle(category string) string {
+	switch category {
+	case CategoryCivilServant:
+		return "Государственные служащие"
+	case CategoryOtherStaff:
+		return "Прочий персонал"
+	}
+	return ""
+}
+
+// PositionsOfCategory — коды должностей категории (для фильтра списка сотрудников).
+func PositionsOfCategory(category string) []string {
+	out := make([]string, 0)
+	for p := range positionsMap {
+		if p.Category() == category {
+			out = append(out, string(p))
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 func (p Position) String() string { return string(p) }

@@ -27,6 +27,7 @@ var pages = map[string]string{
 	"shift_form.html":            "templates/shift_form.html",
 	"calendar_page.html":         "templates/calendar_page.html",
 	"transfer_form.html":         "templates/transfer_form.html",
+	"schedule.html":              "templates/schedule.html",
 }
 
 func NewTemplates() (*Templates, error) {

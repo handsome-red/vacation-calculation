@@ -3,64 +3,130 @@
     if (!el) return;
 
     const userId = el.dataset.userId;
-    const year = parseInt(el.dataset.year, 10) || new Date().getFullYear();
+    // Администратор может выбрать прошедшие даты (правило обходится с предупреждением).
+    const isAdmin = el.dataset.isAdmin === "true";
+    const today = isoToday();
 
     const MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь",
                     "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
     const WEEKDAYS = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 
     const state = {
-        data: null,               // ответ сервера { year, days }
-        dayByDate: new Map(),     // "2026-10-01" -> { date, isWeekend, isHoliday, ... }
-        busyDates: new Set(),     // "2026-10-01" — дни, занятые подтверждёнными отпусками
-        periods: [],              // [{ from, to }, ...]
-        pendingStart: null,       // "2026-10-01" — первый клик
+        year: parseInt(el.dataset.year, 10) || new Date().getFullYear(), // показываемый год
+        years: new Map(),         // год -> Promise ответа сервера { year, days } (кэш загрузки)
+        loaded: new Map(),        // год -> ответ сервера (уже загруженные)
+        dayByDate: new Map(),     // "2026-10-01" -> { date, isWeekend, isHoliday, ... } по всем загруженным годам
+        busyDates: new Set(),     // "2026-10-01" — дни, занятые другими отпусками
+        periods: [],              // [{ from, to }, ...] — могут переходить через год
+        pendingStart: null,       // "2026-10-01" — первый клик; второй можно сделать в другом году
     };
 
-    el.innerHTML = '<p class="muted">Загрузка…</p>';
+    // Переключатель года — над сеткой месяцев.
+    const nav = document.createElement("div");
+    nav.className = "picker-nav";
+    el.before(nav);
 
-    fetch(`/api/v1/users/${userId}/calendar?year=${year}`, {
-        headers: { Accept: "application/json" },
-    })
-    .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-    })
-    .then((data) => {
-        window.data = data;
-        state.data = data;
+    showYear(state.year);
 
-        for (const d of data.days) {
-            state.dayByDate.set(d.date, d);
-            if (d.events && d.events.length > 0) {
-                state.busyDates.add(d.date);
-            }
+    function loadYear(year) {
+        if (!state.years.has(year)) {
+            const p = fetch(`/api/v1/users/${userId}/calendar?year=${year}`, {
+                headers: { Accept: "application/json" },
+            })
+            .then((res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
+            .then((data) => {
+                for (const d of data.days) {
+                    state.dayByDate.set(d.date, d);
+                    if (d.events && d.events.length > 0) {
+                        state.busyDates.add(d.date);
+                    }
+                }
+                state.loaded.set(year, data);
+                return data;
+            })
+            .catch((err) => {
+                state.years.delete(year); // дать повторить попытку
+                throw err;
+            });
+            state.years.set(year, p);
         }
+        return state.years.get(year);
+    }
 
-        render();
-    })
-    .catch((err) => {
-        console.error("calendar load failed:", err);
-        el.innerHTML = `<p class="error">Не удалось загрузить календарь: ${err.message}</p>`;
-    });
+    // Загружает все годы, через которые проходит период [from, to].
+    function ensureYears(from, to) {
+        const loads = [];
+        for (let y = parseInt(from.slice(0, 4), 10); y <= parseInt(to.slice(0, 4), 10); y++) {
+            loads.push(loadYear(y));
+        }
+        return Promise.all(loads);
+    }
+
+    async function showYear(year) {
+        state.year = year;
+        if (!state.loaded.has(year)) {
+            renderNav();
+            el.innerHTML = '<p class="muted">Загрузка…</p>';
+        }
+        try {
+            await loadYear(year);
+        } catch (err) {
+            console.error("calendar load failed:", err);
+            el.innerHTML = `<p class="error">Не удалось загрузить календарь: ${err.message}</p>`;
+            return;
+        }
+        if (state.year === year) render();
+    }
 
     function render() {
+        renderNav();
         el.innerHTML = "";
-        if (!state.data) return;
-    
-        const byMonth = groupByMonth(state.data.days);
-    
+        const data = state.loaded.get(state.year);
+        if (!data) return;
+
+        const byMonth = groupByMonth(data.days);
+
         for (let m = 1; m <= 12; m++) {
             const monthDays = byMonth.get(m) || [];
             if (monthDays.length === 0) continue;
-    
-            el.appendChild(renderMonth(m, monthDays));
+
+            el.appendChild(renderMonth(data.year, m, monthDays));
         }
-    
+
         renderPeriods();
     }
 
-    function renderMonth(monthNumber, days) {
+    function renderNav() {
+        nav.innerHTML = "";
+
+        const prev = document.createElement("button");
+        prev.type = "button";
+        prev.textContent = `← ${state.year - 1}`;
+        prev.addEventListener("click", () => showYear(state.year - 1));
+
+        const label = document.createElement("strong");
+        label.className = "picker-nav__year";
+        label.textContent = String(state.year);
+
+        const next = document.createElement("button");
+        next.type = "button";
+        next.textContent = `${state.year + 1} →`;
+        next.addEventListener("click", () => showYear(state.year + 1));
+
+        nav.append(prev, label, next);
+
+        if (state.pendingStart) {
+            const hint = document.createElement("span");
+            hint.className = "picker-nav__hint";
+            hint.textContent = `Начало: ${formatDate(state.pendingStart)} — выберите дату окончания (можно в другом году)`;
+            nav.append(hint);
+        }
+    }
+
+    function renderMonth(year, monthNumber, days) {
         const month = document.createElement("div");
         month.className = "month";
 
@@ -83,7 +149,7 @@
         daysEl.className = "days";
 
         // offset до 1-го числа (неделя с понедельника)
-        const firstWeekday = new Date(state.data.year, monthNumber - 1, 1).getDay();
+        const firstWeekday = new Date(year, monthNumber - 1, 1).getDay();
         const offset = (firstWeekday + 6) % 7;
         for (let k = 0; k < offset; k++) {
             const empty = document.createElement("div");
@@ -113,6 +179,8 @@
 
         const busy = state.busyDates.has(d.date);
         if (busy) day.classList.add("busy");
+        const past = d.date < today;
+        if (past) day.classList.add("past");
 
         if (isInSelected(d.date)) {
             day.classList.add("selected");
@@ -120,8 +188,8 @@
         if (state.pendingStart === d.date) day.classList.add("pending");
 
         // Отпуск исчисляется в календарных днях: выходные и праздники выбирать можно,
-        // нельзя только дни, уже занятые другим отпуском.
-        if (!busy) {
+        // нельзя дни, занятые другим отпуском, и прошедшие (кроме администратора).
+        if (isSelectable(d.date)) {
             day.addEventListener("click", () => onDayClick(d.date));
         }
 
@@ -132,7 +200,7 @@
         return state.periods.some((p) => date >= p.from && date <= p.to);
     }
 
-    function onDayClick(date) {
+    async function onDayClick(date) {
         if (!isSelectable(date)) return;
 
         if (!state.pendingStart) {
@@ -151,6 +219,14 @@
         const [from, to] = date < state.pendingStart
             ? [date, state.pendingStart]
             : [state.pendingStart, date];
+
+        // Период может идти через несколько лет: нужны праздники и занятые дни каждого.
+        try {
+            await ensureYears(from, to);
+        } catch (err) {
+            alert("Не удалось загрузить календарь: " + err.message);
+            return;
+        }
 
         // блокируем только занятые дни (чужие отпуска).
         const busy = datesBetween(from, to).find((iso) => state.busyDates.has(iso));
@@ -176,8 +252,27 @@
     }
 
     function isSelectable(date) {
-        return state.dayByDate.has(date) && !state.busyDates.has(date);
+        return state.dayByDate.has(date) && !state.busyDates.has(date) && (isAdmin || date >= today);
     }
+
+    function isoToday() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function vacationType() {
+        return document.querySelector('input[name="vacation-type"]:checked')?.value || "annual";
+    }
+
+    // Смена вида отпуска — пересчитать распределение и показать подсказку.
+    document.querySelectorAll('input[name="vacation-type"]').forEach((input) => {
+        input.addEventListener("change", () => {
+            document.querySelectorAll(".vacation-type__hint").forEach((hint) => {
+                hint.hidden = hint.dataset.for !== vacationType();
+            });
+            notifyPeriodsChanged();
+        });
+    });
 
     function renderPeriods() {
         const box = document.getElementById("selected-periods");
@@ -241,6 +336,7 @@
             // Вид отпуска и рабочий год определяет сервер при распределении по квотам.
             const payload = {
                 userId: userId,
+                type: vacationType(),
                 periods: state.periods.map((p) => ({
                     startDate: p.from,
                     endDate: p.to,
@@ -291,7 +387,7 @@
 
     function notifyPeriodsChanged() {
         window.dispatchEvent(new CustomEvent("periods-changed", {
-            detail: { userId, periods: state.periods.slice() },
+            detail: { userId, type: vacationType(), periods: state.periods.slice() },
         }));
     }
 

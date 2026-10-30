@@ -99,6 +99,15 @@ func startVacationReminders(ctx context.Context, cfg config.Config, container *d
 		if res.Sent > 0 || res.Failed > 0 {
 			log.Info(ctx, "vacation reminders", "sent", res.Sent, "failed", res.Failed)
 		}
+
+		carry, err := container.SendCarryoverUseCase.Handle(ctx, time.Now())
+		if err != nil {
+			log.Error(ctx, "carryover warnings failed", "error", err)
+			return
+		}
+		if carry.Sent > 0 || carry.Failed > 0 {
+			log.Info(ctx, "carryover warnings", "sent", carry.Sent, "failed", carry.Failed)
+		}
 	}
 
 	log.Info(ctx, "vacation reminders enabled", "smtp_host", cfg.SMTPHost, "interval", cfg.ReminderInterval.String())

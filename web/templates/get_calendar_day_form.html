@@ -1,40 +1,77 @@
-{{define "title"}}Новый день календаря{{end}}
+{{define "title"}}Праздники {{.Year}}{{end}}
 
 {{define "content"}}
 <div class="container">
-    <h1>Добавить день в производственный календарь</h1>
+    <h1>Производственный календарь: особые дни</h1>
 
-    <p><a href="/calendar">← К календарю</a></p>
+    <div class="picker-nav">
+        <a class="btn btn-light" href="/admin/holidays?year={{.PrevYear}}">← {{.PrevYear}}</a>
+        <strong class="picker-nav__year">{{.Year}}</strong>
+        <a class="btn btn-light" href="/admin/holidays?year={{.NextYear}}">{{.NextYear}} →</a>
+        <a href="/calendar?year={{.Year}}">Посмотреть календарь {{.Year}}</a>
+    </div>
 
+    {{if .Notice}}<p class="notice-ok">{{.Notice}}</p>{{end}}
     {{if .Errors}}
-    <ul style="color:#b00">
-        {{range .Errors}}<li>{{.}}</li>{{end}}
-    </ul>
+    <ul class="error">{{range .Errors}}<li>{{.}}</li>{{end}}</ul>
     {{end}}
 
-    <form method="POST" action="/admin/holidays">
+    <p class="muted">
+        Праздничные дни не входят в отпуск: он продлевается на их число. Постоянные праздники года
+        (1–8 января, 23 февраля, 8 марта, 1 и 9 мая, 12 июня, 30 августа — День Республики Татарстан, 4 ноября)
+        можно добавить одной кнопкой; Ураза-байрам, Курбан-байрам и переносы выходных — по дате ниже.
+    </p>
+
+    <form method="POST" action="/admin/holidays/fill" class="inline-form">
+        <input type="hidden" name="year" value="{{.Year}}">
+        <button type="submit">Добавить постоянные праздники {{.Year}} года</button>
+    </form>
+
+    <table class="holidays-table">
+        <thead>
+            <tr><th>Дата</th><th>Тип</th><th>Название</th><th></th></tr>
+        </thead>
+        <tbody>
+            {{range .Days}}
+            <tr>
+                <td>{{.DateLabel}}</td>
+                <td>{{.TypeLabel}}</td>
+                <td>{{.Name}}</td>
+                <td>
+                    <form method="POST" action="/admin/holidays/delete" onsubmit="return confirm('Удалить {{.DateLabel}}?')">
+                        <input type="hidden" name="date" value="{{.Date}}">
+                        <input type="hidden" name="year" value="{{$.Year}}">
+                        <button type="submit" class="btn-link-danger">Удалить</button>
+                    </form>
+                </td>
+            </tr>
+            {{else}}
+            <tr><td colspan="4" class="muted">На {{.Year}} год особых дней нет.</td></tr>
+            {{end}}
+        </tbody>
+    </table>
+
+    <h2>Добавить или изменить день</h2>
+    <p class="muted">Если день с этой датой уже есть, он будет заменён.</p>
+    <form method="POST" action="/admin/holidays" class="holiday-form">
+        <input type="hidden" name="year" value="{{.Year}}">
         <p>
-            <label for="date">Дата</label><br>
+            <label for="date">Дата</label>
             <input type="date" id="date" name="date" value="{{.Form.Date}}" required>
         </p>
-
         <p>
-            <label for="day_type">Тип дня</label><br>
+            <label for="day_type">Тип дня</label>
             <select id="day_type" name="day_type" required>
-                <option value="holiday" {{if eq .Form.Type "holiday"}}selected{{end}}>Праздничный (нерабочий) день</option>
-                <option value="working" {{if eq .Form.Type "working"}}selected{{end}}>Рабочий выходной</option>
+                <option value="holiday" {{if eq .Form.Type "holiday"}}selected{{end}}>Праздничный (в отпуск не входит)</option>
+                <option value="weekend" {{if eq .Form.Type "weekend"}}selected{{end}}>Перенесённый выходной (в отпуск входит)</option>
+                <option value="working" {{if eq .Form.Type "working"}}selected{{end}}>Рабочий день (перенос на выходной)</option>
             </select>
         </p>
-
         <p>
-            <label for="name">Название</label><br>
-            <input type="text" id="name" name="name" value="{{.Form.Name}}" maxlength="200" required>
+            <label for="name">Название</label>
+            <input type="text" id="name" name="name" value="{{.Form.Name}}" maxlength="200" required placeholder="Например: Ураза-байрам">
         </p>
-
-        <p>
-            <button type="submit">Сохранить</button>
-            <a href="/calendar">Отмена</a>
-        </p>
+        <p><button type="submit">Сохранить</button></p>
     </form>
 </div>
 {{end}}

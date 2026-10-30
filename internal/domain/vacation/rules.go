@@ -42,7 +42,8 @@ func fullYears(from, to time.Time) int {
 
 	years := to.Year() - from.Year()
 
-	if to.YearDay() < from.YearDay() {
+	// Сравнение по месяцу и дню: YearDay в високосном году сдвинут на 1 после 28 февраля.
+	if to.Month() < from.Month() || (to.Month() == from.Month() && to.Day() < from.Day()) {
 		years--
 	}
 

@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -193,21 +195,55 @@ func isZeroCurrent(c vacation.CurrentYearInfo) bool {
 }
 
 func (h *UserHandler) ListUsersPage(w http.ResponseWriter, r *http.Request) {
-	result, err := h.listUsers.Handle(r.Context(), list_users.Query{})
+	q := r.URL.Query()
+	page, _ := strconv.Atoi(q.Get("page"))
+	size, _ := strconv.Atoi(q.Get("size"))
+	filters := list_users.Filters{
+		LastName:       strings.TrimSpace(q.Get("last_name")),
+		FirstName:      strings.TrimSpace(q.Get("first_name")),
+		MiddleName:     strings.TrimSpace(q.Get("middle_name")),
+		Email:          strings.TrimSpace(q.Get("email")),
+		Status:         q.Get("status"),
+		Category:       q.Get("category"),
+		Position:       q.Get("position"),
+		DistrictCode:   q.Get("district"),
+		DepartmentCode: q.Get("department"),
+	}
+
+	result, err := h.listUsers.Handle(r.Context(), list_users.Query{Page: page, Size: size, Filters: filters})
 	if err != nil {
 		h.logger.Error(r.Context(), "list users failed", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
+	// Ссылки на страницы сохраняют фильтры.
+	pageURL := func(p int) string {
+		v := r.URL.Query()
+		v.Set("page", strconv.Itoa(p))
+		return "/users?" + v.Encode()
+	}
+	prevURL, nextURL := "", ""
+	if result.Page > 1 {
+		prevURL = pageURL(result.Page - 1)
+	}
+	if result.Page < result.Pages {
+		nextURL = pageURL(result.Page + 1)
+	}
+
 	data := map[string]any{
-		"Users": result.Users,
-		"Total": result.Total,
-		"Page":  result.Page,
-		"Size":  result.Size,
-		"Filters": struct {
-			LastName, FirstName, MiddleName, Email, Status, BirthDate, HiredAt string
-		}{},
+		"Users":       result.Users,
+		"Total":       result.Total,
+		"Page":        result.Page,
+		"Pages":       result.Pages,
+		"Size":        result.Size,
+		"PrevURL":     prevURL,
+		"NextURL":     nextURL,
+		"Filters":     filters,
+		"Districts":   result.Districts,
+		"Departments": result.Departments,
+		"Positions":   result.Positions,
+		"Categories":  result.Categories,
 	}
 
 	if err := h.templates.Render(w, "users.html", data); err != nil {

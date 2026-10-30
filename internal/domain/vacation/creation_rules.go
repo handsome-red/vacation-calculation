@@ -19,7 +19,7 @@ const (
 	LongPartDays = 14
 
 	// MinGapDays — минимальное количество свободных дней между частями отпуска.
-	MinGapDays = 7
+	MinGapDays = 14
 )
 
 var (
@@ -58,6 +58,10 @@ var (
 	ErrNoSuitableWorkYear = fmt.Errorf(
 		"%w: не удалось определить рабочий год для указанной даты начала отпуска",
 		ErrBasicVacationRules)
+
+	ErrInPast = fmt.Errorf(
+		"%w: нельзя оформить отпуск на прошедшие даты",
+		ErrBasicVacationRules)
 )
 
 // vacationPeriod — вспомогательная структура для работы с интервалами отпусков.
@@ -82,10 +86,17 @@ type CreationPeriod struct {
 // удовлетворяет errors.Is(err, ErrBasicVacationRules). Администратор может их обойти.
 //
 // err — ошибка, которую обойти нельзя: пустой ввод или пересечение с другим отпуском.
+//
+// Длительность частей считается в днях отпуска: нерабочие праздничные дни h
+// в неё не входят (ст. 120 ТК РФ). Для административного отпуска (unpaid)
+// проверяются только пересечения и прошедшие даты.
 func ValidateCreation(
 	periods []CreationPeriod,
 	year YearStat,
 	vacations []*Vacation,
+	h Holidays,
+	today date.Date,
+	unpaid bool,
 ) (violations []error, err error) {
 
 	if len(periods) == 0 {
@@ -97,33 +108,52 @@ func ValidateCreation(
 	for i, p := range periods {
 		from, to := p.Start.Time(), p.End.Time()
 
-		days := DaysInclusive(from, to)
-		if days < MinVacationDays {
+		if p.Start.Before(today) {
+			violations = append(violations, fmt.Errorf("%w: период #%d начинается %s",
+				ErrInPast, i+1, from.Format("02.01.2006")))
+		}
+		if days := ChargeableDays(p.Start, p.End, h); !unpaid && days < MinVacationDays {
 			violations = append(violations, fmt.Errorf(
-				"%w: период #%d: запрошено %d дн., минимум — %d дн.",
+				"%w: период #%d: %d дн. отпуска, минимум — %d дн.",
 				ErrTooShort, i+1, days, MinVacationDays,
 			))
 		}
 		newPeriods = append(newPeriods, vacationPeriod{from: from, to: to})
 	}
 
+	// Пересечения — со всеми действующими отпусками, включая административные.
 	all := make([]vacationPeriod, 0, len(newPeriods)+len(vacations))
 	all = append(all, newPeriods...)
+	annual := make([]vacationPeriod, 0, len(newPeriods)+len(vacations))
+	if !unpaid {
+		annual = append(annual, newPeriods...)
+	}
 	for _, v := range vacations {
 		if v == nil || !v.Status().IsActive() {
 			continue
 		}
-		all = append(all, vacationPeriod{from: v.StartDate().Time(), to: v.EndDate().Time()})
+		vp := vacationPeriod{from: v.StartDate().Time(), to: v.EndDate().Time()}
+		all = append(all, vp)
+		if v.Kind().IsAnnual() {
+			annual = append(annual, vp)
+		}
+	}
+	if _, err := mergePeriods(all); err != nil {
+		return nil, err
+	}
+	if unpaid {
+		return violations, nil
 	}
 
-	mergedAll, err := mergePeriods(all)
+	// Части ежегодного отпуска: разрывы и непрерывная часть.
+	mergedAll, err := mergePeriods(annual)
 	if err != nil {
 		return nil, err
 	}
 
 	hasLongPart := false
 	for _, m := range mergedAll {
-		if DaysInclusive(m.from, m.to) >= LongPartDays {
+		if ChargeableDays(DateOf(m.from), DateOf(m.to), h) >= LongPartDays {
 			hasLongPart = true
 			break
 		}
@@ -153,7 +183,7 @@ func ValidateCreation(
 		}
 		if !hasRoomForLongPart(mergedAll, latestEnd, year.To) {
 			violations = append(violations, fmt.Errorf(
-				"%w: в оставшемся рабочем году нет свободного окна длиной %d дн. с учётом разрывов",
+				"%w: ни одна часть не достигает %d дн., а в оставшемся рабочем году нет для неё свободного окна с учётом перерывов",
 				ErrNoLongPart, LongPartDays,
 			))
 		}

@@ -200,32 +200,70 @@ func buildWhere(f ports.UserFilter) (string, []any) {
 		args = append(args, val)
 	}
 
+	// LIKE и LOWER в SQLite не учитывают регистр только для латиницы, поэтому
+	// для кириллицы сравниваем с вариантами: как введено, строчными, с заглавной.
+	addLike := func(column, value string) {
+		variants := caseVariants(value)
+		parts := make([]string, len(variants))
+		for i, v := range variants {
+			parts[i] = column + " LIKE ?"
+			args = append(args, "%"+v+"%")
+		}
+		conditions = append(conditions, "("+strings.Join(parts, " OR ")+")")
+	}
+
 	if f.Status != "" {
-		add("status = ?", f.Status)
+		add("u.status = ?", f.Status)
 	}
 	if f.LastName != "" {
-		add("LOWER(last_name) LIKE LOWER(?)", "%"+f.LastName+"%")
+		addLike("u.last_name", f.LastName)
 	}
 	if f.FirstName != "" {
-		add("LOWER(first_name) LIKE LOWER(?)", "%"+f.FirstName+"%")
+		addLike("u.first_name", f.FirstName)
 	}
 	if f.MiddleName != "" {
-		add("LOWER(middle_name) LIKE LOWER(?)", "%"+f.MiddleName+"%")
+		addLike("u.middle_name", f.MiddleName)
 	}
 	if f.Email != "" {
-		add("LOWER(email) LIKE LOWER(?)", "%"+f.Email+"%")
+		addLike("u.email", f.Email)
 	}
-	if f.DistrictTitle != "" {
-		add("district_title = ?", f.DistrictTitle)
+	if f.DistrictCode != "" {
+		add("u.district_code = ?", f.DistrictCode)
 	}
-	if f.DepartmentTitle != "" {
-		add("department_title = ?", f.DepartmentTitle)
+	if f.DepartmentCode != "" {
+		add("u.department_code = ?", f.DepartmentCode)
+	}
+	if f.Position != "" {
+		add("u.position = ?", f.Position)
+	}
+	if len(f.Positions) > 0 {
+		marks := strings.TrimSuffix(strings.Repeat("?,", len(f.Positions)), ",")
+		conditions = append(conditions, "u.position IN ("+marks+")")
+		for _, p := range f.Positions {
+			args = append(args, p)
+		}
 	}
 
 	if len(conditions) == 0 {
 		return "", nil
 	}
 	return " WHERE " + strings.Join(conditions, " AND "), args
+}
+
+// caseVariants — строка как введена, строчными и с заглавной первой буквой.
+func caseVariants(s string) []string {
+	s = strings.TrimSpace(s)
+	lower := strings.ToLower(s)
+	r := []rune(lower)
+	title := strings.ToUpper(string(r[:1])) + string(r[1:])
+
+	out := []string{s}
+	for _, v := range []string{lower, title} {
+		if v != out[0] && (len(out) < 2 || v != out[1]) {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 func boolToInt(b bool) int {

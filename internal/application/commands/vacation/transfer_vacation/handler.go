@@ -70,8 +70,14 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 	}
 
 	// Распределение новых дат — как при оформлении, но без учёта переносимого отпуска.
+	// Административный отпуск переносится административным: квоту не расходует.
+	planType := create_vacations.TypeAnnual
+	if old.Kind() == vacation.KindUnpaid {
+		planType = create_vacations.TypeUnpaid
+	}
 	plan, err := h.planner.Preview(ctx, create_vacations.Command{
 		UserID:            cmd.UserID,
+		Type:              planType,
 		Periods:           []create_vacations.Period{{Kind: vacation.KindBase, Start: newStart, End: newEnd}},
 		ExcludeVacationID: old.ID().String(),
 	}, caller)

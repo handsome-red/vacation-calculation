@@ -29,6 +29,7 @@ type Router struct {
 	vacationHandler     *handlers.VacationHandler
 	shiftHandler        *handlers.ShiftHandler
 	transferHandler     *handlers.TransferHandler
+	scheduleHandler     *handlers.ScheduleHandler
 	calendarHandler     *handlers.CalendarHandler
 }
 
@@ -74,6 +75,13 @@ func NewRouter(
 		container.GetUserVacationsUseCase,
 		container.GetVacationFormUseCase,
 		container.ExportReportUseCase,
+		templates,
+		logger,
+	)
+	r.scheduleHandler = handlers.NewScheduleHandler(
+		container.GetScheduleUseCase,
+		container.ApproveScheduleUseCase,
+		container.ScheduleRenderer,
 		templates,
 		logger,
 	)
@@ -196,4 +204,10 @@ func (r *Router) registerAPI(mux chi.Router) {
 func (r *Router) registerAdmin(mux chi.Router) {
 	mux.Get("/holidays", r.calendarHandler.GetCalendarDayForm)
 	mux.Post("/holidays", r.calendarHandler.NewCalendarDay)
+	mux.Post("/holidays/delete", r.calendarHandler.DeleteCalendarDay)
+	mux.Post("/holidays/fill", r.calendarHandler.FillHolidays)
+
+	mux.Get("/schedule", r.scheduleHandler.Page)
+	mux.Post("/schedule/approve", r.scheduleHandler.Approve)
+	mux.Get("/reports/schedule", r.scheduleHandler.Report)
 }

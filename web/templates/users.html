@@ -5,34 +5,54 @@
 {{define "content"}}
 
 <div class="container">
-    <form method="GET" action="/users" class="filters">
-        <input type="text" name="last_name"
-            value="{{.Filters.LastName}}" placeholder="Фамилия">
+    <h1>Сотрудники</h1>
+    <form method="GET" action="/users" class="filters filters-grid">
+        <input type="text" name="last_name" value="{{.Filters.LastName}}" placeholder="Фамилия">
+        <input type="text" name="first_name" value="{{.Filters.FirstName}}" placeholder="Имя">
+        <input type="text" name="middle_name" value="{{.Filters.MiddleName}}" placeholder="Отчество">
+        <input type="text" name="email" value="{{.Filters.Email}}" placeholder="Email">
 
-        <input type="text" name="first_name"
-            value="{{.Filters.FirstName}}" placeholder="Имя">
-
-        <input type="text" name="middle_name"
-            value="{{.Filters.MiddleName}}" placeholder="Отчество">
-
-        <input type="email" name="email"
-            value="{{.Filters.Email}}" placeholder="Email">
-
-        <select name="status">
+        <select name="status" aria-label="Статус">
             <option value="">Все статусы</option>
-            <option value="active"  {{if eq .Filters.Status "active"}}selected{{end}}>Активные</option>
-            <option value="blocked" {{if eq .Filters.Status "blocked"}}selected{{end}}>Заблокированные</option>
-            <option value="fired"   {{if eq .Filters.Status "fired"}}selected{{end}}>Уволенные</option>
+            <option value="active"  {{if eq .Filters.Status "active"}}selected{{end}}>Работает</option>
+            <option value="blocked" {{if eq .Filters.Status "blocked"}}selected{{end}}>Заблокирован</option>
+            <option value="fired"   {{if eq .Filters.Status "fired"}}selected{{end}}>Уволен</option>
         </select>
 
-        <input type="date" name="birth_date" value="{{.Filters.BirthDate}}">
-        <input type="date" name="hired_at"   value="{{.Filters.HiredAt}}">
+        <select name="category" aria-label="Категория">
+            <option value="">Все категории</option>
+            {{range .Categories}}
+            <option value="{{.Code}}" {{if eq .Code $.Filters.Category}}selected{{end}}>{{.Title}}</option>
+            {{end}}
+        </select>
+
+        <select name="position" aria-label="Должность">
+            <option value="">Все должности</option>
+            {{range .Positions}}
+            <option value="{{.Code}}" {{if eq .Code $.Filters.Position}}selected{{end}}>{{.Title}}</option>
+            {{end}}
+        </select>
+
+        <select name="district" id="filter-district" aria-label="Территориальный отдел">
+            <option value="">Все территориальные отделы</option>
+            {{range .Districts}}
+            <option value="{{.Code}}" {{if eq .Code $.Filters.DistrictCode}}selected{{end}}>{{.Title}}</option>
+            {{end}}
+        </select>
+
+        <select name="department" id="filter-department" aria-label="Район/отдел">
+            <option value="">Все отделы</option>
+            {{range .Departments}}
+            <option value="{{.Code}}" data-district="{{.DistrictCode}}" {{if eq .Code $.Filters.DepartmentCode}}selected{{end}}>{{.Title}}</option>
+            {{end}}
+        </select>
 
         <input type="hidden" name="size" value="{{.Size}}">
-        <input type="hidden" name="page" value="1">   <!-- сбрасываем на 1-ю страницу при новом фильтре -->
 
-        <button type="submit">Применить</button>
-        <a href="/users">Сбросить</a>
+        <div class="filters-actions">
+            <button type="submit">Применить</button>
+            <a href="/users">Сбросить</a>
+        </div>
     </form>
 </div>
 
@@ -44,8 +64,8 @@
                 <th>Фамилия</th>
                 <th>Имя</th>
                 <th>Отчество</th>
-                <th>Дата рождения</th>
                 <th>Должность</th>
+                <th>Категория</th>
                 <th>Дата приема на работу</th>
                 <th>Территориальный отдел</th>
                 <th>Район/Отдел</th>
@@ -62,8 +82,8 @@
                 </td>
                 <td>{{.FirstName}}</td>
                 <td>{{.MiddleName}}</td>
-                <td>{{.BirthDate}}</td>
                 <td>{{.Position}}</td>
+                <td>{{.Category}}</td>
                 <td>{{.HiredAt}}</td>
                 <td>{{.DistrictTitle}}</td>
                 <td>{{.DepartmentTitle}}</td>
@@ -76,7 +96,11 @@
         </tbody>
     </table>
 
-    <p>Всего: {{.Total}} · Страница {{.Page}} из ... </p>
+    <p class="pager">
+        Найдено: {{.Total}}{{if gt .Pages 1}} · Страница {{.Page}} из {{.Pages}}{{end}}
+        {{if .PrevURL}}<a href="{{.PrevURL}}">← Назад</a>{{end}}
+        {{if .NextURL}}<a href="{{.NextURL}}">Вперёд →</a>{{end}}
+    </p>
 </div>
 
 <script>
@@ -94,6 +118,19 @@
             }
         });
     });
+
+    // Отделы выбранного территориального отдела (республиканские — всегда)
+    const district = document.getElementById('filter-district');
+    const department = document.getElementById('filter-department');
+    function syncDepartments() {
+        const code = district.value;
+        department.querySelectorAll('option[data-district]').forEach(opt => {
+            opt.hidden = code !== '' && opt.dataset.district !== '' && opt.dataset.district !== code;
+        });
+        if (department.selectedOptions[0]?.hidden) department.value = '';
+    }
+    district.addEventListener('change', syncDepartments);
+    syncDepartments();
 })();
 </script>
 {{end}}
