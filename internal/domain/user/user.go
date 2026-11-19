@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -257,15 +258,56 @@ func (u *User) ExperienceDays() int {
     return u.experienceDays
 }
 
+// Initials — «Фамилия И.О.»; инициал пропускается, если имени или отчества нет.
 func (u *User) Initials() string {
-	lastName := u.LastName()
-	firstName := u.FirstName()
-	middleName := u.MiddleName()
+	s := u.LastName()
+	if f := []rune(strings.TrimSpace(u.FirstName())); len(f) > 0 {
+		s += " " + string(f[0]) + "."
+		if m := []rune(strings.TrimSpace(u.MiddleName())); len(m) > 0 {
+			s += string(m[0]) + "."
+		}
+	}
+	return s
+}
 
-	f := []rune(firstName)
-	m := []rune(middleName)
+// Profile — данные сотрудника, которые может менять администратор.
+type Profile struct {
+	LastName        string
+	FirstName       string
+	MiddleName      string
+	BirthDate       BirthDate
+	Position        Position
+	HiredAt         HiredDate
+	ExperienceDays  int
+	Department      Department
+	District        District
+	WorkdayDuration WorkdayDuration
+	Email           Email
+	IsInvalid       bool
+}
 
-	return fmt.Sprintf(`%s %c.%c.`, lastName, f[0], m[0])
+// UpdateProfile заменяет данные сотрудника. Пароль, статус и права не меняются.
+func (u *User) UpdateProfile(p Profile) error {
+	if p.LastName == "" || p.FirstName == "" || p.MiddleName == "" {
+		return ErrNameRequired
+	}
+	if p.ExperienceDays < 0 {
+		return ErrExperienceInvalid
+	}
+	u.lastName = p.LastName
+	u.firstName = p.FirstName
+	u.middleName = p.MiddleName
+	u.birthDate = p.BirthDate
+	u.position = p.Position
+	u.hiredAt = p.HiredAt
+	u.experienceDays = p.ExperienceDays
+	u.department = p.Department
+	u.district = p.District
+	u.workdayDuration = p.WorkdayDuration
+	u.email = p.Email
+	u.isInvalid = p.IsInvalid
+	u.updatedAt = time.Now().UTC()
+	return nil
 }
 
 // ChangeEmail изменение почты пользователя

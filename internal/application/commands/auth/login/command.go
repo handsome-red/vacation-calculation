@@ -6,7 +6,8 @@ type Command struct {
 }
 
 type Result struct {
-	UserID  string
-	Email   string
-	IsAdmin bool
+	UserID string
+	Email  string
+	// IsStaff — администратор или руководитель: после входа — на главную.
+	IsStaff bool
 }

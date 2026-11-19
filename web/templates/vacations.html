@@ -14,11 +14,12 @@
                 <th></th>
                 <th>Дата начала отпуска</th>
                 <th>Дата конца отпуска</th>
+                <th>Всего дней</th>
                 <th>Вид отпуска</th>
                 <th>Рабочий год (с)</th>
                 <th>Статус</th>
                 <th>Перенос</th>
-                {{if .IsAdmin}}<th>Изменить статус</th>
+                {{if .CanManage}}<th>Изменить статус</th>
                 <th>Действия</th>{{end}}
             </tr>
         </thead>
@@ -28,6 +29,7 @@
                 <td><span class="status-dot status-dot--{{.StatusCode}}" title="{{.Status}}"></span></td>
                 <td>{{.StartDate}}</td>
                 <td>{{.EndDate}}</td>
+                <td>{{.TotalDays}}</td>
                 <td>{{.Kind}}</td>
                 <td>{{.WorkYear}}</td>
                 <td>{{.Status}}</td>
@@ -37,7 +39,7 @@
                     <div class="muted">{{.Date}} · {{.Reason}}</div>
                     {{end}}
                 </td>
-                {{if $.IsAdmin}}
+                {{if $.CanManage}}
                 <td>
                     {{if ne .StatusCode "TRANSFERRED"}}
                     <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/status">
@@ -61,16 +63,45 @@
                     {{if .IsActive}}
                     <a class="btn btn-sm" href="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/transfer">Перенести</a>
                     {{end}}
+                    <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/delete" style="display:inline;"
+                        data-confirm="Удалить из базы отпуск {{.StartDate}} — {{.EndDate}} ({{.Kind}})? Запись и история её переносов будут удалены без возможности восстановления. Чтобы сохранить историю, вместо удаления смените статус на «Отменён»."
+                        data-confirm-label="Удалить" data-danger>
+                        <button type="submit" class="btn-link-danger">Удалить</button>
+                    </form>
                 </td>
                 {{end}}
             </tr>
             {{else}}
             <tr>
-                <td colspan="{{if $.IsAdmin}}9{{else}}7{{end}}">Нет отпусков</td>
+                <td colspan="{{if $.CanManage}}10{{else}}8{{end}}">Нет отпусков</td>
             </tr>
             {{end}}
         </tbody>
     </table>
+    {{if .Opening}}
+    <h2>Использовано до начала учёта</h2>
+    <p class="muted">Дни из исходных остатков: дат таких отпусков нет, в календаре они не отображаются.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Рабочий год (с)</th>
+                <th>Основной</th>
+                <th>За ненормированный день</th>
+                <th>За выслугу лет</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Opening}}
+            <tr>
+                <td>{{.WorkYear}}</td>
+                <td>{{.Base}}</td>
+                <td>{{.Irregular}}</td>
+                <td>{{.Seniority}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{end}}
     {{if .Hidden}}
     <p class="muted">Показаны отпуска за последние 3 года и запланированные. Скрыто более ранних: {{.Hidden}}.
         <a href="/api/v1/users/{{.UserID}}/vacations?all=1">Показать все</a></p>

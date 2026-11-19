@@ -14,19 +14,25 @@ import (
 )
 
 type Service struct {
+	userRepo        ports.UserRepository
 	vacationRepo    ports.VacationRepository
 	shiftRepo       ports.ShiftRepository
 	calendarDayRepo ports.CalendarDayRepository
+	openingRepo     ports.OpeningUsageRepository
+	workYearRepo    ports.WorkYearRepository
 	calc            vacation.WorkYearCalculator
 }
 
 func NewService(
+	userRepo ports.UserRepository,
 	vacationRepo ports.VacationRepository,
 	shiftRepo ports.ShiftRepository,
 	calendarDayRepo ports.CalendarDayRepository,
+	openingRepo ports.OpeningUsageRepository,
+	workYearRepo ports.WorkYearRepository,
 	calc vacation.WorkYearCalculator,
 ) *Service {
-	return &Service{vacationRepo: vacationRepo, shiftRepo: shiftRepo, calendarDayRepo: calendarDayRepo, calc: calc}
+	return &Service{userRepo: userRepo, vacationRepo: vacationRepo, shiftRepo: shiftRepo, calendarDayRepo: calendarDayRepo, openingRepo: openingRepo, workYearRepo: workYearRepo, calc: calc}
 }
 
 // Snapshot — данные сотрудника для расчётов.
@@ -62,31 +68,86 @@ func (s *Service) Load(ctx context.Context, u *user.User, until date.Date, exclu
 	}
 	shifts = vacation.WithUnpaidLeaves(shifts, vacations)
 
-	hiredAt := u.HiredAt().Time()
-	stats, err := s.calc.FindYearStat(
-		hiredAt,
-		until.Time().AddDate(0, 0, 1),
-		u.IsIrregular(),
-		shifts,
-		s.calc.SeniorityAtFromHired(hiredAt, u.ExperienceDays(), u.Position().IsCivilServant()),
-	)
+	stored, err := s.workYearRepo.ListByUser(ctx, u.ID())
 	if err != nil {
 		return nil, fmt.Errorf("work years: %w", err)
 	}
+
+	hiredAt := u.HiredAt().Time()
+	snap := &Snapshot{User: u, Vacations: vacations, Shifts: shifts, calc: s.calc}
+	stats, err := snap.Years(stored, nil, until)
+	if err != nil {
+		return nil, fmt.Errorf("work years: %w", err)
+	}
+
+	opening, err := s.openingRepo.ListByUser(ctx, u.ID())
+	if err != nil {
+		return nil, fmt.Errorf("opening usage: %w", err)
+	}
+	vacation.ApplyOpeningUsage(stats, opening)
 
 	exceptions, err := s.calendarDayRepo.ListInRange(ctx, vacation.DateOf(hiredAt), vacation.HolidaysRangeEnd(vacations, until))
 	if err != nil {
 		return nil, fmt.Errorf("calendar days: %w", err)
 	}
 
-	return &Snapshot{
-		User:      u,
-		Vacations: vacations,
-		Shifts:    shifts,
-		Stats:     stats,
-		Holidays:  vacation.HolidaysFrom(exceptions),
-		calc:      s.calc,
-	}, nil
+	snap.Stats = stats
+	snap.Holidays = vacation.HolidaysFrom(exceptions)
+	return snap, nil
+}
+
+// Years — рабочие годы сотрудника до даты until: сохранённые stored, затем расчётные
+// с концами ends, заданными администратором.
+func (s *Snapshot) Years(stored []vacation.WorkYear, ends []vacation.WorkYearEnd, until date.Date) ([]vacation.YearStat, error) {
+	hiredAt := s.User.HiredAt().Time()
+	return s.calc.FindYearStatWithEnds(
+		hiredAt,
+		until.Time().AddDate(0, 0, 1),
+		s.User.IsIrregular(),
+		s.Shifts,
+		s.calc.SeniorityAtFromHired(hiredAt, s.User.ExperienceDays(), s.User.Position().IsCivilServant()),
+		stored,
+		ends,
+	)
+}
+
+// Freeze сохраняет рабочие годы сотрудника, закончившиеся до today: после этого их
+// границы не пересчитываются, например при сдвиге задним числом.
+func (s *Service) Freeze(ctx context.Context, u *user.User, today date.Date) error {
+	if !vacation.DateOf(u.HiredAt().Time()).Before(today) {
+		return nil
+	}
+	snap, err := s.Load(ctx, u, today, "")
+	if err != nil {
+		return err
+	}
+	ended := EndedYears(snap.Stats, today)
+	if len(ended) == 0 {
+		return nil
+	}
+	return s.workYearRepo.Add(ctx, u.ID(), ended)
+}
+
+// EndedYears — ещё не сохранённые годы из stats, закончившиеся до today.
+func EndedYears(stats []vacation.YearStat, today date.Date) []vacation.WorkYear {
+	out := make([]vacation.WorkYear, 0)
+	for i, y := range stats {
+		if y.Stored || y.To.After(today.Time()) {
+			continue
+		}
+		out = append(out, ToWorkYear(i+1, y))
+	}
+	return out
+}
+
+// ToWorkYear — год number из расчёта в виде записи для сохранения.
+func ToWorkYear(number int, y vacation.YearStat) vacation.WorkYear {
+	return vacation.WorkYear{
+		Number: number,
+		Start:  vacation.DateOf(y.From),
+		End:    vacation.DateOf(y.To.AddDate(0, 0, -1)),
+		Manual: y.Manual,
+	}
 }
 
 // Balances — остатки квот по рабочим годам на дату at (см. vacation.BuildBalances).
@@ -106,11 +167,18 @@ func (s *Snapshot) YearOf(d date.Date) (vacation.YearStat, bool) {
 }
 
 // Warnings — предупреждения по сотруднику на дату today: срок переноса
-// неиспользованного отпуска и административные отпуска больше 14 дней за год.
+// неиспользованного отпуска, административные отпуска больше 14 дней за год и
+// расхождения в учёте (списано сверх нормы).
 func (s *Snapshot) Warnings(today date.Date) ([]string, error) {
 	balances, err := s.Balances(today, true)
 	if err != nil {
 		return nil, err
 	}
-	return vacation.CarryoverMessages(balances, s.Vacations, s.Stats, s.Shifts, today), nil
+	messages := vacation.CarryoverMessages(balances, s.Vacations, s.Stats, s.Shifts, today)
+	return append(messages, s.Discrepancies()...), nil
+}
+
+// Discrepancies — расхождения в учёте отпусков (см. vacation.Discrepancies).
+func (s *Snapshot) Discrepancies() []string {
+	return vacation.Discrepancies(s.Stats, s.Vacations, s.Holidays)
 }

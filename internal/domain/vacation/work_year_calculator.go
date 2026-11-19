@@ -33,6 +33,12 @@ type YearStat struct {
 	Seniority int
 	Irregular int
 	Shifts    []Shift
+	// Opening — дни, использованные до начала учёта в системе.
+	Opening OpeningDays
+	// Manual — конец года задан администратором.
+	Manual bool
+	// Stored — год сохранён в базе, его границы не пересчитываются.
+	Stored bool
 }
 
 type CurrentYearInfo struct {
@@ -50,35 +56,78 @@ func (c WorkYearCalculator) FindYearStat(
 	shifts []Shift,
 	seniorityAt func(at time.Time) int,
 ) ([]YearStat, error) {
+	return c.FindYearStatWithEnds(hiredAt, now, irregular, shifts, seniorityAt, nil, nil)
+}
+
+// FindYearStatWithEnds — рабочие годы, начавшиеся до now. Сначала идут сохранённые годы
+// stored с их границами, следующие считаются от конца последнего из них. ends — концы
+// следующих лет, заданные администратором: для такого года сдвиги длительность не
+// меняют; конец раньше начала года не применяется.
+func (c WorkYearCalculator) FindYearStatWithEnds(
+	hiredAt time.Time,
+	now time.Time,
+	irregular bool,
+	shifts []Shift,
+	seniorityAt func(at time.Time) int,
+	stored []WorkYear,
+	ends []WorkYearEnd,
+) ([]YearStat, error) {
 	if !hiredAt.Before(now) {
 		return nil, ErrCalcInvalidTime
 	}
 	if err := validateShifts(shifts); err != nil {
 		return nil, fmt.Errorf("validate shifts: %w", err)
 	}
+	if err := ValidateWorkYears(hiredAt, stored); err != nil {
+		return nil, err
+	}
 
-	result := make([]YearStat, 0)
+	lastDays := make(map[int]time.Time, len(ends))
+	for _, e := range ends {
+		lastDays[e.Number] = e.LastDay.Time()
+	}
+
+	year := func(from, to time.Time, manual, isStored bool) YearStat {
+		asOf := to
+		if asOf.After(now) {
+			asOf = now
+		}
+		return YearStat{
+			From:      from,
+			To:        to,
+			Base:      BaseAnnualDays,
+			Seniority: seniorityAt(asOf),
+			Irregular: irregularDays(irregular),
+			Shifts:    shiftsOverlapping(shifts, from, to),
+			Manual:    manual,
+			Stored:    isStored,
+		}
+	}
+
+	result := make([]YearStat, 0, len(stored))
 	cursor := hiredAt
+
+	for _, y := range stored {
+		if !cursor.Before(now) {
+			return result, nil
+		}
+		yearEnd := y.End.Time().AddDate(0, 0, 1)
+		result = append(result, year(cursor, yearEnd, y.Manual, true))
+		cursor = yearEnd
+	}
 
 	for cursor.Before(now) {
 		yearStart := cursor
 		yearEnd := yearStart.AddDate(1, 0, 0)
 		yearEnd = yearEnd.AddDate(0, 0, shiftDaysForYear(yearStart, yearEnd, shifts))
 
-		asOf := yearEnd
-		if asOf.After(now) {
-			asOf = now
+		manual := false
+		if lastDay, ok := lastDays[len(result)+1]; ok && !lastDay.Before(yearStart) {
+			yearEnd = lastDay.AddDate(0, 0, 1)
+			manual = true
 		}
 
-		result = append(result, YearStat{
-			From:      yearStart,
-			To:        yearEnd,
-			Base:      BaseAnnualDays,
-			Seniority: seniorityAt(asOf),
-			Irregular: irregularDays(irregular),
-			Shifts:    shiftsOverlapping(shifts, yearStart, yearEnd),
-		})
-
+		result = append(result, year(yearStart, yearEnd, manual, false))
 		cursor = yearEnd
 	}
 
@@ -241,9 +290,9 @@ func shiftCoverage(shift []Shift, from, to time.Time) int {
 // Учитываются все отпуска, кроме отменённых: черновик тоже резервирует дни.
 func UsedDaysInYear(vacations []*Vacation, year YearStat, h Holidays) UsedByKind {
 	result := UsedByKind{
-		Base:      0,
-		Seniority: 0,
-		Irregular: 0,
+		Base:      year.Opening.Base,
+		Seniority: year.Opening.Seniority,
+		Irregular: year.Opening.Irregular,
 		Items:     make([]UsedVacation, 0, len(vacations)),
 	}
 

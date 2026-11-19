@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/audit"
 	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
 	"github.com/handsome-red/vacation-calculation/internal/domain/calendar"
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
@@ -26,6 +27,11 @@ type UserFilter struct {
 	TotalExperience string
 
 	DistrictCode   string
+	// DistrictCodes — только эти территориальные отделы (права руководителя);
+	// nil — без ограничения, пустой — ни одного.
+	DistrictCodes  []string
+	// NoAdmins — без администраторов: руководитель ими не управляет.
+	NoAdmins       bool
 	DepartmentCode string
 	// Positions — любая из должностей (например, все должности категории).
 	Positions []string
@@ -82,6 +88,9 @@ type VacationRepository interface {
 		userID user.UserID,
 		from, to date.Date,
 	) ([]*vacation.Vacation, error)
+	// Delete удаляет запись отпуска вместе с историей её переносов. Записи, созданные
+	// переносом этого отпуска, остаются и перестают на него ссылаться.
+	Delete(ctx context.Context, userID user.UserID, id vacation.VacationID) error
 }
 
 // ReminderRepository — журнал отправленных уведомлений о начале отпуска,
@@ -96,6 +105,51 @@ type TransferRepository interface {
 	ListByUser(ctx context.Context, userID user.UserID) ([]vacation.Transfer, error)
 }
 
+// OpeningUsageRepository — дни, использованные до начала учёта в системе.
+type OpeningUsageRepository interface {
+	ListByUser(ctx context.Context, userID user.UserID) ([]vacation.OpeningUsage, error)
+	Replace(ctx context.Context, userID user.UserID, usages []vacation.OpeningUsage) error
+}
+
+// WorkYearRepository — сохранённые рабочие годы: завершившиеся и с границами,
+// заданными администратором. Годы идут подряд с первого.
+type WorkYearRepository interface {
+	ListByUser(ctx context.Context, userID user.UserID) ([]vacation.WorkYear, error)
+	// Add сохраняет следующие по номеру годы; уже сохранённые номера не меняются.
+	Add(ctx context.Context, userID user.UserID, years []vacation.WorkYear) error
+	// Apply одной транзакцией заменяет сохранённые годы и переносит отпуска и
+	// использованные дни на новые начала рабочих лет.
+	Apply(ctx context.Context, userID user.UserID, years []vacation.WorkYear, vacations []vacation.VacationWorkYear, opening []vacation.OpeningUsage) error
+	// DeleteByUser удаляет сохранённые годы: после изменения даты приёма они считаются заново.
+	DeleteByUser(ctx context.Context, userID user.UserID) error
+}
+
+// SessionRepository — сессии входа. Ключ — хеш токена из куки, не сам токен.
+type SessionRepository interface {
+	Create(ctx context.Context, tokenHash string, userID user.UserID, expires time.Time) error
+	// Find возвращает владельца действующей на момент now сессии; found = false, если
+	// сессии нет или она истекла.
+	Find(ctx context.Context, tokenHash string, now time.Time) (userID user.UserID, found bool, err error)
+	Delete(ctx context.Context, tokenHash string) error
+	DeleteExpired(ctx context.Context, now time.Time) error
+}
+
+// AuditFilter — какие записи журнала выбрать.
+type AuditFilter struct {
+	// TargetID — только действия над этим сотрудником; пусто — все.
+	TargetID string
+	// DistrictCodes — только записи этих теротделов; nil — без ограничения, пустой
+	// срез — ничего.
+	DistrictCodes []string
+	Limit         int
+}
+
+type AuditRepository interface {
+	Record(ctx context.Context, e audit.Entry) error
+	// List возвращает записи от новых к старым.
+	List(ctx context.Context, f AuditFilter) ([]audit.Entry, error)
+}
+
 type CalendarDayRepository interface {
 	Save(ctx context.Context, d calendar.Exception) error
 	// ListInRange возвращает все исключения календаря за период [from, to] включительно
@@ -108,8 +162,4 @@ type CalendarDayRepository interface {
 type AuthRepository interface {
 	FindByEmail(ctx context.Context, email auth.Email) (*auth.AuthUser, error)
 	Save(ctx context.Context, u *auth.AuthUser) error
-}
-
-type SessionRepository interface {
-	UserBySession(ctx context.Context, sessionID string) (*auth.AuthUser, error)
 }

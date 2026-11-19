@@ -21,6 +21,8 @@ var pages = map[string]string{
 	"home.html":                  "templates/home.html",
 	"register_user.html":         "templates/register_user.html",
 	"user.html":                  "templates/user.html",
+	"user_edit.html":             "templates/user_edit.html",
+	"work_years.html":            "templates/work_years.html",
 	"users.html":                 "templates/users.html",
 	"vacations.html":             "templates/vacations.html",
 	"vacation_form.html":         "templates/vacation_form.html",
@@ -28,6 +30,8 @@ var pages = map[string]string{
 	"calendar_page.html":         "templates/calendar_page.html",
 	"transfer_form.html":         "templates/transfer_form.html",
 	"schedule.html":              "templates/schedule.html",
+	"audit.html":                 "templates/audit.html",
+	"discrepancies.html":         "templates/discrepancies.html",
 }
 
 func NewTemplates() (*Templates, error) {

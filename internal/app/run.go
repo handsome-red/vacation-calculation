@@ -34,6 +34,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 		return err
 	}
 
+	startWorkYearFreeze(ctx, container, log)
 	startVacationReminders(ctx, cfg, container, log)
 
 	r, err := routes.NewRouter(container, log, nil)
@@ -80,6 +81,39 @@ func Run(ctx context.Context, cfg config.Config) error {
 	log.Info(ctx, "application stopped")
 
 	return nil
+}
+
+// workYearFreezeInterval — как часто сохранять закончившиеся рабочие годы.
+const workYearFreezeInterval = 24 * time.Hour
+
+// startWorkYearFreeze сохраняет закончившиеся рабочие годы сотрудников: сразу при
+// старте и затем раз в сутки, пока не отменён ctx. Пока год не сохранён, его границы
+// считаются так же, поэтому задержка на расчёты не влияет.
+func startWorkYearFreeze(ctx context.Context, container *di.Container, log ports.Logger) {
+	run := func() {
+		res, err := container.FreezeWorkYearsUseCase.Handle(ctx, time.Now())
+		if err != nil {
+			log.Error(ctx, "freeze work years failed", "error", err)
+			return
+		}
+		if res.Failed > 0 {
+			log.Info(ctx, "freeze work years", "users", res.Users, "failed", res.Failed)
+		}
+	}
+
+	go func() {
+		run()
+		ticker := time.NewTicker(workYearFreezeInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				run()
+			}
+		}
+	}()
 }
 
 // startVacationReminders запускает фоновую рассылку уведомлений о начале отпуска:

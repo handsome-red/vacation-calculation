@@ -1,6 +1,9 @@
 package register_form
 
-type Query struct{}
+type Query struct {
+	// Districts — какие теротделы предлагать (права руководителя); nil — все.
+	Districts []string
+}
 
 type PositionOption struct {
 	Code  string
@@ -36,7 +39,6 @@ type Result struct {
 	Departments []DepartmentOption
 
 	Errors    []string
-	CSRFToken string
 	Today     string
 	Form      Form
 }

@@ -3,6 +3,7 @@ package register_form
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
@@ -24,7 +25,7 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) Handle(ctx context.Context, _ Query) (*Result, error) {
+func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 
 	positions := user.AllPositions()
 	districts, err := h.districtRepo.List(ctx)
@@ -47,6 +48,9 @@ func (h *Handler) Handle(ctx context.Context, _ Query) (*Result, error) {
 
 	dis := make([]DistrictOption, 0, len(districts))
 	for _, d := range districts {
+		if q.Districts != nil && !slices.Contains(q.Districts, d.Code()) {
+			continue
+		}
 		dis = append(dis, DistrictOption{
 			Code:  d.Code(),
 			Title: d.Title(),
@@ -67,7 +71,6 @@ func (h *Handler) Handle(ctx context.Context, _ Query) (*Result, error) {
 		Districts:   dis,
 		Departments: dep,
 		Errors:      []string{},
-		CSRFToken:   "",
 		Today:       time.Now().Format("2006-01-02"),
 		Form:        Form{
 			WorkdayDuration: 8,

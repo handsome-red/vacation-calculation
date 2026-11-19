@@ -16,6 +16,7 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/hasher"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/persistence/sqlite"
 	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/handlers"
+	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/middleware"
 )
 
 type testLogger struct{}
@@ -106,6 +107,7 @@ func TestRegistrationFormCreatesUserWhoCanLogIn(t *testing.T) {
 	}
 	req := httptest.NewRequest(http.MethodPost, "/user/register", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req = req.WithContext(middleware.WithUser(req.Context(), user.ReconstructUser(user.UserParams{Superadmin: true})))
 	w := httptest.NewRecorder()
 	registration.Register(w, req)
 	if w.Code != http.StatusSeeOther {

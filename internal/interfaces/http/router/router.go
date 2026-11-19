@@ -19,6 +19,7 @@ type Router struct {
 	container    *di.Container
 	logger       ports.Logger
 	authMW       func(http.Handler) http.Handler
+	sessions     *authmiddleware.AuthMiddleware
 	loginHandler *handlers.LoginHandler
 
 	templates           *handlers.Templates
@@ -28,9 +29,13 @@ type Router struct {
 	userHandler         *handlers.UserHandler
 	vacationHandler     *handlers.VacationHandler
 	shiftHandler        *handlers.ShiftHandler
+	workYearHandler     *handlers.WorkYearHandler
 	transferHandler     *handlers.TransferHandler
 	scheduleHandler     *handlers.ScheduleHandler
 	calendarHandler     *handlers.CalendarHandler
+	auditHandler        *handlers.AuditHandler
+	discrepancies       *handlers.DiscrepanciesHandler
+	auditor             *authmiddleware.Auditor
 }
 
 func NewRouter(
@@ -51,9 +56,10 @@ func NewRouter(
 	}
 
 	r.healthHandler = handlers.NewHealthHandler()
-	sessions := authmiddleware.NewAuthMiddleware(container.UserRepo)
+	sessions := authmiddleware.NewAuthMiddleware(container.UserRepo, container.SessionRepo)
 	r.authMW = sessions.Require
-	r.loginHandler = handlers.NewLoginHandler(container.LoginUseCase, sessions, templates)
+	r.sessions = sessions
+	r.loginHandler = handlers.NewLoginHandler(container.LoginUseCase, sessions, authmiddleware.NewLoginLimiter(), templates)
 	r.homeHandler = handlers.NewHomeHandler(templates)
 	r.registrationHandler = handlers.NewRegistrationHandler(
 		container.RegisterUserUseCase,
@@ -65,6 +71,8 @@ func NewRouter(
 		container.ListUsersUseCase,
 		container.DeactivateUserUseCase,
 		container.ActivateUserUseCase,
+		container.UpdateUserUseCase,
+		container.UserEditFormUseCase,
 		templates,
 		logger,
 	)
@@ -72,6 +80,7 @@ func NewRouter(
 		container.CreateVacationUseCase,
 		container.ApproveVacationUseCase,
 		container.ChangeVacationStatusUseCase,
+		container.DeleteVacationUseCase,
 		container.GetUserVacationsUseCase,
 		container.GetVacationFormUseCase,
 		container.ExportReportUseCase,
@@ -96,6 +105,12 @@ func NewRouter(
 		container.ShiftFormUseCase,
 		templates,
 	)
+	r.workYearHandler = handlers.NewWorkYearHandler(
+		container.WorkYearsUseCase,
+		container.SetWorkYearUseCase,
+		templates,
+		logger,
+	)
 	r.calendarHandler = handlers.NewCalendarHandler(
 		container.GetCalendarUseCase,
 		container.UserCalendarUseCase,
@@ -104,6 +119,9 @@ func NewRouter(
 		templates,
 		logger,
 	)
+	r.auditHandler = handlers.NewAuditHandler(container.ListAuditUseCase, templates, logger)
+	r.discrepancies = handlers.NewDiscrepanciesHandler(container.ListDiscrepanciesUseCase, templates, logger)
+	r.auditor = authmiddleware.NewAuditor(container.UserRepo, container.AuditRepo, logger, auditActions(container.VacationRepo))
 
 	return r, nil
 }
@@ -115,6 +133,7 @@ func (r *Router) Build() (http.Handler, error) {
 	root.Use(middleware.RealIP)
 	root.Use(middleware.Logger)
 	root.Use(middleware.Recoverer)
+	root.Use(authmiddleware.SameOrigin)
 
 	// 1. Публичные маршруты (без аутентификации)
 	r.registerPublic(root)
@@ -124,15 +143,17 @@ func (r *Router) Build() (http.Handler, error) {
 		if r.authMW != nil { // Middleware применяется ко всей группе /api/v1
 			api.Use(r.authMW)
 		}
+		api.Use(r.auditor.Middleware)
 		r.registerAPI(api)
 	})
 
-	// 3. Админка (аутентификация + проверка роли)
+	// 3. Админка (аутентификация + проверка роли: администратор или руководитель)
 	root.Route("/admin", func(admin chi.Router) {
 		if r.authMW != nil {
 			admin.Use(r.authMW)
 		}
-		admin.Use(authmiddleware.RequireAdmin)
+		admin.Use(r.auditor.Middleware)
+		admin.Use(authmiddleware.RequireStaff)
 		r.registerAdmin(admin)
 	})
 
@@ -155,11 +176,18 @@ func (r *Router) registerPublic(mux chi.Router) {
 
 	mux.Group(func(private chi.Router) {
 		private.Use(r.authMW)
+		private.Use(r.auditor.Middleware)
+		managerOf := r.sessions.RequireManagerOf("id")
 		private.Get("/", r.homeHandler.Home)
-		private.With(authmiddleware.RequireAdmin).Get("/user/register", r.registrationHandler.Form)
-		private.With(authmiddleware.RequireAdmin).Post("/user/register", r.registrationHandler.Register)
-		private.With(authmiddleware.RequireAdmin).Get("/users", r.userHandler.ListUsersPage)
-		private.With(authmiddleware.RequireSelfOrAdmin("id")).Get("/users/{id}", r.userHandler.GetUserPage)
+		private.With(authmiddleware.RequireStaff).Get("/user/register", r.registrationHandler.Form)
+		private.With(authmiddleware.RequireStaff).Post("/user/register", r.registrationHandler.Register)
+		private.With(authmiddleware.RequireStaff).Get("/users", r.userHandler.ListUsersPage)
+		private.With(r.sessions.RequireSelfOrManager("id")).Get("/users/{id}", r.userHandler.GetUserPage)
+		private.With(managerOf).Get("/users/{id}/edit", r.userHandler.EditForm)
+		private.With(managerOf).Post("/users/{id}/edit", r.userHandler.UpdateUser)
+		private.With(managerOf).Get("/users/{id}/work-years", r.workYearHandler.Page)
+		private.With(managerOf).Post("/users/{id}/work-years/{number}", r.workYearHandler.Set)
+		private.With(managerOf).Get("/users/{id}/history", r.auditHandler.UserPage)
 		private.Get("/calendar", r.calendarHandler.GetCalendarPage)
 	})
 }
@@ -168,27 +196,31 @@ func (r *Router) registerAPI(mux chi.Router) {
 	// Здесь все пути БЕЗ префикса /api/v1, потому что мы уже внутри Route("/api/v1")
 
 	// Reuse pre-initialized handlers from the router
-	selfOrAdmin := authmiddleware.RequireSelfOrAdmin("userId")
+	// Сотрудник — сам себе; администратор и руководитель его теротдела — как администратор.
+	selfOrManager := r.sessions.RequireSelfOrManager("userId")
+	managerOf := r.sessions.RequireManagerOf("userId")
 
 	if r.userHandler != nil {
-		mux.With(authmiddleware.RequireSelfOrAdmin("id")).Get("/users/{id}", r.userHandler.GetUser)
-		mux.With(authmiddleware.RequireAdmin).Delete("/users/{id}", r.userHandler.DeactivateUser)
-		mux.With(authmiddleware.RequireAdmin).Get("/users", r.userHandler.ListUsers)
+		mux.With(r.sessions.RequireSelfOrManager("id")).Get("/users/{id}", r.userHandler.GetUser)
+		mux.With(r.sessions.RequireManagerOf("id")).Delete("/users/{id}", r.userHandler.DeactivateUser)
+		mux.With(authmiddleware.RequireStaff).Get("/users", r.userHandler.ListUsers)
 	}
 
 	if r.vacationHandler != nil {
-		mux.With(selfOrAdmin).Get("/users/{userId}/vacations", r.vacationHandler.GetVacations)
-		mux.With(selfOrAdmin).Get("/users/{userId}/vacations/new", r.vacationHandler.GetVacationForm)
-		mux.With(selfOrAdmin).Post("/users/{userId}/vacations", r.vacationHandler.CreateVacation)
-		mux.With(selfOrAdmin).Post("/users/{userId}/vacations/preview", r.vacationHandler.PreviewVacation)
-		mux.With(authmiddleware.RequireAdmin).Post("/users/{userId}/vacations/{id}/approve", r.vacationHandler.ApproveVacation)
-		mux.With(authmiddleware.RequireAdmin).Post("/users/{userId}/vacations/{id}/status", r.vacationHandler.ChangeVacationStatus)
-		mux.With(authmiddleware.RequireAdmin).Get("/users/{userId}/vacations/{id}/transfer", r.transferHandler.Form)
-		mux.With(authmiddleware.RequireAdmin).Post("/users/{userId}/vacations/{id}/transfer", r.transferHandler.Transfer)
+		mux.With(selfOrManager).Get("/users/{userId}/vacations", r.vacationHandler.GetVacations)
+		mux.With(selfOrManager).Get("/users/{userId}/vacations/new", r.vacationHandler.GetVacationForm)
+		mux.With(selfOrManager).Post("/users/{userId}/vacations", r.vacationHandler.CreateVacation)
+		mux.With(selfOrManager).Post("/users/{userId}/vacations/preview", r.vacationHandler.PreviewVacation)
+		mux.With(selfOrManager).Post("/users/{userId}/vacations/limit", r.vacationHandler.VacationLimit)
+		mux.With(managerOf).Post("/users/{userId}/vacations/{id}/approve", r.vacationHandler.ApproveVacation)
+		mux.With(managerOf).Post("/users/{userId}/vacations/{id}/status", r.vacationHandler.ChangeVacationStatus)
+		mux.With(managerOf).Post("/users/{userId}/vacations/{id}/delete", r.vacationHandler.DeleteVacation)
+		mux.With(managerOf).Get("/users/{userId}/vacations/{id}/transfer", r.transferHandler.Form)
+		mux.With(managerOf).Post("/users/{userId}/vacations/{id}/transfer", r.transferHandler.Transfer)
 	}
 
 	if r.calendarHandler != nil {
-		mux.With(selfOrAdmin).Get("/users/{userId}/calendar", r.calendarHandler.GetUserCalendar)
+		mux.With(selfOrManager).Get("/users/{userId}/calendar", r.calendarHandler.GetUserCalendar)
 	}
 
 	if r.calendarHandler != nil {
@@ -196,18 +228,24 @@ func (r *Router) registerAPI(mux chi.Router) {
 	}
 
 	if r.shiftHandler != nil {
-		mux.With(authmiddleware.RequireAdmin).Get("/users/{userId}/shift/new", r.shiftHandler.NewShiftForm)
-		mux.With(authmiddleware.RequireAdmin).Post("/users/{userId}/shift", r.shiftHandler.CreateShift)
+		mux.With(managerOf).Get("/users/{userId}/shift/new", r.shiftHandler.NewShiftForm)
+		mux.With(managerOf).Post("/users/{userId}/shift", r.shiftHandler.CreateShift)
 	}
 }
 
 func (r *Router) registerAdmin(mux chi.Router) {
-	mux.Get("/holidays", r.calendarHandler.GetCalendarDayForm)
-	mux.Post("/holidays", r.calendarHandler.NewCalendarDay)
-	mux.Post("/holidays/delete", r.calendarHandler.DeleteCalendarDay)
-	mux.Post("/holidays/fill", r.calendarHandler.FillHolidays)
+	// Производственный календарь общий для всех теротделов — только администратор.
+	mux.With(authmiddleware.RequireAdmin).Get("/holidays", r.calendarHandler.GetCalendarDayForm)
+	mux.With(authmiddleware.RequireAdmin).Post("/holidays", r.calendarHandler.NewCalendarDay)
+	mux.With(authmiddleware.RequireAdmin).Post("/holidays/delete", r.calendarHandler.DeleteCalendarDay)
+	mux.With(authmiddleware.RequireAdmin).Post("/holidays/fill", r.calendarHandler.FillHolidays)
 
+	// График — в пределах теротделов руководителя (проверяет обработчик).
 	mux.Get("/schedule", r.scheduleHandler.Page)
 	mux.Post("/schedule/approve", r.scheduleHandler.Approve)
+
+	// Журнал изменений — в пределах теротделов руководителя.
+	mux.Get("/audit", r.auditHandler.Page)
+	mux.Get("/discrepancies", r.discrepancies.Page)
 	mux.Get("/reports/schedule", r.scheduleHandler.Report)
 }

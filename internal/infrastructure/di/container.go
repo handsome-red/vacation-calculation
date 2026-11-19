@@ -13,25 +13,33 @@ import (
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/bootstrap_admin"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/deactivate_user"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/freeze_work_years"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/set_work_year"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/update_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacations"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/delete_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/send_carryover_warnings"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/send_vacation_reminders"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/transfer_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/leavecalc"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/audit/list_entries"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/schedule/get_schedule"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/shift/shift_form"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/edit_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/list_users"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/work_years"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/export_report"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_transfer_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_calendar"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/list_discrepancies"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/new_calendar_day_form"
 	"github.com/handsome-red/vacation-calculation/internal/infrastructure/exporter/docx"
 
@@ -57,7 +65,13 @@ type Container struct {
 	UserRepo       ports.UserRepository
 	DistrictRepo   ports.DistrictRepository
 	DepartmentRepo ports.DepartmentRepository
-	// VacationRepo ports.VacationRepository
+	SessionRepo    ports.SessionRepository
+	VacationRepo   ports.VacationRepository
+	AuditRepo      ports.AuditRepository
+	// Журнал изменений
+	ListAuditUseCase *list_entries.Handler
+	// Расхождения в учёте: дни сверх нормы, отпуска без рабочего года
+	ListDiscrepanciesUseCase *list_discrepancies.Handler
 
 	// Use Cases - Commands (User)
 	RegisterUserUseCase    *register_user.Handler
@@ -65,9 +79,16 @@ type Container struct {
 	DeactivateUserUseCase  *deactivate_user.Handler
 	ActivateUserUseCase    *activate_user.Handler
 	GetRegisterFormUseCase *register_form.Handler
+	UpdateUserUseCase      *update_user.Handler
+	UserEditFormUseCase    *edit_form.Handler
+	WorkYearsUseCase       *work_years.Handler
+	SetWorkYearUseCase     *set_work_year.Handler
+	// Сохранение закончившихся рабочих лет: при запуске и раз в сутки.
+	FreezeWorkYearsUseCase *freeze_work_years.Handler
 	// Use Cases - Commands (Vacation)
 	ApproveVacationUseCase      *approve_vacation.Handler
 	ChangeVacationStatusUseCase *change_status.Handler
+	DeleteVacationUseCase       *delete_vacation.Handler
 
 	CreateVacationUseCase   *create_vacations.Handler
 	TransferVacationUseCase *transfer_vacation.Handler
@@ -128,21 +149,29 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 	activateUserUseCase := activate_user.NewHandler(userRepo, log)
 	getRegisterFormUseCase := register_form.NewHandler(districtRepo, departmentRepo)
 
+	var openingRepo ports.OpeningUsageRepository = sqlite.NewOpeningUsageRepository(db)
+	var workYearRepo ports.WorkYearRepository = sqlite.NewWorkYearRepository(db)
+	updateUserUseCase := update_user.NewHandler(userRepo, districtRepo, departmentRepo, vacationRepo, openingRepo, workYearRepo, hasher)
+	userEditFormUseCase := edit_form.NewHandler(userRepo, getRegisterFormUseCase)
+
 	bootstrapAdminUseCase := bootstrap_admin.NewHandler(userRepo, registerUserUseCase)
 
-	leaveService := leavecalc.NewService(vacationRepo, shiftRepo, calendarDayRepo, wc)
+	leaveService := leavecalc.NewService(userRepo, vacationRepo, shiftRepo, calendarDayRepo, openingRepo, workYearRepo, wc)
+	workYearsUseCase := work_years.NewHandler(userRepo, leaveService)
+	setWorkYearUseCase := set_work_year.NewHandler(userRepo, workYearRepo, leaveService)
+	freezeWorkYearsUseCase := freeze_work_years.NewHandler(userRepo, leaveService, log)
 
 	getUserUseCase := get_user.NewHandler(userRepo, leaveService, wc, log)
-	getScheduleUseCase := get_schedule.NewHandler(userRepo, districtRepo, leaveService)
+	getScheduleUseCase := get_schedule.NewHandler(userRepo, districtRepo, departmentRepo, leaveService)
 	approveScheduleUseCase := approve_schedule.NewHandler(userRepo, vacationRepo)
 	getActiveUsersUseCase := list_users.NewHandler(userRepo, districtRepo, departmentRepo, log)
 
 	createVacationUseCase := create_vacations.NewHandler(vacationRepo, userRepo, leaveService)
-	approveVacationUseCase := approve_vacation.NewHandler(vacationRepo, userRepo)
-	changeVacationStatusUseCase := change_status.NewHandler(vacationRepo)
-	transferVacationUseCase := transfer_vacation.NewHandler(vacationRepo, transferRepo, createVacationUseCase)
+	approveVacationUseCase := approve_vacation.NewHandler(vacationRepo, userRepo, leaveService)
+	changeVacationStatusUseCase := change_status.NewHandler(vacationRepo, leaveService)
+	transferVacationUseCase := transfer_vacation.NewHandler(userRepo, vacationRepo, transferRepo, createVacationUseCase, leaveService)
 	getTransferFormUseCase := get_transfer_form.NewHandler(vacationRepo)
-	getUserVacationsUseCase := get_user_vacations.NewHandler(vacationRepo, transferRepo)
+	getUserVacationsUseCase := get_user_vacations.NewHandler(vacationRepo, transferRepo, openingRepo)
 	getVacationFormUseCase := get_vacation_form.NewHandler(userRepo, leaveService)
 	getCalendarUseCase := get_calendar.NewHandler(calendarDayRepo)
 	userCalendarUseCase := get_user_calendar.NewHandler(calendarDayRepo, vacationRepo)
@@ -181,8 +210,10 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		sendCarryoverUseCase = send_carryover_warnings.NewHandler(userRepo, leaveService, reminderRepo, smtpMailer, log)
 	}
 
-	createShiftUseCase := create_shift.NewHandler(shiftRepo)
+	createShiftUseCase := create_shift.NewHandler(shiftRepo, leaveService)
 	shiftFormUseCase := shift_form.NewHandler()
+
+	var auditRepo ports.AuditRepository = sqlite.NewAuditRepository(db)
 
 	return &Container{
 		// Infrastructure
@@ -191,13 +222,23 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		Hasher:       hasher,
 		LoginUseCase: login.NewHandler(userRepo, hasher),
 		// Repositories
-		UserRepo: userRepo,
+		UserRepo:                 userRepo,
+		SessionRepo:              sqlite.NewSessionRepository(db),
+		VacationRepo:             vacationRepo,
+		AuditRepo:                auditRepo,
+		ListAuditUseCase:         list_entries.NewHandler(auditRepo),
+		ListDiscrepanciesUseCase: list_discrepancies.NewHandler(userRepo, leaveService),
 		// Use Cases - Commands
 		RegisterUserUseCase:    registerUserUseCase,
 		BootstrapAdminUseCase:  bootstrapAdminUseCase,
 		DeactivateUserUseCase:  deactivateUserUseCase,
 		ActivateUserUseCase:    activateUserUseCase,
 		GetRegisterFormUseCase: getRegisterFormUseCase,
+		UpdateUserUseCase:      updateUserUseCase,
+		WorkYearsUseCase:       workYearsUseCase,
+		SetWorkYearUseCase:     setWorkYearUseCase,
+		FreezeWorkYearsUseCase: freezeWorkYearsUseCase,
+		UserEditFormUseCase:    userEditFormUseCase,
 		// Use Cases - Queries
 		GetUserUseCase:              getUserUseCase,
 		ListUsersUseCase:            getActiveUsersUseCase,
@@ -208,6 +249,7 @@ func NewContainer(ctx context.Context, cfg config.Config, log ports.Logger) (*Co
 		GetTransferFormUseCase:      getTransferFormUseCase,
 		ApproveVacationUseCase:      approveVacationUseCase,
 		ChangeVacationStatusUseCase: changeVacationStatusUseCase,
+		DeleteVacationUseCase:       delete_vacation.NewHandler(vacationRepo, leaveService),
 		GetUserVacationsUseCase:     getUserVacationsUseCase,
 		GetVacationFormUseCase:      getVacationFormUseCase,
 		GetCalendarUseCase:          getCalendarUseCase,

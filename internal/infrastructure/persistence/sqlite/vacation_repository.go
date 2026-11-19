@@ -91,6 +91,30 @@ func (r *vacationRepository) FindByID(ctx context.Context, userID user.UserID, i
 	return v, nil
 }
 
+func (r *vacationRepository) Delete(ctx context.Context, userID user.UserID, id vacation.VacationID) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin delete vacation: %w", err)
+	}
+	defer tx.Rollback()
+
+	// transferred_from ссылается на отпуск без ON DELETE: сначала отвязываем перенесённые.
+	if _, err := tx.ExecContext(ctx, `UPDATE vacations SET transferred_from = NULL WHERE transferred_from = ?`, id.String()); err != nil {
+		return fmt.Errorf("detach transferred vacations: %w", err)
+	}
+	// История переносов (vacation_transfers) удаляется каскадом.
+	res, err := tx.ExecContext(ctx, `DELETE FROM vacations WHERE user_id = ? AND id = ?`, userID.String(), id.String())
+	if err != nil {
+		return fmt.Errorf("delete vacation: %w", err)
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return fmt.Errorf("rows affected: %w", err)
+	} else if n == 0 {
+		return vacation.ErrVacationNotFound
+	}
+	return tx.Commit()
+}
+
 func (r *vacationRepository) FindByUserID(ctx context.Context, userID user.UserID) ([]*vacation.Vacation, error) {
 	const q = `
 		SELECT id, user_id, start_date, end_date, kind, work_year_start, transferred_from, status, created_at, updated_at

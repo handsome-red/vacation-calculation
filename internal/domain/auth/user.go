@@ -2,9 +2,43 @@ package auth
 
 import "github.com/handsome-red/vacation-calculation/internal/domain/user"
 
+// Caller — кто выполняет действие: администратор, руководитель своих
+// территориальных отделов (Managed) или обычный сотрудник.
 type Caller struct {
 	UserID  user.UserID
 	IsAdmin bool
+	Managed []string
+}
+
+// CallerOf — права пользователя u.
+func CallerOf(u *user.User) Caller {
+	return Caller{UserID: u.ID(), IsAdmin: u.IsAdmin(), Managed: u.ManagedDistricts()}
+}
+
+// Manages — может ли вызывающий действовать как администратор в отношении target.
+func (c Caller) Manages(target *user.User) bool {
+	return user.Manages(c.IsAdmin, c.Managed, target)
+}
+
+// ManagesDistrict — может ли вызывающий управлять территориальным отделом code.
+func (c Caller) ManagesDistrict(code string) bool {
+	return user.ManagesDistrict(c.IsAdmin, c.Managed, code)
+}
+
+// IsStaff — администратор или руководитель.
+func (c Caller) IsStaff() bool {
+	return c.IsAdmin || len(c.Managed) > 0
+}
+
+// Scope — доступные территориальные отделы; nil — все.
+func (c Caller) Scope() []string {
+	if c.IsAdmin {
+		return nil
+	}
+	if c.Managed == nil {
+		return []string{}
+	}
+	return c.Managed
 }
 
 type AuthUser struct {

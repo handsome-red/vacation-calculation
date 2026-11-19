@@ -8,22 +8,15 @@ import (
 )
 
 type Period struct {
+	// Kind — вид отпуска; KindAuto — распределить по квотам автоматически.
 	Kind  vacation.Kind
 	Start date.Date
 	End   date.Date
 }
 
-// Тип заявки: ежегодный оплачиваемый (по умолчанию) или административный отпуск.
-const (
-	TypeAnnual = "annual"
-	TypeUnpaid = "unpaid"
-)
-
 type Command struct {
 	UserID  string   `json:"userId"`
 	Periods []Period `json:"periods"`
-	// Type — TypeAnnual (пусто) или TypeUnpaid.
-	Type string `json:"type"`
 	// ExcludeVacationID — отпуск, который не учитывается при проверках и расчёте
 	// квот (переносимый). Заполняется только сервером, не из запроса.
 	ExcludeVacationID string `json:"-"`
@@ -36,6 +29,13 @@ type Result struct {
 	Warnings []string
 	// Notices — предупреждения для всех: дни года используются позже срока переноса.
 	Notices []string
+	// Years — рабочие годы, из которых можно списать дни, с уже списанными днями.
+	Years []YearQuota
+}
+
+type YearQuota struct {
+	Year vacation.YearStat
+	Used vacation.UsedByKind
 }
 
 func (c Command) Validate() error {

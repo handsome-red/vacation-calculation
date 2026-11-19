@@ -1,0 +1,16 @@
+# Секреты и локальные данные
+.env
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Собранные бинарники
+/bin/
+/server_new
+/vacation-app
+/vacation-calculation
+*.exe
+
+# Отчёты тестов
+coverage.out

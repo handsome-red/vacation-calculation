@@ -14,10 +14,12 @@ const (
 	PositionDirector       Position = "director"
 	PositionHeadOfTerritorialDepartment Position = "head_of_territorial_department"
 	PositionDeputyDirector Position = "deputy_director"
+	PositionHeadOfDepartment Position = "head_of_department"
 
 	PositionAssistant Position = "assistant"
 	PositionDeputyHead Position = "deputy_head"
 	PositionLeadSpecialist Position = "lead_specialist"
+	PositionLeadSpecialistExpert Position = "lead_specialist_expert"
 	PositionSeniorSpecialistSecondClass Position = "senior_specialist_second_class"
 	PositionSpecialistFirstClass Position = "specialist_first_class"
 
@@ -41,6 +43,8 @@ var positionsMap = map[Position]string{
 	PositionDirector: "Руководитель",  // +
 	PositionHeadOfTerritorialDepartment:              "Начальник территориального отдела", // +
 	PositionDeputyDirector:        "Заместитель начальника",            // +
+	PositionHeadOfDepartment: "Начальник отдела",
+	PositionLeadSpecialistExpert: "Ведущий специалист-эксперт",
 	PositionChiefSpecialistExpert: "Главный специалист-эксперт",        // +
 	PositionSpecialistExpert:      "Специалист-эксперт",                // +
 	PositionSeniorSpecialistFirst: "Старший специалист 1 разряда",
@@ -82,6 +86,8 @@ func (p Position) isIrregular() bool {
 		PositionDirector,
 		PositionHeadOfTerritorialDepartment,
 		PositionDeputyDirector,
+		PositionHeadOfDepartment,
+		PositionLeadSpecialistExpert,
 		PositionChiefSpecialistExpert,
 		PositionSpecialistExpert,
 		PositionAssistant,

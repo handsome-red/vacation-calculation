@@ -48,6 +48,8 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		Status:         f.Status,
 		Position:       f.Position,
 		DistrictCode:   f.DistrictCode,
+		DistrictCodes:  query.Caller.Scope(),
+		NoAdmins:       !query.Caller.IsAdmin,
 		DepartmentCode: f.DepartmentCode,
 	}
 	if f.Category != "" {
@@ -85,16 +87,19 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 			WorkdayDuration: u.WorkdayDuration().Int(),
 			IsInvalid:       u.IsInvalid(),
 			TotalExperience: u.ExperienceLabel(),
+			Role:            u.RoleLabel(),
 		})
 	}
 
-	// Справочники для фильтров.
+	// Справочники для фильтров: теротделы — только доступные.
 	districts, err := h.districtRepo.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("districts: %w", err)
 	}
 	for _, d := range districts {
-		result.Districts = append(result.Districts, Option{Code: d.Code(), Title: d.Title()})
+		if query.Caller.ManagesDistrict(d.Code()) {
+			result.Districts = append(result.Districts, Option{Code: d.Code(), Title: d.Title()})
+		}
 	}
 	departments, err := h.departmentRepo.ListWithDistrict(ctx)
 	if err != nil {

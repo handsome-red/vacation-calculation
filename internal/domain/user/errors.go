@@ -28,6 +28,8 @@ var (
 
 	ErrHiredDateInvalid = errors.New("hired date invalid")
 
+	ErrExperienceInvalid = errors.New("experience invalid")
+
 	ErrDistrictInvalid = errors.New("district invalid")
 
 	ErrWorkdayDurationInvalid = errors.New("workday duration invalid")

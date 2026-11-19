@@ -47,7 +47,7 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 	for _, s := range snap.Stats {
 		used := vacation.UsedDaysInYear(snap.Vacations, s, snap.Holidays)
 		result.YearStats = append(result.YearStats, YearStat{
-			Year:      formatYearRange(s),
+			Year:      FormatYearRange(s),
 			Start:     vacation.DateOf(s.From).ISO(),
 			Base:      Quota{Total: s.Base, Blocked: used.Base},
 			Seniority: Quota{Total: s.Seniority, Blocked: used.Seniority},
@@ -77,8 +77,8 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 	return result, nil
 }
 
-// formatYearRange — "01.01.24-01.01.25" из YearStat.From/To.
-func formatYearRange(s vacation.YearStat) string {
+// FormatYearRange — "01.01.24-01.01.25" из YearStat.From/To.
+func FormatYearRange(s vacation.YearStat) string {
 	return fmt.Sprintf("%s-%s",
 		s.From.Format("02.01.06"),
 		s.To.Format("02.01.06"),

@@ -1,0 +1,44 @@
+{{template "base" .}}
+
+{{define "title"}}Журнал изменений{{end}}
+
+{{define "content"}}
+<div class="container">
+    <h1>Журнал изменений</h1>
+
+    <p class="muted">Последние {{.Limit}} действий. Время московское.</p>
+
+    {{if .Rows}}
+    <table>
+        <thead>
+            <tr>
+                <th>Когда</th>
+                <th>Кто</th>
+                {{if not .UserID}}<th>Сотрудник</th>{{end}}
+                <th>Действие</th>
+                <th>Подробности</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Rows}}
+            <tr>
+                <td>{{.At}}</td>
+                <td>{{.ActorName}}</td>
+                {{if not $.UserID}}<td>{{if .TargetID}}<a href="/users/{{.TargetID}}">{{.TargetName}}</a>{{end}}</td>{{end}}
+                <td>{{.Action}}</td>
+                <td>{{.Details}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p>Записей пока нет.</p>
+    {{end}}
+
+    {{if .UserID}}
+    <p><a href="/users/{{.UserID}}">← К карточке сотрудника</a></p>
+    {{else}}
+    <p><a href="/">← На главную</a></p>
+    {{end}}
+</div>
+{{end}}

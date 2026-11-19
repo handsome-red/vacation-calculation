@@ -1,0 +1,106 @@
+{{template "base" .}}
+
+{{define "title"}}Изменение данных сотрудника{{end}}
+
+{{define "content"}}
+{{$form := .Form}}
+<div class="container">
+    <h1>Изменить данные сотрудника</h1>
+
+    {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+
+    <p class="muted">
+        Должность, стаж и дата приёма влияют на расчёт отпусков: положенные дни по рабочим годам будут пересчитаны.
+        Начальник территориального отдела управляет сотрудниками своего теротдела с правами администратора.
+    </p>
+
+    <form method="POST" action="/users/{{.UserID}}/edit">
+        <p><label>Фамилия<br>
+                <input type="text" name="last_name" value="{{$form.LastName}}" required>
+            </label></p>
+
+        <p><label>Имя<br>
+                <input type="text" name="first_name" value="{{$form.FirstName}}" required>
+            </label></p>
+
+        <p><label>Отчество<br>
+                <input type="text" name="middle_name" value="{{$form.MiddleName}}" required>
+            </label></p>
+
+        <p><label>Email<br>
+                <input type="email" name="email" value="{{$form.Email}}" required>
+            </label></p>
+
+        <p><label>Новый пароль (оставьте пустым, чтобы не менять)<br>
+                <input type="password" name="password" minlength="8" autocomplete="new-password">
+            </label></p>
+
+        <p><label>Дата рождения<br>
+                <input type="date" name="birth_date" value="{{$form.BirthDate}}" max="{{.Today}}" required>
+            </label></p>
+
+        <p><label for="position">Должность</label></p>
+        <select id="position" name="position" required>
+            <option value="">- выберите должность -</option>
+            {{range .Positions}}
+            <option value="{{.Code}}" {{if eq .Code $form.Position}}selected{{end}}>{{.Title}}</option>
+            {{end}}
+        </select>
+
+        <p><label>Стаж в днях до устройства на работу<br>
+                <input type="number" name="experience" value="{{$form.Experience}}" min="0" max="36500" step="1" required>
+            </label></p>
+
+        <p><label>Дата приема на работу<br>
+                <input type="date" name="hired_at" value="{{$form.HiredAt}}" max="{{.Today}}" required>
+            </label></p>
+
+        <p><label for="district">Территориальный отдел</label></p>
+        <select id="district" name="district" required>
+            <option value="">-- выберите территориальный отдел --</option>
+            {{range .Districts}}
+            <option value="{{.Code}}" {{if eq .Code $form.District}}selected{{end}}>{{.Title}}</option>
+            {{end}}
+        </select>
+
+        <p><label for="department">Район/Отдел</label></p>
+        <select id="department" name="department" required>
+            <option value="">-- выберите отдел --</option>
+            {{range .Departments}}
+            <option value="{{.Code}}" data-district="{{.DistrictCode}}" {{if eq .Code $form.Department}}selected{{end}}>{{.Title}}</option>
+            {{end}}
+        </select>
+
+        <p><label>Продолжительность рабочего дня<br>
+                <input type="number" name="workday_duration" value="{{$form.WorkdayDuration}}" min="1" max="8" step="1" required>
+            </label></p>
+
+        <p><label>Инвалид<br>
+                <input type="checkbox" name="is_invalid" value="true" {{if $form.IsInvalid}}checked{{end}}>
+            </label></p>
+
+        <p><button type="submit" class="btn">Сохранить</button></p>
+    </form>
+
+    <p><a href="/users/{{.UserID}}">← К карточке сотрудника</a></p>
+</div>
+
+<script>
+(function () {
+    const district = document.getElementById('district');
+    const department = document.getElementById('department');
+    const options = Array.from(department.querySelectorAll('option[data-district]'));
+
+    // Республиканские отделы (district_code = "") доступны в любом теротделе.
+    function render() {
+        options.forEach(opt => {
+            opt.hidden = opt.dataset.district !== '' && opt.dataset.district !== district.value;
+        });
+        if (department.selectedOptions[0]?.hidden) department.value = '';
+    }
+
+    district.addEventListener('change', render);
+    render();
+})();
+</script>
+{{end}}

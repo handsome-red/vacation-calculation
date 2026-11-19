@@ -17,7 +17,7 @@ let previewSeq = 0;
 
 // Распределение периодов по квотам считает сервер — та же логика, что и при сохранении.
 window.addEventListener('periods-changed', async (e) => {
-    const { userId, type, periods } = e.detail;
+    const { userId, periods } = e.detail;
     const seq = ++previewSeq;
     if (confirmBtn) confirmBtn.disabled = true;
 
@@ -35,8 +35,7 @@ window.addEventListener('periods-changed', async (e) => {
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({
                 userId,
-                type,
-                periods: periods.map((p) => ({ startDate: p.from, endDate: p.to })),
+                periods: periods.map((p) => ({ kind: p.kind, startDate: p.from, endDate: p.to })),
             }),
         });
         ok = res.ok;
@@ -53,12 +52,22 @@ window.addEventListener('periods-changed', async (e) => {
         return;
     }
 
-    if (root) renderQuotas(root, { ...APP, yearStats: withReserved(APP.yearStats, body.allocations) });
+    if (root) renderQuotas(root, { ...APP, yearStats: withReserved(mergeYears(APP.yearStats, body.years || []), body.allocations) });
     renderAllocation(body.allocations);
     renderBox('notices', 'Внимание: дни используются позже срока переноса (не позднее 12 месяцев после окончания рабочего года):', body.notices || []);
     renderBox('warnings', 'Правила не соблюдены — отпуск будет оформлен правами администратора:', body.warnings || []);
     if (confirmBtn) confirmBtn.disabled = false;
 });
+
+// Годы формы (по сегодняшний день) и годы, из которых списывает заявка: отпуск в
+// будущем может списывать дни года, который ещё не начался.
+function mergeYears(formYears, previewYears) {
+    const byStart = new Map(formYears.map((y) => [y.start, y]));
+    for (const y of previewYears) {
+        if (!byStart.has(y.start)) byStart.set(y.start, y);
+    }
+    return [...byStart.values()].sort((a, b) => a.start.localeCompare(b.start));
+}
 
 function withReserved(yearStats, allocations) {
     const stats = yearStats.map((y) => {

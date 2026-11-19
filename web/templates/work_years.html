@@ -1,0 +1,50 @@
+{{template "base" .}}
+
+{{define "title"}}Рабочие годы сотрудника{{end}}
+
+{{define "content"}}
+<div class="container">
+    <h1>Рабочие годы: {{.FullName}}</h1>
+
+    {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+
+    <p class="muted">
+        Начало года — день после конца предыдущего, поэтому его изменение меняет конец предыдущего года.
+        Следующие годы считаются от новой даты. Отпуска и использованные дни остаются в году с тем же номером.
+        Закончившиеся годы сохраняются: сдвиги задним числом их границы не меняют, только правка здесь.
+        В году с заданным вручную концом сдвиги на его длительность не влияют.
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>№</th>
+                <th>Начало</th>
+                <th>Конец</th>
+                <th>Дней</th>
+                <th>Границы</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Years}}
+            <tr>
+                <td>{{.Number}}</td>
+                <td><input type="date" name="start" form="year-{{.Number}}" value="{{.Start}}" aria-label="Начало года {{.Number}}" required {{if eq .Number 1}}readonly{{end}}></td>
+                <td><input type="date" name="end" form="year-{{.Number}}" value="{{.End}}" aria-label="Конец года {{.Number}}" required></td>
+                <td>{{.Days}}</td>
+                <td>{{if .Manual}}вручную{{else if .Stored}}сохранены{{else}}расчёт{{end}}</td>
+                <td>
+                    <form id="year-{{.Number}}" method="POST" action="/users/{{$.UserID}}/work-years/{{.Number}}">
+                        <button type="submit" class="btn">Сохранить</button>
+                        {{if .Manual}}<button type="submit" class="btn" name="action" value="reset" formnovalidate>Вернуть расчёт</button>{{end}}
+                    </form>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+
+    <p><a href="/users/{{.UserID}}">← К карточке сотрудника</a></p>
+</div>
+{{end}}

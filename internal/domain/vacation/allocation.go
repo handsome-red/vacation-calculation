@@ -60,6 +60,9 @@ var AllocationOrder = []Kind{KindBase, KindIrregular, KindSeniority}
 type YearBalance struct {
 	Year      YearStat
 	Remaining map[Kind]int
+	// Full — остаток по видам без ограничения заработанным: заработанные дни можно
+	// потратить на любой вид, общий лимит года — сумма Remaining.
+	Full map[Kind]int
 }
 
 func (b YearBalance) Total() int {
@@ -110,6 +113,11 @@ func BuildBalances(
 			KindSeniority: max(s.Seniority-used.Seniority, 0),
 		}
 
+		full := make(map[Kind]int, len(remaining))
+		for k, n := range remaining {
+			full[k] = n
+		}
+
 		if capEarned && at.Time().Before(s.To) {
 			usedTotal := used.Base + used.Irregular + used.Seniority
 			info, err := calc.CurrentYear([]YearStat{s}, at.Time(), usedTotal)
@@ -124,93 +132,137 @@ func BuildBalances(
 			}
 		}
 
-		out = append(out, YearBalance{Year: s, Remaining: remaining})
+		out = append(out, YearBalance{Year: s, Remaining: remaining, Full: full})
 	}
 
 	return out, nil
 }
 
 // Allocate распределяет дни периодов по квотам: сначала самый старый рабочий год
-// с остатком, внутри года — в порядке AllocationOrder. Периоды не должны пересекаться.
-//
-// При allowOverdraft нехватка дней не ошибка: недостающие дни списываются сверх
-// нормы основного отпуска последнего рабочего года из balances; их число — overdraft.
-func Allocate(periods []CreationPeriod, balances []YearBalance, h Holidays, allowOverdraft bool) (allocations []Allocation, overdraft int, err error) {
+// с остатком. Период с выбранным видом списывается только из квоты этого вида,
+// автоматический (KindAuto) — в порядке AllocationOrder. Периоды с выбранным видом
+// распределяются первыми, чтобы автоматические не заняли их дни.
+// Периоды не должны пересекаться. Списать больше остатка нельзя — ErrExceedsAnnual.
+func Allocate(periods []CreationPeriod, balances []YearBalance, h Holidays) ([]Allocation, error) {
 	if len(balances) == 0 {
-		return nil, 0, fmt.Errorf("%w: нет рабочего года для списания дней", ErrNoSuitableWorkYear)
+		return nil, fmt.Errorf("%w: нет рабочего года для списания дней", ErrNoSuitableWorkYear)
 	}
 
 	sorted := make([]CreationPeriod, len(periods))
 	copy(sorted, periods)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Start.Before(sorted[j].Start) })
 
-	requested := 0
+	requested := make(map[Kind]int)
 	for _, p := range sorted {
-		requested += ChargeableDays(p.Start, p.End, h)
+		requested[p.Kind] += ChargeableDays(p.Start, p.End, h)
 	}
-	available := 0
-	remaining := make([]map[Kind]int, len(balances))
-	for i, b := range balances {
-		available += b.Total()
-		remaining[i] = make(map[Kind]int, len(b.Remaining))
-		for k, n := range b.Remaining {
-			remaining[i][k] = n
-		}
-	}
-	if requested > available {
-		if !allowOverdraft {
-			return nil, 0, fmt.Errorf("%w: к списанию %d дн., доступно %d дн.", ErrExceedsAnnual, requested, available)
-		}
-		overdraft = requested - available
-		// Сверхнормативные дни — в основной отпуск последнего рабочего года.
-		remaining[len(remaining)-1][KindBase] += overdraft
-	}
-
-	yi, ki := 0, 0
-	// bucket находит ближайшую непустую квоту, начиная с текущей.
-	bucket := func() bool {
-		for yi < len(remaining) {
-			if remaining[yi][AllocationOrder[ki]] > 0 {
-				return true
-			}
-			ki++
-			if ki == len(AllocationOrder) {
-				ki = 0
-				yi++
-			}
-		}
-		return false
-	}
+	quotas := newYearQuotas(balances)
+	initial := newYearQuotas(balances)
 
 	out := make([]Allocation, 0, len(sorted))
-	for _, p := range sorted {
-		var cur *Allocation
-		for d := p.Start; !d.After(p.End); d = d.AddDay() {
-			holiday := h.Has(d)
-			if holiday && cur != nil {
-				cur.End = d
+	for _, auto := range []bool{false, true} {
+		for _, p := range sorted {
+			if (p.Kind == KindAuto) != auto {
 				continue
 			}
-			if !bucket() {
-				return nil, 0, fmt.Errorf("%w: к списанию %d дн., доступно %d дн.", ErrExceedsAnnual, requested, available)
-			}
-			kind, yearStart := AllocationOrder[ki], DateOf(balances[yi].Year.From)
-			if cur == nil || cur.Kind != kind || cur.WorkYearStart != yearStart {
-				if cur != nil {
-					out = append(out, *cur)
+			var cur *Allocation
+			for d := p.Start; !d.After(p.End); d = d.AddDay() {
+				holiday := h.Has(d)
+				if holiday && cur != nil {
+					cur.End = d
+					continue
 				}
-				cur = &Allocation{Kind: kind, WorkYearStart: yearStart, Start: d}
+				yi, kind, ok := quotas.next(p.Kind)
+				if !ok {
+					return nil, initial.notEnough(p.Kind, requested)
+				}
+				yearStart := DateOf(balances[yi].Year.From)
+				if cur == nil || cur.Kind != kind || cur.WorkYearStart != yearStart {
+					if cur != nil {
+						out = append(out, *cur)
+					}
+					cur = &Allocation{Kind: kind, WorkYearStart: yearStart, Start: d}
+				}
+				cur.End = d
+				if !holiday {
+					cur.Days++
+					quotas.spend(yi, kind)
+				}
 			}
-			cur.End = d
-			if !holiday {
-				cur.Days++
-				remaining[yi][kind]--
+			if cur != nil {
+				out = append(out, *cur)
 			}
-		}
-		if cur != nil {
-			out = append(out, *cur)
 		}
 	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Start.Before(out[j].Start) })
 
-	return out, overdraft, nil
+	return out, nil
+}
+
+// yearQuotas — изменяемая копия остатков на время распределения: дни по видам
+// и общий лимит года (в текущем году он ограничен заработанным).
+type yearQuotas struct {
+	kinds []map[Kind]int
+	left  []int
+}
+
+func newYearQuotas(balances []YearBalance) *yearQuotas {
+	q := &yearQuotas{kinds: make([]map[Kind]int, len(balances)), left: make([]int, len(balances))}
+	for i, b := range balances {
+		source := b.Full
+		if source == nil {
+			source = b.Remaining
+		}
+		q.kinds[i] = make(map[Kind]int, len(source))
+		for k, n := range source {
+			q.kinds[i][k] = n
+		}
+		q.left[i] = b.Total()
+	}
+	return q
+}
+
+// next находит самый старый год и вид, из которых можно списать день.
+func (q *yearQuotas) next(k Kind) (year int, kind Kind, ok bool) {
+	order := []Kind{k}
+	if k == KindAuto {
+		order = AllocationOrder
+	}
+	for yi := range q.kinds {
+		if q.left[yi] <= 0 {
+			continue
+		}
+		for _, kind := range order {
+			if q.kinds[yi][kind] > 0 {
+				return yi, kind, true
+			}
+		}
+	}
+	return 0, "", false
+}
+
+func (q *yearQuotas) spend(year int, k Kind) {
+	q.kinds[year][k]--
+	q.left[year]--
+}
+
+// notEnough — ошибка нехватки дней; q — квоты до начала распределения.
+func (q *yearQuotas) notEnough(k Kind, requested map[Kind]int) error {
+	if k == KindAuto {
+		available := 0
+		for _, n := range q.left {
+			available += n
+		}
+		for kind, n := range requested {
+			if kind != KindAuto {
+				available -= n
+			}
+		}
+		return fmt.Errorf("%w: к списанию %d дн., доступно %d дн.", ErrExceedsAnnual, requested[KindAuto], max(available, 0))
+	}
+	available := 0
+	for yi := range q.kinds {
+		available += min(q.kinds[yi][k], q.left[yi])
+	}
+	return fmt.Errorf("%w: вид отпуска «%s»: к списанию %d дн., доступно %d дн.", ErrExceedsAnnual, k.Label(), requested[k], available)
 }

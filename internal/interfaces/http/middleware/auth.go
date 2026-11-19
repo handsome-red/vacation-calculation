@@ -3,10 +3,10 @@ package middleware
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -23,19 +23,20 @@ type contextKey string
 
 const userCtxKey contextKey = "user"
 
-type session struct {
-	userID  user.UserID
-	expires time.Time
-}
-
+// AuthMiddleware ведёт сессии входа. Сессии хранятся в базе и переживают перезапуск.
 type AuthMiddleware struct {
 	users    ports.UserRepository
-	mu       sync.Mutex
-	sessions map[string]session
+	sessions ports.SessionRepository
 }
 
-func NewAuthMiddleware(users ports.UserRepository) *AuthMiddleware {
-	return &AuthMiddleware{users: users, sessions: make(map[string]session)}
+func NewAuthMiddleware(users ports.UserRepository, sessions ports.SessionRepository) *AuthMiddleware {
+	return &AuthMiddleware{users: users, sessions: sessions}
+}
+
+// hashToken — ключ сессии в базе: SHA-256 токена из куки.
+func hashToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 func (m *AuthMiddleware) Start(w http.ResponseWriter, r *http.Request, id user.UserID) error {
@@ -44,9 +45,14 @@ func (m *AuthMiddleware) Start(w http.ResponseWriter, r *http.Request, id user.U
 		return err
 	}
 	token := hex.EncodeToString(key)
-	m.mu.Lock()
-	m.sessions[token] = session{userID: id, expires: time.Now().Add(sessionLifetime)}
-	m.mu.Unlock()
+	now := time.Now()
+	// Истекшие сессии убираются при каждом входе: входов мало, отдельная задача не нужна.
+	if err := m.sessions.DeleteExpired(r.Context(), now); err != nil {
+		return err
+	}
+	if err := m.sessions.Create(r.Context(), hashToken(token), id, now.Add(sessionLifetime)); err != nil {
+		return err
+	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Value: token, Path: "/", HttpOnly: true,
 		Secure: r.TLS != nil, SameSite: http.SameSiteLaxMode, MaxAge: int(sessionLifetime.Seconds())})
 	return nil
@@ -54,9 +60,7 @@ func (m *AuthMiddleware) Start(w http.ResponseWriter, r *http.Request, id user.U
 
 func (m *AuthMiddleware) End(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie(sessionCookieName); err == nil {
-		m.mu.Lock()
-		delete(m.sessions, cookie.Value)
-		m.mu.Unlock()
+		_ = m.sessions.Delete(r.Context(), hashToken(cookie.Value))
 	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Path: "/", HttpOnly: true,
 		Secure: r.TLS != nil, SameSite: http.SameSiteLaxMode, MaxAge: -1})
@@ -66,17 +70,15 @@ func (m *AuthMiddleware) Require(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(sessionCookieName)
 		if err == nil {
-			m.mu.Lock()
-			s, found := m.sessions[cookie.Value]
-			if found && time.Now().After(s.expires) {
-				delete(m.sessions, cookie.Value)
-				found = false
+			userID, found, err := m.sessions.Find(r.Context(), hashToken(cookie.Value), time.Now())
+			if err != nil {
+				http.Error(w, "Ошибка проверки сессии", http.StatusInternalServerError)
+				return
 			}
-			m.mu.Unlock()
 			if found {
-				u, err := m.users.FindByID(r.Context(), s.userID)
+				u, err := m.users.FindByID(r.Context(), userID)
 				if err == nil && u.Status().IsActive() {
-					next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userCtxKey, u)))
+					next.ServeHTTP(w, r.WithContext(WithUser(r.Context(), u)))
 					return
 				}
 			}
@@ -89,6 +91,11 @@ func (m *AuthMiddleware) Require(next http.Handler) http.Handler {
 	})
 }
 
+// WithUser — контекст запроса вошедшего пользователя u (как после Require).
+func WithUser(ctx context.Context, u *user.User) context.Context {
+	return context.WithValue(ctx, userCtxKey, u)
+}
+
 func UserFromContext(ctx context.Context) (*user.User, bool) {
 	u, ok := ctx.Value(userCtxKey).(*user.User)
 	return u, ok
@@ -99,12 +106,23 @@ func CallerFromContext(ctx context.Context) (auth.Caller, bool) {
 	if !ok || u == nil {
 		return auth.Caller{}, false
 	}
-	return auth.Caller{UserID: u.ID(), IsAdmin: u.IsAdmin()}, true
+	return auth.CallerOf(u), true
 }
 
-// RequireSelfOrAdmin пропускает администратора или пользователя, чей ID указан
-// в параметре маршрута param. Применяется после Require.
-func RequireSelfOrAdmin(param string) func(http.Handler) http.Handler {
+// RequireSelfOrManager пропускает пользователя, чей ID указан в параметре маршрута
+// param, и тех, кто им управляет: администратора и руководителя его территориального
+// отдела. Применяется после Require.
+func (m *AuthMiddleware) RequireSelfOrManager(param string) func(http.Handler) http.Handler {
+	return m.requireTarget(param, true)
+}
+
+// RequireManagerOf пропускает только тех, кто управляет сотрудником из параметра
+// маршрута param: администратора и руководителя его территориального отдела.
+func (m *AuthMiddleware) RequireManagerOf(param string) func(http.Handler) http.Handler {
+	return m.requireTarget(param, false)
+}
+
+func (m *AuthMiddleware) requireTarget(param string, allowSelf bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			u, ok := UserFromContext(r.Context())
@@ -112,13 +130,53 @@ func RequireSelfOrAdmin(param string) func(http.Handler) http.Handler {
 				http.Error(w, "Необходим вход", http.StatusUnauthorized)
 				return
 			}
-			if !u.IsAdmin() && !strings.EqualFold(chi.URLParam(r, param), u.ID().String()) {
+			raw := chi.URLParam(r, param)
+			if allowSelf && strings.EqualFold(raw, u.ID().String()) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			if u.IsAdmin() {
+				next.ServeHTTP(w, r)
+				return
+			}
+			if !u.IsManager() {
+				http.Error(w, "Доступ запрещён", http.StatusForbidden)
+				return
+			}
+			id, err := user.ParseUserID(raw)
+			if err != nil {
+				http.Error(w, "Сотрудник не найден", http.StatusNotFound)
+				return
+			}
+			target, err := m.users.FindByID(r.Context(), id)
+			if err != nil {
+				http.Error(w, "Сотрудник не найден", http.StatusNotFound)
+				return
+			}
+			if !u.Manages(target) {
 				http.Error(w, "Доступ запрещён", http.StatusForbidden)
 				return
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// RequireStaff пропускает администратора и руководителей. Доступные им сотрудники
+// ограничиваются в обработчиках правами из CallerFromContext.
+func RequireStaff(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u, ok := UserFromContext(r.Context())
+		if !ok || u == nil {
+			http.Error(w, "Необходим вход", http.StatusUnauthorized)
+			return
+		}
+		if !u.IsStaff() {
+			http.Error(w, "Доступ запрещён", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // RequireAdmin разрешает доступ только суперадминистратору после Require.

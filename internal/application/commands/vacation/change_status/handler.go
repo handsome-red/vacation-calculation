@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/application/leavecalc"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
@@ -12,10 +13,11 @@ import (
 
 type Handler struct {
 	vacationRepo ports.VacationRepository
+	leave        *leavecalc.Service
 }
 
-func NewHandler(vacationRepo ports.VacationRepository) *Handler {
-	return &Handler{vacationRepo: vacationRepo}
+func NewHandler(vacationRepo ports.VacationRepository, leave *leavecalc.Service) *Handler {
+	return &Handler{vacationRepo: vacationRepo, leave: leave}
 }
 
 func (h *Handler) Handle(ctx context.Context, cmd Command) error {
@@ -39,7 +41,18 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) error {
 	if err := v.ChangeStatus(status, time.Now()); err != nil {
 		return fmt.Errorf("change vacation status: %w", err)
 	}
-	if err := h.vacationRepo.Save(ctx, v); err != nil {
+	save := func() error { return h.vacationRepo.Save(ctx, v) }
+	// Смена статуса административного отпуска может сдвинуть рабочие годы.
+	if v.Kind() == vacation.KindUnpaid {
+		var adding []vacation.Shift
+		if v.Status() == vacation.StatusApproved {
+			adding = append(adding, vacation.NewShift(vacation.ShiftKindUnpaid, v.StartDate().Time(), v.EndDate().Time()))
+		}
+		err = h.leave.WithRebind(ctx, userID, adding, save)
+	} else {
+		err = save()
+	}
+	if err != nil {
 		return fmt.Errorf("save vacation status: %w", err)
 	}
 	return nil

@@ -4,6 +4,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -16,9 +17,12 @@ import (
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/activate_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/deactivate_user"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/update_user"
+	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/edit_form"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/get_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/list_users"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
+	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 	authmiddleware "github.com/handsome-red/vacation-calculation/internal/interfaces/http/middleware"
 )
@@ -28,6 +32,8 @@ type UserHandler struct {
 	listUsers  *list_users.Handler
 	deactivate *deactivate_user.Handler
 	activate   *activate_user.Handler
+	update     *update_user.Handler
+	editForm   *edit_form.Handler
 	templates  *Templates
 	logger     ports.Logger
 }
@@ -37,6 +43,8 @@ func NewUserHandler(
 	listUsers *list_users.Handler,
 	deactivate *deactivate_user.Handler,
 	activate *activate_user.Handler,
+	update *update_user.Handler,
+	editForm *edit_form.Handler,
 	templates *Templates,
 	logger ports.Logger,
 ) *UserHandler {
@@ -45,6 +53,8 @@ func NewUserHandler(
 		listUsers:  listUsers,
 		deactivate: deactivate,
 		activate:   activate,
+		update:     update,
+		editForm:   editForm,
 		templates:  templates,
 		logger:     logger,
 	}
@@ -61,7 +71,8 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
-	view, err := h.listUsers.Handle(r.Context(), list_users.Query{})
+	caller, _ := authmiddleware.CallerFromContext(r.Context())
+	view, err := h.listUsers.Handle(r.Context(), list_users.Query{Caller: caller})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -72,7 +83,9 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 // ListUsersPage — публичный HTML-маршрут для просмотра списка пользователей
 // userPageData — набор полей, который ожидает шаблон user.html.
 type userPageData struct {
-	IsAdmin         bool
+	// CanManage — смотрящий управляет сотрудником: администратор или руководитель его теротдела.
+	CanManage       bool
+	Role            string
 	UserID          uuid.UUID
 	StatusLabel     string
 	LastName        string
@@ -139,6 +152,7 @@ func assembleUserPageData(result *get_user.Result) *userPageData {
 		IsInvalid:       u.IsInvalid(),
 		Experience:      u.ExperienceLabel(),
 		Initials:        u.Initials(),
+		Role:            u.RoleLabel(),
 		Warnings:        result.Warnings,
 	}
 
@@ -210,7 +224,8 @@ func (h *UserHandler) ListUsersPage(w http.ResponseWriter, r *http.Request) {
 		DepartmentCode: q.Get("department"),
 	}
 
-	result, err := h.listUsers.Handle(r.Context(), list_users.Query{Page: page, Size: size, Filters: filters})
+	caller, _ := authmiddleware.CallerFromContext(r.Context())
+	result, err := h.listUsers.Handle(r.Context(), list_users.Query{Page: page, Size: size, Filters: filters, Caller: caller})
 	if err != nil {
 		h.logger.Error(r.Context(), "list users failed", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -264,12 +279,102 @@ func (h *UserHandler) GetUserPage(w http.ResponseWriter, r *http.Request) {
 
 	data := assembleUserPageData(result)
 	currentUser, _ := authmiddleware.UserFromContext(r.Context())
-	data.IsAdmin = currentUser.IsAdmin()
+	data.CanManage = currentUser.Manages(result.User)
 
 	if err := h.templates.Render(w, "user.html", data); err != nil {
 		h.logger.Error(r.Context(), "render user page failed", "error", err)
 		http.Error(w, "Template error", http.StatusInternalServerError)
 	}
+}
+
+// EditForm — форма изменения данных сотрудника (администратор или руководитель его теротдела).
+func (h *UserHandler) EditForm(w http.ResponseWriter, r *http.Request) {
+	caller, _ := authmiddleware.CallerFromContext(r.Context())
+	view, err := h.editForm.Handle(r.Context(), edit_form.Query{UserID: chi.URLParam(r, "id"), Caller: caller})
+	if err != nil {
+		h.renderEditError(w, r, err)
+		return
+	}
+	if err := h.templates.Render(w, "user_edit.html", view); err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+	}
+}
+
+// UpdateUser сохраняет данные сотрудника; при ошибке ввода показывает форму с введёнными значениями.
+func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	// Нечисловой стаж и рабочий день отклонит use case.
+	experience, err := strconv.Atoi(r.FormValue("experience"))
+	if err != nil {
+		experience = -1
+	}
+	workday, err := strconv.Atoi(r.FormValue("workday_duration"))
+	if err != nil {
+		workday = 0
+	}
+	cmd := update_user.Command{
+		UserID:          id,
+		LastName:        strings.TrimSpace(r.FormValue("last_name")),
+		FirstName:       strings.TrimSpace(r.FormValue("first_name")),
+		MiddleName:      strings.TrimSpace(r.FormValue("middle_name")),
+		BirthDate:       r.FormValue("birth_date"),
+		Position:        r.FormValue("position"),
+		HiredAt:         r.FormValue("hired_at"),
+		Experience:      experience,
+		DepartmentCode:  r.FormValue("department"),
+		DistrictCode:    r.FormValue("district"),
+		WorkdayDuration: workday,
+		Email:           r.FormValue("email"),
+		IsInvalid:       r.FormValue("is_invalid") == "true",
+		Password:        r.FormValue("password"),
+	}
+	cmd.Caller, _ = authmiddleware.CallerFromContext(r.Context())
+
+	err = h.update.Handle(r.Context(), cmd)
+	if err == nil {
+		admin, _ := authmiddleware.UserFromContext(r.Context())
+		h.logger.Info(r.Context(), "user profile updated", "user_id", id, "admin_id", admin.ID().String())
+		http.Redirect(w, r, "/users/"+id, http.StatusSeeOther)
+		return
+	}
+	if !errors.Is(err, update_user.ErrInvalidInput) {
+		h.renderEditError(w, r, err)
+		return
+	}
+
+	view, ferr := h.editForm.Handle(r.Context(), edit_form.Query{UserID: id, Caller: cmd.Caller})
+	if ferr != nil {
+		h.renderEditError(w, r, ferr)
+		return
+	}
+	view.Form = edit_form.Form{
+		LastName: cmd.LastName, FirstName: cmd.FirstName, MiddleName: cmd.MiddleName,
+		Email: cmd.Email, BirthDate: cmd.BirthDate, Position: cmd.Position, HiredAt: cmd.HiredAt,
+		Experience: r.FormValue("experience"), District: cmd.DistrictCode, Department: cmd.DepartmentCode,
+		WorkdayDuration: r.FormValue("workday_duration"), IsInvalid: cmd.IsInvalid,
+	}
+	view.Error = err.Error()
+	w.WriteHeader(http.StatusBadRequest)
+	if err := h.templates.Render(w, "user_edit.html", view); err != nil {
+		h.logger.Error(r.Context(), "render user edit page failed", "error", err)
+	}
+}
+
+func (h *UserHandler) renderEditError(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, user.ErrUserNotFound) {
+		http.Error(w, "Сотрудник не найден", http.StatusNotFound)
+		return
+	}
+	if errors.Is(err, update_user.ErrForbidden) {
+		http.Error(w, "Доступ запрещён", http.StatusForbidden)
+		return
+	}
+	h.logger.Error(r.Context(), "edit user failed", "error", err)
+	http.Error(w, "Internal server error", http.StatusInternalServerError)
 }
 
 func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {

@@ -93,19 +93,19 @@ func TestValidateCreationParts(t *testing.T) {
 	may := Holidays{ymd(2026, time.May, 1): {}, ymd(2026, time.May, 9): {}}
 
 	// 01.05–07.05: 7 календарных дней, но 1 мая — праздник → 6 дней отпуска
-	v, err := ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.May, 1), End: ymd(2026, time.May, 7)}}, year, nil, may, today, false)
+	v, err := ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.May, 1), End: ymd(2026, time.May, 7)}}, year, nil, may, today)
 	if err != nil || len(v) == 0 || !errors.Is(v[0], ErrTooShort) {
 		t.Errorf("праздник не входит в длительность части: violations=%v err=%v", v, err)
 	}
 
 	// одна часть 14 дней — допустимо
-	v, _ = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 1), End: ymd(2026, time.June, 14)}}, year, nil, Holidays{}, today, false)
+	v, _ = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 1), End: ymd(2026, time.June, 14)}}, year, nil, Holidays{}, today)
 	if len(v) != 0 {
 		t.Errorf("14 дней одним куском: %v", v)
 	}
 
 	// прошедшие даты
-	v, _ = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.March, 20), End: ymd(2026, time.April, 5)}}, year, nil, Holidays{}, today, false)
+	v, _ = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.March, 20), End: ymd(2026, time.April, 5)}}, year, nil, Holidays{}, today)
 	if len(v) == 0 || !errors.Is(v[0], ErrInPast) {
 		t.Errorf("прошедшие даты: %v", v)
 	}
@@ -113,21 +113,21 @@ func TestValidateCreationParts(t *testing.T) {
 	// перерыв 13 дней между частями — нарушение (нужно 14)
 	uid := user.GenerateUserID()
 	existing, _ := NewVacation(NewVacationID(), uid, KindBase, ymd(2026, time.June, 1), ymd(2026, time.June, 14), ymd(2026, time.March, 10), time.Now())
-	v, _ = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 28), End: ymd(2026, time.July, 4)}}, year, []*Vacation{existing}, Holidays{}, today, false)
+	v, _ = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 28), End: ymd(2026, time.July, 4)}}, year, []*Vacation{existing}, Holidays{}, today)
 	if len(v) == 0 || !errors.Is(v[0], ErrGapTooSmall) {
 		t.Errorf("перерыв 13 дней: %v", v)
 	}
-	v, _ = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 29), End: ymd(2026, time.July, 5)}}, year, []*Vacation{existing}, Holidays{}, today, false)
+	v, _ = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 29), End: ymd(2026, time.July, 5)}}, year, []*Vacation{existing}, Holidays{}, today)
 	if len(v) != 0 {
 		t.Errorf("перерыв 14 дней допустим: %v", v)
 	}
 
 	// административный отпуск: короткий допустим, пересечение — нет
-	v, err = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 20), End: ymd(2026, time.June, 21)}}, year, []*Vacation{existing}, Holidays{}, today, true)
+	v, err = ValidateCreation([]CreationPeriod{{Kind: KindUnpaid, Start: ymd(2026, time.June, 20), End: ymd(2026, time.June, 21)}}, year, []*Vacation{existing}, Holidays{}, today)
 	if err != nil || len(v) != 0 {
 		t.Errorf("административный 2 дня: violations=%v err=%v", v, err)
 	}
-	if _, err = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 10), End: ymd(2026, time.June, 21)}}, year, []*Vacation{existing}, Holidays{}, today, true); !errors.Is(err, ErrOverlapsExisting) {
+	if _, err = ValidateCreation([]CreationPeriod{{Kind: KindUnpaid, Start: ymd(2026, time.June, 10), End: ymd(2026, time.June, 21)}}, year, []*Vacation{existing}, Holidays{}, today); !errors.Is(err, ErrOverlapsExisting) {
 		t.Errorf("административный поверх отпуска: err=%v", err)
 	}
 }

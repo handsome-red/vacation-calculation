@@ -1,9 +1,13 @@
 package list_users
 
+import "github.com/handsome-red/vacation-calculation/internal/domain/auth"
+
 type Query struct {
 	Page    int
 	Size    int
 	Filters Filters
+	// Caller — кто смотрит: руководитель видит только сотрудников своих теротделов.
+	Caller auth.Caller
 }
 
 // Filters — фильтры списка сотрудников для кадровика.
@@ -60,4 +64,5 @@ type UserListItem struct {
 	Email           string
 	IsInvalid       bool
 	TotalExperience string
+	Role            string
 }

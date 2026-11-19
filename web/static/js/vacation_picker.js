@@ -10,6 +10,11 @@
     const MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь",
                     "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
     const WEEKDAYS = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+    const MONTHS_GENITIVE = ["января","февраля","марта","апреля","мая","июня",
+                             "июля","августа","сентября","октября","ноября","декабря"];
+
+    // Сообщение об ошибке на странице (ui.js); без него — обычный alert.
+    const notify = (message) => (window.UI ? window.UI.notify(message) : alert(message));
 
     const state = {
         year: parseInt(el.dataset.year, 10) || new Date().getFullYear(), // показываемый год
@@ -17,8 +22,11 @@
         loaded: new Map(),        // год -> ответ сервера (уже загруженные)
         dayByDate: new Map(),     // "2026-10-01" -> { date, isWeekend, isHoliday, ... } по всем загруженным годам
         busyDates: new Set(),     // "2026-10-01" — дни, занятые другими отпусками
-        periods: [],              // [{ from, to }, ...] — могут переходить через год
+        periods: [],              // [{ from, to, kind, kindLabel }, ...] — могут переходить через год
         pendingStart: null,       // "2026-10-01" — первый клик; второй можно сделать в другом году
+        // Сколько дней выбранного вида можно взять с даты start (считает сервер):
+        // { start, kind, promise, value: { days, lastDay, unlimited } | null, error }
+        limit: null,
     };
 
     // Переключатель года — над сеткой месяцев.
@@ -82,6 +90,8 @@
     }
 
     function render() {
+        // Сетка перерисовывается целиком: фокус клавиатуры возвращается на тот же день.
+        const focusedDate = el.contains(document.activeElement) ? document.activeElement.dataset.date : null;
         renderNav();
         el.innerHTML = "";
         const data = state.loaded.get(state.year);
@@ -97,6 +107,10 @@
         }
 
         renderPeriods();
+        if (focusedDate) {
+            const day = el.querySelector(`.day[data-date="${focusedDate}"][tabindex]`);
+            if (day) day.focus();
+        }
     }
 
     function renderNav() {
@@ -121,9 +135,62 @@
         if (state.pendingStart) {
             const hint = document.createElement("span");
             hint.className = "picker-nav__hint";
-            hint.textContent = `Начало: ${formatDate(state.pendingStart)} — выберите дату окончания (можно в другом году)`;
+            hint.textContent = `Начало: ${formatDate(state.pendingStart)} — ${limitHint()}`;
             nav.append(hint);
         }
+    }
+
+    function limitHint() {
+        const limit = state.limit;
+        if (!limit || limit.start !== state.pendingStart) return "выберите дату окончания (можно в другом году)";
+        if (limit.error) return `не удалось посчитать доступные дни: ${limit.error}`;
+        if (!limit.value) return "считаем доступные дни…";
+        if (limit.value.unlimited) return "выберите дату окончания (можно в другом году)";
+        if (!limit.value.lastDay) return `с этой даты нет доступных дней вида «${selectedKind().label}» — выберите другой вид или дату`;
+        return `вида «${selectedKind().label}» доступно ${limit.value.days} дн., окончание не позже ${formatDate(limit.value.lastDay)}`;
+    }
+
+    // Запрашивает у сервера, сколько дней выбранного вида можно взять с даты start
+    // вместе с уже выбранными периодами. Ответ кэшируется до смены начала или вида.
+    function loadLimit(start) {
+        const kind = selectedKind().value;
+        if (state.limit && state.limit.start === start && state.limit.kind === kind) {
+            return state.limit.promise;
+        }
+        const limit = { start, kind, value: null, error: null };
+        limit.promise = fetch(`/api/v1/users/${userId}/vacations/limit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+                userId,
+                kind,
+                start,
+                periods: state.periods.map((p) => ({ kind: p.kind, startDate: p.from, endDate: p.to })),
+            }),
+        })
+        .then(async (res) => {
+            const body = await res.json();
+            if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+            limit.value = body;
+            return body;
+        })
+        .catch((err) => {
+            limit.error = err.message;
+            throw err;
+        })
+        .finally(() => {
+            if (state.limit === limit) render();
+        });
+        state.limit = limit;
+        return limit.promise;
+    }
+
+    // День за пределами доступных дней вида: окончание на нём не уложится в остаток.
+    function isOverLimit(date) {
+        const limit = state.limit;
+        if (!state.pendingStart || !limit || limit.start !== state.pendingStart || !limit.value) return false;
+        if (limit.value.unlimited || date <= state.pendingStart) return false;
+        return !limit.value.lastDay || date > limit.value.lastDay;
     }
 
     function renderMonth(year, monthNumber, days) {
@@ -186,14 +253,44 @@
             day.classList.add("selected");
         }
         if (state.pendingStart === d.date) day.classList.add("pending");
+        const overLimit = isOverLimit(d.date);
+        if (overLimit) day.classList.add("over-limit");
 
         // Отпуск исчисляется в календарных днях: выходные и праздники выбирать можно,
-        // нельзя дни, занятые другим отпуском, и прошедшие (кроме администратора).
-        if (isSelectable(d.date)) {
+        // нельзя дни, занятые другим отпуском, прошедшие (кроме администратора)
+        // и окончание сверх доступных дней выбранного вида.
+        const selectable = isSelectable(d.date) && !overLimit;
+        day.setAttribute("aria-label", dayLabel(d, { busy, past, overLimit }));
+        if (selectable) {
+            // Выбор с клавиатуры: Tab до дня, Enter или пробел.
+            day.setAttribute("role", "button");
+            day.tabIndex = 0;
+            day.setAttribute("aria-pressed", String(isInSelected(d.date) || state.pendingStart === d.date));
             day.addEventListener("click", () => onDayClick(d.date));
+            day.addEventListener("keydown", (e) => {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                onDayClick(d.date);
+            });
+        } else {
+            day.setAttribute("aria-disabled", "true");
         }
 
         return day;
+    }
+
+    // Описание дня для скринридера: «3 июня 2030, суббота, выходной, занят другим отпуском».
+    function dayLabel(d, flags) {
+        const [y, m, dd] = d.date.split("-").map((s) => parseInt(s, 10));
+        const parts = [`${dd} ${MONTHS_GENITIVE[m - 1]} ${y}`];
+        if (d.isHoliday) parts.push(d.holidayName ? `праздник: ${d.holidayName}` : "праздник");
+        else if (d.isWeekend) parts.push("выходной");
+        if (flags.busy) parts.push("занят другим отпуском");
+        if (state.pendingStart === d.date) parts.push("выбрано начало");
+        else if (isInSelected(d.date)) parts.push("выбран");
+        if (flags.past && !isAdmin) parts.push("прошедшая дата");
+        if (flags.overLimit) parts.push("сверх доступных дней");
+        return parts.join(", ");
     }
 
     function isInSelected(date) {
@@ -206,6 +303,7 @@
         if (!state.pendingStart) {
             state.pendingStart = date;
             render();
+            loadLimit(date).catch(() => {}); // ошибка показывается в подсказке
             return;
         }
 
@@ -220,18 +318,37 @@
             ? [date, state.pendingStart]
             : [state.pendingStart, date];
 
+        // Больше доступных дней выбранного вида взять нельзя (при выборе назад
+        // начало другое — остаток считается от него).
+        const kind = selectedKind();
+        let limit;
+        try {
+            limit = await loadLimit(from);
+        } catch (err) {
+            notify("Не удалось посчитать доступные дни: " + err.message);
+            return;
+        }
+        if (!limit.unlimited && (!limit.lastDay || to > limit.lastDay)) {
+            notify(limit.days > 0
+                ? `Вида «${kind.label}» доступно ${limit.days} дн.: с ${formatDate(from)} отпуск можно закончить не позже ${formatDate(limit.lastDay)}`
+                : `С ${formatDate(from)} нет доступных дней вида «${kind.label}». Выберите другой вид или другие даты`);
+            if (from !== state.pendingStart) loadLimit(state.pendingStart).catch(() => {});
+            render();
+            return;
+        }
+
         // Период может идти через несколько лет: нужны праздники и занятые дни каждого.
         try {
             await ensureYears(from, to);
         } catch (err) {
-            alert("Не удалось загрузить календарь: " + err.message);
+            notify("Не удалось загрузить календарь: " + err.message);
             return;
         }
 
         // блокируем только занятые дни (чужие отпуска).
         const busy = datesBetween(from, to).find((iso) => state.busyDates.has(iso));
         if (busy) {
-            alert(`День ${busy} занят другим отпуском`);
+            notify(`День ${formatDate(busy)} занят другим отпуском`);
             state.pendingStart = null;
             render();
             return;
@@ -239,14 +356,15 @@
 
         // не должно пересекаться с уже выбранными в текущей заявке
         if (state.periods.some((p) => overlaps(p, { from, to }))) {
-            alert("Период пересекается с уже выбранным");
+            notify("Период пересекается с уже выбранным");
             state.pendingStart = null;
             render();
             return;
         }
 
-        state.periods.push({ from, to });
+        state.periods.push({ from, to, kind: kind.value, kindLabel: kind.label });
         state.pendingStart = null;
+        state.limit = null; // новые периоды меняют остаток
         render();
         notifyPeriodsChanged();
     }
@@ -260,17 +378,22 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
 
-    function vacationType() {
-        return document.querySelector('input[name="vacation-type"]:checked')?.value || "annual";
+    function selectedKind() {
+        const input = document.querySelector('input[name="vacation-type"]:checked');
+        return { value: input?.value || "auto", label: input?.dataset.label || "Автоматически" };
     }
 
-    // Смена вида отпуска — пересчитать распределение и показать подсказку.
+    // Смена вида отпуска применяется к следующим периодам — выбранные не меняются.
     document.querySelectorAll('input[name="vacation-type"]').forEach((input) => {
         input.addEventListener("change", () => {
             document.querySelectorAll(".vacation-type__hint").forEach((hint) => {
-                hint.hidden = hint.dataset.for !== vacationType();
+                hint.hidden = hint.dataset.for !== selectedKind().value;
             });
-            notifyPeriodsChanged();
+            // Начало уже выбрано — остаток пересчитывается для нового вида.
+            if (state.pendingStart) {
+                loadLimit(state.pendingStart).catch(() => {});
+                render();
+            }
         });
     });
 
@@ -293,15 +416,17 @@
                 const note = charged === calendarDays
                     ? `${calendarDays} дн.`
                     : `${calendarDays} дн., из них праздничных ${calendarDays - charged} — не списываются`;
-                row.textContent = `${formatDate(p.from)} — ${formatDate(p.to)} (${note})`;
+                row.textContent = `${p.kindLabel}: ${formatDate(p.from)} — ${formatDate(p.to)} (${note})`;
 
                 const del = document.createElement("button");
                 del.type = "button";
                 del.textContent = "✕";
                 del.title = "Удалить период";
+                del.setAttribute("aria-label", `Удалить период ${formatDate(p.from)} — ${formatDate(p.to)}`);
                 del.addEventListener("click", () => {
                     state.periods.splice(i, 1);
                     state.pendingStart = null;
+                    state.limit = null;
                     render();
                     notifyPeriodsChanged();
                 });
@@ -333,11 +458,11 @@
             if (state.periods.length === 0) return;
             btn.disabled = true;
 
-            // Вид отпуска и рабочий год определяет сервер при распределении по квотам.
+            // Рабочий год (и вид для «Автоматически») определяет сервер при распределении по квотам.
             const payload = {
                 userId: userId,
-                type: vacationType(),
                 periods: state.periods.map((p) => ({
+                    kind: p.kind,
                     startDate: p.from,
                     endDate: p.to,
                 })),
@@ -351,14 +476,14 @@
                 });
 
                 if (!res.ok) {
-                    alert(await res.text());
+                    notify(await res.text());
                     btn.disabled = false;
                     return;
                 }
 
                 window.location.href = `/users/${userId}`;
             } catch (err) {
-                alert("Ошибка сети: " + err.message);
+                notify("Ошибка сети: " + err.message);
                 btn.disabled = false;
             }
         });
@@ -387,7 +512,7 @@
 
     function notifyPeriodsChanged() {
         window.dispatchEvent(new CustomEvent("periods-changed", {
-            detail: { userId, type: vacationType(), periods: state.periods.slice() },
+            detail: { userId, periods: state.periods.slice() },
         }));
     }
 

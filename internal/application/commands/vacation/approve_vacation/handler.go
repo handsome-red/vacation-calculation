@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/application/leavecalc"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
@@ -13,15 +14,18 @@ import (
 type Handler struct {
 	vacationRepo ports.VacationRepository
 	userRepo     ports.UserRepository
+	leave        *leavecalc.Service
 }
 
 func NewHandler(
 	vacationRepo ports.VacationRepository,
 	userRepo ports.UserRepository,
+	leave *leavecalc.Service,
 ) *Handler {
 	return &Handler{
 		vacationRepo: vacationRepo,
 		userRepo:     userRepo,
+		leave:        leave,
 	}
 }
 
@@ -52,7 +56,15 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 		return nil, fmt.Errorf("approve failed: %w", err)
 	}
 
-	if err := h.vacationRepo.Save(ctx, v); err != nil {
+	save := func() error { return h.vacationRepo.Save(ctx, v) }
+	// Утверждённый административный отпуск сдвигает рабочие годы.
+	if v.Kind() == vacation.KindUnpaid {
+		adding := []vacation.Shift{vacation.NewShift(vacation.ShiftKindUnpaid, v.StartDate().Time(), v.EndDate().Time())}
+		err = h.leave.WithRebind(ctx, userID, adding, save)
+	} else {
+		err = save()
+	}
+	if err != nil {
 		return nil, fmt.Errorf("save approved vacation: %w", err)
 	}
 

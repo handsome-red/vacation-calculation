@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/handsome-red/vacation-calculation/internal/application/leavecalc"
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -12,11 +13,13 @@ import (
 
 type Handler struct {
 	shiftRepo ports.ShiftRepository
+	leave     *leavecalc.Service
 }
 
-func NewHandler(shiftRepo ports.ShiftRepository) *Handler {
+func NewHandler(shiftRepo ports.ShiftRepository, leave *leavecalc.Service) *Handler {
 	return &Handler{
 		shiftRepo: shiftRepo,
+		leave:     leave,
 	}
 }
 
@@ -52,8 +55,11 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 		return nil, fmt.Errorf("create_shift: %w", err)
 	}
 
-	if err := h.shiftRepo.Save(ctx, userID, shift); err != nil {
-		return nil, fmt.Errorf("create_shift: save shift: %w", err)
+	err = h.leave.WithRebind(ctx, userID, []vacation.Shift{shift}, func() error {
+		return h.shiftRepo.Save(ctx, userID, shift)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create_shift: %w", err)
 	}
 
 	return &Result{}, nil

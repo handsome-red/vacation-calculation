@@ -8,6 +8,7 @@ import (
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/user/register_user"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/user/register_form"
+	"github.com/handsome-red/vacation-calculation/internal/interfaces/http/middleware"
 )
 
 type RegistrationHandler struct {
@@ -30,7 +31,8 @@ func NewRegistrationHandler(
 
 // Form отдаёт HTML-форму регистрации.
 func (h *RegistrationHandler) Form(w http.ResponseWriter, r *http.Request) {
-	view, err := h.registerForm.Handle(r.Context(), register_form.Query{})
+	caller, _ := middleware.CallerFromContext(r.Context())
+	view, err := h.registerForm.Handle(r.Context(), register_form.Query{Districts: caller.Scope()})
 	if err != nil {
 		log.Printf("register form: %v", err)
 		http.Error(w, "form unavailable", http.StatusInternalServerError)
@@ -71,11 +73,15 @@ func (h *RegistrationHandler) Register(w http.ResponseWriter, r *http.Request) {
 		WorkdayDuration: workday,
 		IsInvalid:       r.FormValue("is_invalid") == "true",
 	}
+	caller, _ := middleware.CallerFromContext(r.Context())
+	cmd.Districts = caller.Scope()
 
-	if _, err := h.register.Handle(r.Context(), cmd); err != nil {
+	created, err := h.register.Handle(r.Context(), cmd)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	middleware.AuditTarget(r.Context(), created.UserID)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

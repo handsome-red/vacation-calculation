@@ -13,9 +13,6 @@
     {{end}}
 
     <form method="POST" action="/user/register">
-        {{if .CSRFToken}}
-        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-        {{end}}
 
         <p><label>Фамилия<br>
                 <input type="text" name="last_name" value="{{.Form.LastName}}" required>

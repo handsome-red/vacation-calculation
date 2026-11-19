@@ -19,9 +19,10 @@ func NewHomeHandler(templates *Templates) *Handler {
 }
 
 func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
-	data := map[string]any{"IsAdmin": false, "UserID": ""}
+	data := map[string]any{"IsAdmin": false, "IsStaff": false, "UserID": ""}
 	if u, ok := authmiddleware.UserFromContext(r.Context()); ok && u != nil {
 		data["IsAdmin"] = u.IsAdmin()
+		data["IsStaff"] = u.IsStaff()
 		data["UserID"] = u.ID().String()
 	}
 

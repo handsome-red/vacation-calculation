@@ -2,6 +2,7 @@ package vacation
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func TestAllocate_OldestYearFirstThenKindOrder(t *testing.T) {
 	}
 	periods := []CreationPeriod{{Start: ymd(2026, time.November, 9), End: ymd(2026, time.November, 15)}}
 
-	got, _, err := Allocate(periods, balances, Holidays{}, false)
+	got, err := Allocate(periods, balances, Holidays{})
 	if err != nil {
 		t.Fatalf("Allocate: %v", err)
 	}
@@ -60,7 +61,7 @@ func TestAllocate_HolidaysAreNotCharged(t *testing.T) {
 	holidays := Holidays{ymd(2026, time.November, 4): {}}
 	periods := []CreationPeriod{{Start: ymd(2026, time.November, 2), End: ymd(2026, time.November, 8)}}
 
-	got, _, err := Allocate(periods, balances, holidays, false)
+	got, err := Allocate(periods, balances, holidays)
 	if err != nil {
 		t.Fatalf("Allocate: %v", err)
 	}
@@ -75,35 +76,164 @@ func TestAllocate_NotEnoughDays(t *testing.T) {
 	}
 	periods := []CreationPeriod{{Start: ymd(2026, time.November, 9), End: ymd(2026, time.November, 15)}}
 
-	if _, _, err := Allocate(periods, balances, Holidays{}, false); !errors.Is(err, ErrExceedsAnnual) {
+	if _, err := Allocate(periods, balances, Holidays{}); !errors.Is(err, ErrExceedsAnnual) {
 		t.Fatalf("err = %v, want ErrExceedsAnnual", err)
 	}
 }
 
-func TestAllocate_OverdraftGoesToLastYearBase(t *testing.T) {
+// Сверх остатков всех лет списать нельзя: в ошибке — сколько доступно.
+func TestAllocate_NoOverdraftAcrossYears(t *testing.T) {
 	balances := []YearBalance{
 		{Year: yearStat(2024, 30, 0, 0), Remaining: map[Kind]int{KindBase: 2}},
 		{Year: yearStat(2025, 30, 3, 0), Remaining: map[Kind]int{KindBase: 1, KindIrregular: 1}},
 	}
 	periods := []CreationPeriod{{Start: ymd(2026, time.January, 12), End: ymd(2026, time.January, 18)}}
 
-	got, overdraft, err := Allocate(periods, balances, Holidays{}, true)
+	_, err := Allocate(periods, balances, Holidays{})
+	if !errors.Is(err, ErrExceedsAnnual) || !strings.Contains(err.Error(), "доступно 4 дн.") {
+		t.Fatalf("err = %v, want ErrExceedsAnnual with 4 days available", err)
+	}
+}
+
+func TestAllocate_ChosenKindUsesOnlyItsQuota(t *testing.T) {
+	balances := []YearBalance{
+		{Year: yearStat(2024, 30, 3, 1), Remaining: map[Kind]int{KindBase: 10, KindIrregular: 1, KindSeniority: 0}},
+		{Year: yearStat(2025, 30, 3, 5), Remaining: map[Kind]int{KindBase: 30, KindIrregular: 3, KindSeniority: 5}},
+	}
+	periods := []CreationPeriod{
+		{Kind: KindSeniority, Start: ymd(2026, time.June, 1), End: ymd(2026, time.June, 5)},
+		{Kind: KindIrregular, Start: ymd(2026, time.June, 6), End: ymd(2026, time.June, 7)},
+	}
+
+	got, err := Allocate(periods, balances, Holidays{})
 	if err != nil {
 		t.Fatalf("Allocate: %v", err)
 	}
-	if overdraft != 3 {
-		t.Errorf("overdraft = %d, want 3", overdraft)
+	want := []Allocation{
+		{Kind: KindSeniority, WorkYearStart: ymd(2025, time.March, 10), Start: ymd(2026, time.June, 1), End: ymd(2026, time.June, 5), Days: 5},
+		{Kind: KindIrregular, WorkYearStart: ymd(2024, time.March, 10), Start: ymd(2026, time.June, 6), End: ymd(2026, time.June, 6), Days: 1},
+		{Kind: KindIrregular, WorkYearStart: ymd(2025, time.March, 10), Start: ymd(2026, time.June, 7), End: ymd(2026, time.June, 7), Days: 1},
 	}
-	total := 0
-	for _, a := range got {
-		total += a.Days
+	if len(got) != len(want) {
+		t.Fatalf("got %+v, want %+v", got, want)
 	}
-	if total != 7 {
-		t.Errorf("allocated %d days, want 7: %+v", total, got)
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("allocation[%d] = %+v, want %+v", i, got[i], want[i])
+		}
 	}
-	last := got[len(got)-1]
-	if last.WorkYearStart != ymd(2025, time.March, 10) {
-		t.Errorf("last allocation from %v, want work year 10.03.2025", last.WorkYearStart)
+
+	tooMany := []CreationPeriod{{Kind: KindSeniority, Start: ymd(2026, time.June, 1), End: ymd(2026, time.June, 6)}}
+	if _, err := Allocate(tooMany, balances, Holidays{}); !errors.Is(err, ErrExceedsAnnual) {
+		t.Fatalf("err = %v, want ErrExceedsAnnual", err)
+	}
+}
+
+func TestAllocate_ChosenKindIsReservedBeforeAuto(t *testing.T) {
+	balances := []YearBalance{
+		{Year: yearStat(2025, 30, 3, 0), Remaining: map[Kind]int{KindBase: 2, KindIrregular: 3}},
+	}
+	periods := []CreationPeriod{
+		{Start: ymd(2026, time.June, 1), End: ymd(2026, time.June, 3)},
+		{Kind: KindIrregular, Start: ymd(2026, time.June, 4), End: ymd(2026, time.June, 5)},
+	}
+
+	got, err := Allocate(periods, balances, Holidays{})
+	if err != nil {
+		t.Fatalf("Allocate: %v", err)
+	}
+	if len(got) != 3 || got[0].Kind != KindBase || got[0].Days != 2 || got[1].Kind != KindIrregular || got[1].Days != 1 || got[2].Start != ymd(2026, time.June, 4) {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+// Выбранный вид не занимает дни другого вида, даже если их много.
+func TestAllocate_ChosenKindDoesNotBorrowOtherKinds(t *testing.T) {
+	balances := []YearBalance{
+		{Year: yearStat(2025, 30, 3, 1), Remaining: map[Kind]int{KindBase: 30, KindIrregular: 3, KindSeniority: 1}},
+	}
+	periods := []CreationPeriod{{Kind: KindSeniority, Start: ymd(2026, time.June, 1), End: ymd(2026, time.June, 3)}}
+
+	_, err := Allocate(periods, balances, Holidays{})
+	if !errors.Is(err, ErrExceedsAnnual) || !strings.Contains(err.Error(), "доступно 1 дн.") {
+		t.Fatalf("err = %v, want ErrExceedsAnnual with 1 day available", err)
+	}
+}
+
+// В текущем году заработанные дни можно потратить на любой вид, а не только на основной.
+func TestAllocate_EarnedDaysCanBeSpentOnChosenKind(t *testing.T) {
+	current := yearStat(2025, 30, 3, 1)
+	at := ymd(2025, time.September, 10)
+	balances, err := BuildBalances([]YearStat{current}, nil, Holidays{}, at, NewWorkYearCalculator(), true)
+	if err != nil {
+		t.Fatalf("BuildBalances: %v", err)
+	}
+	if balances[0].Remaining[KindSeniority] != 0 {
+		t.Fatalf("Remaining = %v, want earned days in base first", balances[0].Remaining)
+	}
+
+	periods := []CreationPeriod{{Kind: KindSeniority, Start: at, End: at}}
+	got, err := Allocate(periods, balances, Holidays{})
+	if err != nil {
+		t.Fatalf("Allocate: %v", err)
+	}
+	if len(got) != 1 || got[0].Kind != KindSeniority {
+		t.Fatalf("got %+v", got)
+	}
+
+	// Сверх заработанного (17 дн.) нельзя даже при большой квоте вида.
+	base := []CreationPeriod{{Kind: KindBase, Start: at, End: ymd(2025, time.September, 27)}}
+	if _, err := Allocate(base, balances, Holidays{}); !errors.Is(err, ErrExceedsAnnual) {
+		t.Fatalf("err = %v, want ErrExceedsAnnual", err)
+	}
+}
+
+func TestValidateCreation_AdjacentKindsCountAsOnePart(t *testing.T) {
+	year := yearStat(2026, 30, 3, 5)
+	today := ymd(2026, time.January, 1)
+
+	joined := []CreationPeriod{
+		{Kind: KindIrregular, Start: ymd(2026, time.June, 1), End: ymd(2026, time.June, 3)},
+		{Kind: KindBase, Start: ymd(2026, time.June, 4), End: ymd(2026, time.June, 17)},
+	}
+	v, err := ValidateCreation(joined, year, nil, Holidays{}, today)
+	if err != nil || len(v) != 0 {
+		t.Fatalf("violations = %v, err = %v; want none", v, err)
+	}
+
+	alone := []CreationPeriod{{Kind: KindIrregular, Start: ymd(2026, time.June, 1), End: ymd(2026, time.June, 3)}}
+	v, err = ValidateCreation(alone, year, nil, Holidays{}, today)
+	if err != nil || len(v) == 0 || !errors.Is(v[0], ErrTooShort) {
+		t.Fatalf("violations = %v, err = %v; want ErrTooShort", v, err)
+	}
+}
+
+func TestValidateCreation_UnpaidPeriodSkipsAnnualRulesInMixedRequest(t *testing.T) {
+	year := yearStat(2026, 30, 3, 5)
+	periods := []CreationPeriod{
+		{Kind: KindBase, Start: ymd(2026, time.June, 1), End: ymd(2026, time.June, 14)},
+		{Kind: KindUnpaid, Start: ymd(2026, time.June, 20), End: ymd(2026, time.June, 21)},
+	}
+	v, err := ValidateCreation(periods, year, nil, Holidays{}, ymd(2026, time.January, 1))
+	if err != nil || len(v) != 0 {
+		t.Fatalf("violations = %v, err = %v; want none", v, err)
+	}
+}
+
+func TestBuildBalances_OpeningUsageReducesRemaining(t *testing.T) {
+	year := yearStat(2024, 30, 3, 1)
+	stats := []YearStat{year}
+	ApplyOpeningUsage(stats, []OpeningUsage{
+		{WorkYearStart: ymd(2024, time.March, 10), Days: OpeningDays{Base: 20, Irregular: 3}},
+		{WorkYearStart: ymd(2020, time.March, 10), Days: OpeningDays{Base: 30}},
+	})
+	balances, err := BuildBalances(stats, nil, Holidays{}, ymd(2026, time.January, 1), NewWorkYearCalculator(), true)
+	if err != nil {
+		t.Fatalf("BuildBalances: %v", err)
+	}
+	got := balances[0].Remaining
+	if got[KindBase] != 10 || got[KindIrregular] != 0 || got[KindSeniority] != 1 {
+		t.Errorf("remaining = %v, want base 10, irregular 0, seniority 1", got)
 	}
 }
 
@@ -113,7 +243,7 @@ func TestValidateCreation_CollectsAllViolationsButOverlapIsHard(t *testing.T) {
 	existing, _ := NewVacation(NewVacationID(), uid, KindBase, ymd(2026, time.June, 1), ymd(2026, time.June, 7), ymd(2026, time.March, 10), time.Now())
 
 	// 3 дня (короче минимума) и вплотную к существующему отпуску (разрыв 2 дня)
-	violations, err := ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 10), End: ymd(2026, time.June, 12)}}, year, []*Vacation{existing}, Holidays{}, ymd(2026, time.January, 1), false)
+	violations, err := ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 10), End: ymd(2026, time.June, 12)}}, year, []*Vacation{existing}, Holidays{}, ymd(2026, time.January, 1))
 	if err != nil {
 		t.Fatalf("unexpected hard error: %v", err)
 	}
@@ -121,7 +251,7 @@ func TestValidateCreation_CollectsAllViolationsButOverlapIsHard(t *testing.T) {
 		t.Fatalf("violations = %v, want ErrTooShort and ErrGapTooSmall", violations)
 	}
 
-	_, err = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 5), End: ymd(2026, time.June, 20)}}, year, []*Vacation{existing}, Holidays{}, ymd(2026, time.January, 1), false)
+	_, err = ValidateCreation([]CreationPeriod{{Start: ymd(2026, time.June, 5), End: ymd(2026, time.June, 20)}}, year, []*Vacation{existing}, Holidays{}, ymd(2026, time.January, 1))
 	if !errors.Is(err, ErrOverlapsExisting) {
 		t.Fatalf("err = %v, want ErrOverlapsExisting", err)
 	}

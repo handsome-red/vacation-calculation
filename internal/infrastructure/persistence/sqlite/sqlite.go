@@ -230,6 +230,20 @@ func buildWhere(f ports.UserFilter) (string, []any) {
 	if f.DistrictCode != "" {
 		add("u.district_code = ?", f.DistrictCode)
 	}
+	if f.NoAdmins {
+		conditions = append(conditions, "u.superadmin = 0")
+	}
+	if f.DistrictCodes != nil {
+		if len(f.DistrictCodes) == 0 {
+			conditions = append(conditions, "0 = 1")
+		} else {
+			marks := strings.TrimSuffix(strings.Repeat("?,", len(f.DistrictCodes)), ",")
+			conditions = append(conditions, "u.district_code IN ("+marks+")")
+			for _, d := range f.DistrictCodes {
+				args = append(args, d)
+			}
+		}
+	}
 	if f.DepartmentCode != "" {
 		add("u.department_code = ?", f.DepartmentCode)
 	}

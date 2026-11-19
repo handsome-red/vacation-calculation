@@ -3,6 +3,7 @@ package register_user
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -68,6 +69,9 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	district, err := h.districtRepo.FindByCode(ctx, cmd.DistrictCode)
 	if err != nil {
 		return nil, fmt.Errorf("invalid district: %w", err)
+	}
+	if cmd.Districts != nil && !slices.Contains(cmd.Districts, district.Code()) {
+		return nil, fmt.Errorf("можно добавить сотрудника только в территориальный отдел, которым вы руководите")
 	}
 
 	// Валидируем продолжительность рабочего дня

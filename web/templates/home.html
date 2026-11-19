@@ -8,7 +8,7 @@
 
     {{if .ScheduleYear}}
     <div class="banner">
-        {{if .IsAdmin}}
+        {{if .IsStaff}}
         Пора сформировать график отпусков на {{.ScheduleYear}} год — утвердить его нужно не позднее {{.ScheduleDeadline}}.
         <a href="/admin/schedule?year={{.ScheduleYear}}">Открыть график {{.ScheduleYear}}</a>
         {{else}}
@@ -20,10 +20,14 @@
 
     <nav>
         <ul>
-            {{if .IsAdmin}}
+            {{if .IsStaff}}
             <li><a href="/users">Сотрудники</a></li>
             <li><a href="/user/register">Добавить сотрудника</a></li>
             <li><a href="/admin/schedule">График отпусков</a></li>
+            <li><a href="/admin/audit">Журнал изменений</a></li>
+            <li><a href="/admin/discrepancies">Расхождения в учёте</a></li>
+            {{end}}
+            {{if .IsAdmin}}
             <li><a href="/admin/holidays">Праздничные дни</a></li>
             {{end}}
             <li><a href="/users/{{.UserID}}">Моя карточка</a></li>
@@ -32,7 +36,7 @@
     </nav>
 
     <h2>Отпуска</h2>
-    {{if .IsAdmin}}
+    {{if .IsStaff}}
     <p>
         Чтобы создать отпуск, откройте карточку сотрудника и перейдите в раздел отпусков.
         Например: <a href="/users">список сотрудников</a>.

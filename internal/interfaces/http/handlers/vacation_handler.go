@@ -3,18 +3,22 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/approve_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/change_status"
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacations"
+	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/delete_vacation"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/export_report"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_user_vacations"
 	"github.com/handsome-red/vacation-calculation/internal/application/queries/vacation/get_vacation_form"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
@@ -49,6 +53,7 @@ type VacationHandler struct {
 	createVacationUseCase   *create_vacations.Handler
 	approveVacationUseCase  *approve_vacation.Handler
 	changeStatusUseCase     *change_status.Handler
+	deleteVacationUseCase   *delete_vacation.Handler
 	getUserVacationsUseCase *get_user_vacations.Handler
 	getVacationFormUseCase  *get_vacation_form.Handler
 	exportReportUseCase     *export_report.Handler
@@ -60,6 +65,7 @@ func NewVacationHandler(
 	createVacationUseCase *create_vacations.Handler,
 	approveVacationUseCase *approve_vacation.Handler,
 	changeStatusUseCase *change_status.Handler,
+	deleteVacationUseCase *delete_vacation.Handler,
 	getUserVacationsUseCase *get_user_vacations.Handler,
 	getVacationFormUseCase *get_vacation_form.Handler,
 	exportReportUseCase *export_report.Handler,
@@ -70,6 +76,7 @@ func NewVacationHandler(
 		createVacationUseCase:   createVacationUseCase,
 		approveVacationUseCase:  approveVacationUseCase,
 		changeStatusUseCase:     changeStatusUseCase,
+		deleteVacationUseCase:   deleteVacationUseCase,
 		getUserVacationsUseCase: getUserVacationsUseCase,
 		getVacationFormUseCase:  getVacationFormUseCase,
 		exportReportUseCase:     exportReportUseCase,
@@ -95,12 +102,12 @@ func (h *VacationHandler) GetVacations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentUser, _ := authmiddleware.UserFromContext(r.Context())
 	data := map[string]any{
-		"IsAdmin":   currentUser.IsAdmin(),
+		"CanManage": managesTarget(r, userID.String()),
 		"UserID":    userID.String(),
 		"Vacations": result.Vacations,
 		"Hidden":    result.Hidden,
+		"Opening":   result.Opening,
 		"ShowAll":   showAll,
 		"Statuses": []vacationStatusOption{
 			{vacation.StatusDraft.ISO(), vacation.StatusDraft.String()},
@@ -138,7 +145,25 @@ func (h *VacationHandler) CreateVacation(w http.ResponseWriter, r *http.Request)
 			"user_id", cmd.UserID, "admin_id", caller.UserID.String(), "warnings", result.Warnings)
 	}
 	h.logger.Info(r.Context(), "vacation created successfully")
+	middleware.AuditDetail(r.Context(), describePeriods(cmd.Periods, result.Warnings))
 	http.Redirect(w, r, "/users/"+cmd.UserID, http.StatusSeeOther)
+}
+
+// describePeriods — периоды нового отпуска для журнала изменений и обойдённые правила.
+func describePeriods(periods []create_vacations.Period, warnings []string) string {
+	parts := make([]string, len(periods))
+	for i, p := range periods {
+		s := p.Start.Time().Format("02.01.2006") + "–" + p.End.Time().Format("02.01.2006")
+		if p.Kind != vacation.KindAuto {
+			s = p.Kind.Label() + " " + s
+		}
+		parts[i] = s
+	}
+	s := strings.Join(parts, "; ")
+	if len(warnings) > 0 {
+		s += ". В обход правил: " + strings.Join(warnings, "; ")
+	}
+	return s
 }
 
 type allocationDTO struct {
@@ -187,7 +212,85 @@ func (h *VacationHandler) PreviewVacation(w http.ResponseWriter, r *http.Request
 			Days:          a.Days,
 		})
 	}
-	_ = json.NewEncoder(w).Encode(map[string]any{"allocations": out, "warnings": result.Warnings, "notices": result.Notices})
+	years := make([]yearStatDTO, 0, len(result.Years))
+	for _, y := range result.Years {
+		years = append(years, yearStatDTO{
+			Year:      get_vacation_form.FormatYearRange(y.Year),
+			Start:     vacation.DateOf(y.Year.From).ISO(),
+			Base:      quotaDTO{Total: y.Year.Base, Blocked: y.Used.Base},
+			Seniority: quotaDTO{Total: y.Year.Seniority, Blocked: y.Used.Seniority},
+			Irregular: quotaDTO{Total: y.Year.Irregular, Blocked: y.Used.Irregular},
+		})
+	}
+	_ = json.NewEncoder(w).Encode(map[string]any{"allocations": out, "warnings": result.Warnings, "notices": result.Notices, "years": years})
+}
+
+// limitRequest — уже выбранные периоды заявки и начало нового периода вида kind.
+type limitRequest struct {
+	create_vacations.Command
+	Kind  string `json:"kind"`
+	Start string `json:"start"`
+}
+
+// VacationLimit возвращает, до какого дня можно продлить новый период: сколько дней
+// выбранного вида осталось с учётом уже выбранных периодов. Ошибки — {"error": "..."}.
+func (h *VacationHandler) VacationLimit(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	fail := func(status int, message string) {
+		w.WriteHeader(status)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
+	}
+
+	caller, ok := middleware.CallerFromContext(r.Context())
+	if !ok {
+		fail(http.StatusUnauthorized, "Необходим вход")
+		return
+	}
+
+	var req limitRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		fail(http.StatusBadRequest, err.Error())
+		return
+	}
+	kind := vacation.KindAuto
+	if req.Kind != "" && req.Kind != "auto" {
+		k, err := vacation.NewKind(req.Kind)
+		if err != nil {
+			fail(http.StatusBadRequest, "неизвестный вид отпуска")
+			return
+		}
+		kind = k
+	}
+	start, err := date.ParseDate(req.Start)
+	if err != nil {
+		fail(http.StatusBadRequest, "некорректная дата начала")
+		return
+	}
+
+	limit, err := h.createVacationUseCase.Limit(r.Context(), req.Command, kind, start, caller)
+	if err != nil {
+		fail(vacationErrorStatus(err), err.Error())
+		return
+	}
+	out := map[string]any{"days": limit.Days, "unlimited": limit.Unlimited, "lastDay": nil}
+	if limit.Days > 0 {
+		out["lastDay"] = limit.LastDay.ISO()
+	}
+	_ = json.NewEncoder(w).Encode(out)
+}
+
+// managesTarget — смотрящий управляет сотрудником targetID (права администратора).
+// Маршруты под RequireSelfOrManager пускают к чужим данным только тех, кто ими
+// управляет; к своим — всех, тогда права зависят от теротделов самого смотрящего.
+func managesTarget(r *http.Request, targetID string) bool {
+	u, ok := authmiddleware.UserFromContext(r.Context())
+	if !ok || u == nil {
+		return false
+	}
+	if !strings.EqualFold(u.ID().String(), targetID) {
+		return true
+	}
+	return u.Manages(u)
 }
 
 func vacationErrorStatus(err error) int {
@@ -243,12 +346,11 @@ func (h *VacationHandler) GetVacationForm(w http.ResponseWriter, r *http.Request
 	if y, err := strconv.Atoi(r.URL.Query().Get("year")); err == nil && y >= 2000 && y <= 2100 {
 		year = y
 	}
-	currentUser, _ := authmiddleware.UserFromContext(r.Context())
 	data := map[string]any{
-		"Year":    year,
-		"IsAdmin": currentUser != nil && currentUser.IsAdmin(),
-		"Cmd":     create_vacations.Command{UserID: result.UserID},
-		"Error":   "",
+		"Year":      year,
+		"CanManage": managesTarget(r, result.UserID),
+		"Cmd":       create_vacations.Command{UserID: result.UserID},
+		"Error":     "",
 		"Calendar": CalendarProps{
 			UserID:    result.UserID,
 			Year:      now.Year(),
@@ -333,4 +435,23 @@ func (h *VacationHandler) ExportReport(w http.ResponseWriter, r *http.Request) {
 
 	// TODO
 	_ = data
+}
+
+// DeleteVacation удаляет запись отпуска из базы (ошибочно внесённую). В журнал
+// изменений попадают вид, даты и статус удалённой записи.
+func (h *VacationHandler) DeleteVacation(w http.ResponseWriter, r *http.Request) {
+	cmd := delete_vacation.Command{UserID: r.PathValue("userId"), VacationID: r.PathValue("id")}
+	v, err := h.deleteVacationUseCase.Handle(r.Context(), cmd)
+	if err != nil {
+		h.logger.Error(r.Context(), "failed to delete vacation", "error", err)
+		status := http.StatusInternalServerError
+		if errors.Is(err, vacation.ErrVacationNotFound) {
+			status = http.StatusNotFound
+		}
+		http.Error(w, err.Error(), status)
+		return
+	}
+	middleware.AuditDetail(r.Context(), fmt.Sprintf("%s, %s–%s, статус: %s", v.Kind().Label(),
+		v.StartDate().Time().Format("02.01.2006"), v.EndDate().Time().Format("02.01.2006"), v.Status().String()))
+	http.Redirect(w, r, "/api/v1/users/"+cmd.UserID+"/vacations", http.StatusSeeOther)
 }

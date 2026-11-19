@@ -5,14 +5,18 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
 	"github.com/handsome-red/vacation-calculation/internal/domain/vacation"
 )
 
 type Command struct {
-	Year         int
-	DistrictCode string // пусто — все территориальные отделы
+	Year           int
+	DistrictCode   string // пусто — все территориальные отделы
+	DepartmentCode string // пусто — все районы/отделы
+	// Caller — кто утверждает: руководитель — только сотрудников своих теротделов.
+	Caller auth.Caller
 }
 
 type Result struct {
@@ -29,12 +33,12 @@ func NewHandler(userRepo ports.UserRepository, vacationRepo ports.VacationReposi
 }
 
 // Handle утверждает график: все черновики ежегодного отпуска, начинающиеся
-// в году, у работающих сотрудников территориального отдела. Нарушения графика
+// в году, у работающих сотрудников территориального отдела и района/отдела. Нарушения графика
 // показываются администратору на странице, но утверждение не блокируют.
 func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	users, _, err := h.userRepo.FindUsers(ctx, ports.Query{
 		Page: 1, Size: 100000,
-		Filters: ports.UserFilter{Status: string(user.StatusActive), DistrictCode: cmd.DistrictCode},
+		Filters: ports.UserFilter{Status: string(user.StatusActive), DistrictCode: cmd.DistrictCode, DistrictCodes: cmd.Caller.Scope(), DepartmentCode: cmd.DepartmentCode},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("users: %w", err)
@@ -43,6 +47,9 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
 	now := time.Now()
 	res := &Result{}
 	for _, u := range users {
+		if !cmd.Caller.Manages(u) {
+			continue
+		}
 		vacations, err := h.vacationRepo.FindByUserID(ctx, u.ID())
 		if err != nil {
 			return res, fmt.Errorf("vacations: %w", err)

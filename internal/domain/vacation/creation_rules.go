@@ -88,7 +88,8 @@ type CreationPeriod struct {
 // err — ошибка, которую обойти нельзя: пустой ввод или пересечение с другим отпуском.
 //
 // Длительность частей считается в днях отпуска: нерабочие праздничные дни h
-// в неё не входят (ст. 120 ТК РФ). Для административного отпуска (unpaid)
+// в неё не входят (ст. 120 ТК РФ). Часть — непрерывный отпуск: периоды разных видов,
+// идущие встык, считаются вместе. Для административного отпуска (KindUnpaid)
 // проверяются только пересечения и прошедшие даты.
 func ValidateCreation(
 	periods []CreationPeriod,
@@ -96,7 +97,6 @@ func ValidateCreation(
 	vacations []*Vacation,
 	h Holidays,
 	today date.Date,
-	unpaid bool,
 ) (violations []error, err error) {
 
 	if len(periods) == 0 {
@@ -104,6 +104,7 @@ func ValidateCreation(
 	}
 
 	newPeriods := make([]vacationPeriod, 0, len(periods))
+	newAnnual := make([]vacationPeriod, 0, len(periods))
 
 	for i, p := range periods {
 		from, to := p.Start.Time(), p.End.Time()
@@ -112,22 +113,17 @@ func ValidateCreation(
 			violations = append(violations, fmt.Errorf("%w: период #%d начинается %s",
 				ErrInPast, i+1, from.Format("02.01.2006")))
 		}
-		if days := ChargeableDays(p.Start, p.End, h); !unpaid && days < MinVacationDays {
-			violations = append(violations, fmt.Errorf(
-				"%w: период #%d: %d дн. отпуска, минимум — %d дн.",
-				ErrTooShort, i+1, days, MinVacationDays,
-			))
-		}
 		newPeriods = append(newPeriods, vacationPeriod{from: from, to: to})
+		if p.Kind != KindUnpaid {
+			newAnnual = append(newAnnual, vacationPeriod{from: from, to: to})
+		}
 	}
 
 	// Пересечения — со всеми действующими отпусками, включая административные.
 	all := make([]vacationPeriod, 0, len(newPeriods)+len(vacations))
 	all = append(all, newPeriods...)
 	annual := make([]vacationPeriod, 0, len(newPeriods)+len(vacations))
-	if !unpaid {
-		annual = append(annual, newPeriods...)
-	}
+	annual = append(annual, newAnnual...)
 	for _, v := range vacations {
 		if v == nil || !v.Status().IsActive() {
 			continue
@@ -141,7 +137,7 @@ func ValidateCreation(
 	if _, err := mergePeriods(all); err != nil {
 		return nil, err
 	}
-	if unpaid {
+	if len(newAnnual) == 0 {
 		return violations, nil
 	}
 
@@ -149,6 +145,18 @@ func ValidateCreation(
 	mergedAll, err := mergePeriods(annual)
 	if err != nil {
 		return nil, err
+	}
+
+	for i, p := range periods {
+		if p.Kind == KindUnpaid {
+			continue
+		}
+		if days := partDays(mergedAll, p.Start.Time(), h); days < MinVacationDays {
+			violations = append(violations, fmt.Errorf(
+				"%w: период #%d: %d дн. отпуска, минимум — %d дн.",
+				ErrTooShort, i+1, days, MinVacationDays,
+			))
+		}
 	}
 
 	hasLongPart := false
@@ -175,8 +183,8 @@ func ValidateCreation(
 
 	// ── 7. Обязательная непрерывная часть ────────────────────────────────
 	if !hasLongPart {
-		latestEnd := newPeriods[0].to
-		for _, p := range newPeriods[1:] {
+		latestEnd := newAnnual[0].to
+		for _, p := range newAnnual[1:] {
 			if p.to.After(latestEnd) {
 				latestEnd = p.to
 			}
@@ -229,6 +237,17 @@ func hasRoomForLongPart(merged []vacationPeriod, after, yearEnd time.Time) bool 
 }
 
 // Helpers
+
+// partDays — дни отпуска в непрерывной части, куда входит дата t.
+func partDays(merged []vacationPeriod, t time.Time, h Holidays) int {
+	for _, m := range merged {
+		if !t.Before(m.from) && !t.After(m.to) {
+			return ChargeableDays(DateOf(m.from), DateOf(m.to), h)
+		}
+	}
+	return 0
+}
+
 func mergePeriods(periods []vacationPeriod) ([]vacationPeriod, error) {
 	if len(periods) == 0 {
 		return nil, nil

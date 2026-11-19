@@ -38,7 +38,7 @@
                 <td>{{.TypeLabel}}</td>
                 <td>{{.Name}}</td>
                 <td>
-                    <form method="POST" action="/admin/holidays/delete" onsubmit="return confirm('Удалить {{.DateLabel}}?')">
+                    <form method="POST" action="/admin/holidays/delete" data-confirm="Удалить {{.DateLabel}} из производственного календаря?" data-confirm-label="Удалить" data-danger>
                         <input type="hidden" name="date" value="{{.Date}}">
                         <input type="hidden" name="year" value="{{$.Year}}">
                         <button type="submit" class="btn-link-danger">Удалить</button>

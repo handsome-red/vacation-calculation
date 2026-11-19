@@ -8,7 +8,10 @@
             <section class="card card--profile">
                 <div class="card-header">
                     <h2>Общая статистика</h2>
-                    <a class="btn" href="/api/v1/users/{{.UserID}}/vacations/new">Оформить отпуск</a>
+                    <div>
+                        {{if .CanManage}}<a class="btn" href="/users/{{.UserID}}/edit">Изменить данные</a>{{end}}
+                        <a class="btn" href="/api/v1/users/{{.UserID}}/vacations/new">Оформить отпуск</a>
+                    </div>
                 </div>  
                 <table>
                     <tbody>
@@ -49,6 +52,10 @@
                             <td>{{.Department}}</td>
                         </tr>
                         <tr>
+                            <th>Роль</th>
+                            <td>{{.Role}}</td>
+                        </tr>
+                        <tr>
                             <th>Продолжительность рабочего дня</th>
                             <td>{{.WorkdayDuration}}</td>
                         </tr>
@@ -71,8 +78,10 @@
             <section class="card card--entitlement">
                 <div class="card-header">
                     <h2>Статистика</h2>
-                    {{if .IsAdmin}}
+                    {{if .CanManage}}
                     <a class="btn" href="/api/v1/users/{{.UserID}}/shift/new">Добавить сдвиг</a>
+                    <a class="btn" href="/users/{{.UserID}}/work-years">Границы рабочих лет</a>
+                <a class="btn" href="/users/{{.UserID}}/history">Журнал изменений</a>
                     {{end}}
                 </div>
             <table>

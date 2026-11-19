@@ -14,6 +14,9 @@ type Command struct {
 	DistrictCode    string
 	WorkdayDuration int
 	IsInvalid       bool
+	// Districts — в какие теротделы можно добавить сотрудника (права руководителя);
+	// nil — в любые (администратор, первичная настройка).
+	Districts []string
 }
 
 type Result struct {

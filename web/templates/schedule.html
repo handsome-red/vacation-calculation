@@ -7,14 +7,22 @@
     <p class="muted">Утвердить график нужно не позднее {{$s.Deadline}} (за две недели до начала года).</p>
 
     <form method="GET" action="/admin/schedule" class="picker-nav">
-        <a class="btn btn-light" href="/admin/schedule?year={{.PrevYear}}&district={{$s.DistrictCode}}">← {{.PrevYear}}</a>
+        <a class="btn btn-light" href="/admin/schedule?year={{.PrevYear}}&district={{$s.DistrictCode}}&department={{$s.DepartmentCode}}">← {{.PrevYear}}</a>
         <strong class="picker-nav__year">{{$s.Year}}</strong>
-        <a class="btn btn-light" href="/admin/schedule?year={{.NextYear}}&district={{$s.DistrictCode}}">{{.NextYear}} →</a>
+        <a class="btn btn-light" href="/admin/schedule?year={{.NextYear}}&district={{$s.DistrictCode}}&department={{$s.DepartmentCode}}">{{.NextYear}} →</a>
         <input type="hidden" name="year" value="{{$s.Year}}">
-        <select name="district" onchange="this.form.submit()" aria-label="Территориальный отдел">
+        <select name="district" onchange="this.form.department.value=''; this.form.submit()" aria-label="Территориальный отдел">
             <option value="">Все территориальные отделы</option>
             {{range $s.Districts}}
             <option value="{{.Code}}" {{if eq .Code $s.DistrictCode}}selected{{end}}>{{.Title}}</option>
+            {{end}}
+        </select>
+        <select name="department" onchange="this.form.submit()" aria-label="Район/отдел" style="max-width: 24rem;">
+            <option value="">Все районы/отделы</option>
+            {{range $s.Departments}}
+            {{if or (eq $s.DistrictCode "") (eq .DistrictCode "") (eq .DistrictCode $s.DistrictCode)}}
+            <option value="{{.Code}}" {{if eq .Code $s.DepartmentCode}}selected{{end}}>{{.Title}}</option>
+            {{end}}
             {{end}}
         </select>
     </form>
@@ -27,12 +35,13 @@
 
     <div class="schedule-actions">
         <form method="POST" action="/admin/schedule/approve"
-              onsubmit="return {{if $s.WithIssues}}confirm('У {{$s.WithIssues}} сотрудников есть замечания к графику. Утвердить всё равно?'){{else}}true{{end}}">
+              {{if $s.WithIssues}}data-confirm="У {{$s.WithIssues}} сотрудников есть замечания к графику. Утвердить всё равно?" data-confirm-label="Утвердить"{{end}}>
             <input type="hidden" name="year" value="{{$s.Year}}">
             <input type="hidden" name="district" value="{{$s.DistrictCode}}">
+            <input type="hidden" name="department" value="{{$s.DepartmentCode}}">
             <button type="submit" class="btn" {{if not $s.ToApprove}}disabled{{end}}>Утвердить график</button>
         </form>
-        <a class="btn" href="/admin/reports/schedule?year={{$s.Year}}&district={{$s.DistrictCode}}">Скачать график в Word</a>
+        <a class="btn" href="/admin/reports/schedule?year={{$s.Year}}&district={{$s.DistrictCode}}&department={{$s.DepartmentCode}}">Скачать график в Word</a>
     </div>
 
     <table class="schedule-table">

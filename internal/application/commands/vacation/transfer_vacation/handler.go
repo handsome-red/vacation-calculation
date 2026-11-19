@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/application/commands/vacation/create_vacations"
+	"github.com/handsome-red/vacation-calculation/internal/application/leavecalc"
 	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
@@ -14,30 +15,37 @@ import (
 )
 
 type Handler struct {
+	userRepo     ports.UserRepository
 	vacationRepo ports.VacationRepository
 	transferRepo ports.TransferRepository
 	planner      *create_vacations.Handler
+	leave        *leavecalc.Service
 }
 
 func NewHandler(
+	userRepo ports.UserRepository,
 	vacationRepo ports.VacationRepository,
 	transferRepo ports.TransferRepository,
 	planner *create_vacations.Handler,
+	leave *leavecalc.Service,
 ) *Handler {
-	return &Handler{vacationRepo: vacationRepo, transferRepo: transferRepo, planner: planner}
+	return &Handler{userRepo: userRepo, vacationRepo: vacationRepo, transferRepo: transferRepo, planner: planner, leave: leave}
 }
 
 // Handle переносит отпуск на новые даты. Исходная запись остаётся в истории
 // со статусом «Перенесён», новые даты оформляются новыми записями (с повторным
 // распределением по квотам) с тем же статусом, а причина и даты сохраняются в Transfer.
 func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (*Result, error) {
-	if !caller.IsAdmin {
-		return nil, fmt.Errorf("%w: переносить отпуск может только администратор", vacation.ErrForbidden)
-	}
-
 	userID, err := user.ParseUserID(cmd.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: некорректный идентификатор пользователя", vacation.ErrInvalidInput)
+	}
+	target, err := h.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: сотрудник не найден (%v)", vacation.ErrInvalidInput, err)
+	}
+	if !caller.Manages(target) {
+		return nil, fmt.Errorf("%w: переносить отпуск может администратор или руководитель теротдела сотрудника", vacation.ErrForbidden)
 	}
 	vacationID, err := vacation.ParseVacationID(cmd.VacationID)
 	if err != nil {
@@ -70,15 +78,10 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 	}
 
 	// Распределение новых дат — как при оформлении, но без учёта переносимого отпуска.
-	// Административный отпуск переносится административным: квоту не расходует.
-	planType := create_vacations.TypeAnnual
-	if old.Kind() == vacation.KindUnpaid {
-		planType = create_vacations.TypeUnpaid
-	}
+	// Вид отпуска сохраняется: дни списываются из квоты того же вида.
 	plan, err := h.planner.Preview(ctx, create_vacations.Command{
 		UserID:            cmd.UserID,
-		Type:              planType,
-		Periods:           []create_vacations.Period{{Kind: vacation.KindBase, Start: newStart, End: newEnd}},
+		Periods:           []create_vacations.Period{{Kind: old.Kind(), Start: newStart, End: newEnd}},
 		ExcludeVacationID: old.ID().String(),
 	}, caller)
 	if err != nil {
@@ -109,16 +112,28 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, caller auth.Caller) (
 
 	// TODO: одной транзакцией. Порядок: сначала новые записи (на них ссылается
 	// история), затем исходная запись и сама история переноса.
-	for _, v := range newVacations {
-		if err := h.vacationRepo.Save(ctx, v); err != nil {
-			return nil, fmt.Errorf("save new vacation: %w", err)
+	save := func() error {
+		for _, v := range newVacations {
+			if err := h.vacationRepo.Save(ctx, v); err != nil {
+				return fmt.Errorf("save new vacation: %w", err)
+			}
 		}
+		if err := h.vacationRepo.Save(ctx, old); err != nil {
+			return fmt.Errorf("save transferred vacation: %w", err)
+		}
+		if err := h.transferRepo.Save(ctx, transfer); err != nil {
+			return fmt.Errorf("save transfer: %w", err)
+		}
+		return nil
 	}
-	if err := h.vacationRepo.Save(ctx, old); err != nil {
-		return nil, fmt.Errorf("save transferred vacation: %w", err)
+	// Перенос утверждённого административного отпуска сдвигает рабочие годы.
+	if old.Kind() == vacation.KindUnpaid && approved {
+		err = h.leave.WithRebind(ctx, userID, nil, save)
+	} else {
+		err = save()
 	}
-	if err := h.transferRepo.Save(ctx, transfer); err != nil {
-		return nil, fmt.Errorf("save transfer: %w", err)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Result{TransferID: transfer.ID(), NewVacationIDs: ids, Warnings: plan.Warnings}, nil

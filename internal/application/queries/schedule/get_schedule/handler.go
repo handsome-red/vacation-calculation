@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/handsome-red/vacation-calculation/internal/application/leavecalc"
+	"github.com/handsome-red/vacation-calculation/internal/domain/auth"
 	"github.com/handsome-red/vacation-calculation/internal/domain/date"
 	"github.com/handsome-red/vacation-calculation/internal/domain/ports"
 	"github.com/handsome-red/vacation-calculation/internal/domain/user"
@@ -15,8 +16,11 @@ import (
 )
 
 type Query struct {
-	Year         int
-	DistrictCode string // пусто — все территориальные отделы
+	Year           int
+	DistrictCode   string // пусто — все территориальные отделы
+	DepartmentCode string // пусто — все районы/отделы
+	// Caller — кто смотрит: руководитель — только сотрудников своих теротделов.
+	Caller auth.Caller
 }
 
 type Part struct {
@@ -41,34 +45,50 @@ type Option struct {
 	Title string
 }
 
-type Result struct {
-	Year         int
+// DepartmentOption — район/отдел; DistrictCode пуст у республиканских отделов.
+type DepartmentOption struct {
+	Code         string
+	Title        string
 	DistrictCode string
-	Deadline     string // крайний срок утверждения
-	Rows         []Row
-	WithIssues   int
-	ToApprove    int // сотрудников с неутверждёнными частями
-	Districts    []Option
+}
+
+type Result struct {
+	Year           int
+	DistrictCode   string
+	DepartmentCode string
+	Deadline       string // крайний срок утверждения
+	Rows           []Row
+	WithIssues     int
+	ToApprove      int // сотрудников с неутверждёнными частями
+	Districts      []Option
+	Departments    []DepartmentOption
 }
 
 type Handler struct {
-	userRepo     ports.UserRepository
-	districtRepo ports.DistrictRepository
-	leave        *leavecalc.Service
+	userRepo       ports.UserRepository
+	districtRepo   ports.DistrictRepository
+	departmentRepo ports.DepartmentRepository
+	leave          *leavecalc.Service
 }
 
-func NewHandler(userRepo ports.UserRepository, districtRepo ports.DistrictRepository, leave *leavecalc.Service) *Handler {
-	return &Handler{userRepo: userRepo, districtRepo: districtRepo, leave: leave}
+func NewHandler(userRepo ports.UserRepository, districtRepo ports.DistrictRepository, departmentRepo ports.DepartmentRepository, leave *leavecalc.Service) *Handler {
+	return &Handler{userRepo: userRepo, districtRepo: districtRepo, departmentRepo: departmentRepo, leave: leave}
 }
 
-// employees — работающие сотрудники территориального отдела (или все).
-func (h *Handler) employees(ctx context.Context, districtCode string) ([]*user.User, error) {
-	users, _, err := h.userRepo.FindUsers(ctx, ports.Query{
+// employees — работающие сотрудники территориального отдела и района/отдела (или все).
+func (h *Handler) employees(ctx context.Context, q Query) ([]*user.User, error) {
+	all, _, err := h.userRepo.FindUsers(ctx, ports.Query{
 		Page: 1, Size: 100000,
-		Filters: ports.UserFilter{Status: string(user.StatusActive), DistrictCode: districtCode},
+		Filters: ports.UserFilter{Status: string(user.StatusActive), DistrictCode: q.DistrictCode, DistrictCodes: q.Caller.Scope(), DepartmentCode: q.DepartmentCode},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("users: %w", err)
+	}
+	users := make([]*user.User, 0, len(all))
+	for _, u := range all {
+		if q.Caller.Manages(u) {
+			users = append(users, u)
+		}
 	}
 	sort.SliceStable(users, func(i, j int) bool {
 		if users[i].Department().Title != users[j].Department().Title {
@@ -81,15 +101,16 @@ func (h *Handler) employees(ctx context.Context, districtCode string) ([]*user.U
 
 // Handle — график отпусков на год с проверкой каждого сотрудника.
 func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
-	users, err := h.employees(ctx, q.DistrictCode)
+	users, err := h.employees(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &Result{
-		Year:         q.Year,
-		DistrictCode: q.DistrictCode,
-		Deadline:     vacation.ApprovalDeadline(q.Year).Time().Format("02.01.2006"),
+		Year:           q.Year,
+		DistrictCode:   q.DistrictCode,
+		DepartmentCode: q.DepartmentCode,
+		Deadline:       vacation.ApprovalDeadline(q.Year).Time().Format("02.01.2006"),
 	}
 	for _, u := range users {
 		snap, err := h.leave.Load(ctx, u, yearEnd(q.Year), "")
@@ -128,7 +149,17 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 		return nil, fmt.Errorf("districts: %w", err)
 	}
 	for _, d := range districts {
-		res.Districts = append(res.Districts, Option{Code: d.Code(), Title: d.Title()})
+		if q.Caller.ManagesDistrict(d.Code()) {
+			res.Districts = append(res.Districts, Option{Code: d.Code(), Title: d.Title()})
+		}
+	}
+
+	departments, err := h.departmentRepo.ListWithDistrict(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("departments: %w", err)
+	}
+	for _, d := range departments {
+		res.Departments = append(res.Departments, DepartmentOption{Code: d.Department.Code, Title: d.Department.Title, DistrictCode: d.DistrictCode})
 	}
 	return res, nil
 }
@@ -136,7 +167,7 @@ func (h *Handler) Handle(ctx context.Context, q Query) (*Result, error) {
 // Report — данные для выгрузки графика в Word: строка на сотрудника и рабочий год,
 // за который предоставляются дни отпусков, начинающихся в календарном году.
 func (h *Handler) Report(ctx context.Context, q Query) (*ports.ScheduleReport, error) {
-	users, err := h.employees(ctx, q.DistrictCode)
+	users, err := h.employees(ctx, q)
 	if err != nil {
 		return nil, err
 	}

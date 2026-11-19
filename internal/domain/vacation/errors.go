@@ -21,7 +21,8 @@ var (
 	ErrCalendarDayTypeInvalid = errors.New("calendar day type is invalid")
 	ErrCalendarDayNotFound    = errors.New("calendar day not found")
 
-	ErrStatusNotFound = errors.New("status not found")
+	ErrStatusNotFound   = errors.New("status not found")
+	ErrVacationNotFound = errors.New("отпуск не найден")
 
 	ErrVacationNotRejectable   = errors.New("vacation is not rejectable")
 	ErrVacationNotEditable     = errors.New("vacation is not editable")
@@ -36,6 +37,8 @@ var (
 
 	ErrCalcInvalidTime = errors.New("hired after now")
 	ErrCalcEmptyStats  = errors.New("empty status")
+	// ErrWorkYearsInvalid — сохранённые рабочие годы не согласуются с датой приёма.
+	ErrWorkYearsInvalid = errors.New("сохранённые рабочие годы некорректны")
 
 	ErrForbidden = errors.New("действие запрещено")
 )

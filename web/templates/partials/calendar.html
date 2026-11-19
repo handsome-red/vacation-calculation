@@ -1,8 +1,16 @@
 {{ define "vacation_picker" }}
 <fieldset class="vacation-type">
     <legend>Вид отпуска</legend>
-    <label><input type="radio" name="vacation-type" value="annual" checked> Ежегодный оплачиваемый</label>
-    <label><input type="radio" name="vacation-type" value="unpaid"> Без сохранения заработной платы (административный)</label>
+    <label><input type="radio" name="vacation-type" value="auto" data-label="Автоматически" checked> Автоматически</label>
+    <label><input type="radio" name="vacation-type" value="base" data-label="Основной"> Основной</label>
+    <label><input type="radio" name="vacation-type" value="irregular" data-label="За ненормированный день"> За ненормированный служебный день</label>
+    <label><input type="radio" name="vacation-type" value="seniority" data-label="За выслугу лет"> За выслугу лет</label>
+    <label><input type="radio" name="vacation-type" value="unpaid" data-label="Без сохранения заработной платы"> Без сохранения заработной платы (административный)</label>
+    <p class="muted vacation-type__hint" data-for="auto">
+        Дни списываются с самого раннего рабочего года, где остались неиспользованные дни: сначала основной отпуск, затем за ненормированный день, затем за выслугу лет.
+    </p>
+    <p class="muted">Вид применяется к следующему выбранному периоду: выберите вид и даты, затем другой вид и другие даты.</p>
+
     <p class="muted vacation-type__hint" data-for="unpaid" hidden>
         Квоту не расходует. Вступает в силу после утверждения администратором; дни сверх 14 за рабочий год сдвигают рабочий год.
     </p>
@@ -11,7 +19,7 @@
 <div id="calendar" class="calendar"
      data-user-id="{{ .Cmd.UserID }}"
      data-year="{{ .Year }}"
-     data-is-admin="{{ .IsAdmin }}">
+     data-is-admin="{{ .CanManage }}">
     <p class="muted">Загрузка…</p>
 </div>
 

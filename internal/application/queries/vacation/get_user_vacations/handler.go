@@ -14,16 +14,19 @@ import (
 type Handler struct {
 	vacationRepo ports.VacationRepository
 	transferRepo ports.TransferRepository
+	openingRepo  ports.OpeningUsageRepository
 }
 
 func NewHandler(
 	vacationRepo ports.VacationRepository,
 	transferRepo ports.TransferRepository,
+	openingRepo ports.OpeningUsageRepository,
 ) *Handler {
 
 	return &Handler{
 		vacationRepo: vacationRepo,
 		transferRepo: transferRepo,
+		openingRepo:  openingRepo,
 	}
 }
 
@@ -65,6 +68,7 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 			WorkYear:   v.WorkYearStart().Time().Format("02.01.2006"),
 			StartDate:  v.StartDate().Time().Format("02.01.2006"),
 			EndDate:    v.EndDate().Time().Format("02.01.2006"),
+			TotalDays:  vacation.DaysInclusive(v.StartDate().Time(), v.EndDate().Time()),
 			Status:     v.Status().String(),
 			StatusCode: v.Status().ISO(),
 			IsActive:   v.Status().IsActive(),
@@ -79,8 +83,20 @@ func (h *Handler) Handle(ctx context.Context, query Query) (*Result, error) {
 		result = append(result, item)
 	}
 
+	opening, err := h.openingRepo.ListByUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list opening usage: %w", err)
+	}
+	openingRows := make([]OpeningRow, 0, len(opening))
+	for _, o := range opening {
+		openingRows = append(openingRows, OpeningRow{
+			WorkYear: fmtDate(o.WorkYearStart), Base: o.Days.Base, Irregular: o.Days.Irregular, Seniority: o.Days.Seniority,
+		})
+	}
+
 	return &Result{
 		Vacations: result,
+		Opening:   openingRows,
 		Hidden:    hidden,
 	}, nil
 }
