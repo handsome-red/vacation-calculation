@@ -81,7 +81,7 @@ func (h *CalendarHandler) NewCalendarDay(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	http.Redirect(w, r, "/admin/holidays?done=saved&year="+result.Date[:4], http.StatusSeeOther)
+	http.Redirect(w, r, "/vacations/admin/holidays?done=saved&year="+result.Date[:4], http.StatusSeeOther)
 }
 
 func (h *CalendarHandler) DeleteCalendarDay(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +93,7 @@ func (h *CalendarHandler) DeleteCalendarDay(w http.ResponseWriter, r *http.Reque
 		h.renderHolidays(w, r, http.StatusBadRequest, calendarDayFormData{Year: holidaysYear(r), Errors: []string{err.Error()}})
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/admin/holidays?done=deleted&year=%d", holidaysYear(r)), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/vacations/admin/holidays?done=deleted&year=%d", holidaysYear(r)), http.StatusSeeOther)
 }
 
 // FillHolidays добавляет постоянные праздники выбранного года.
@@ -108,5 +108,5 @@ func (h *CalendarHandler) FillHolidays(w http.ResponseWriter, r *http.Request) {
 		h.renderHolidays(w, r, http.StatusInternalServerError, calendarDayFormData{Year: year, Errors: []string{err.Error()}})
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/admin/holidays?done=filled&n=%d&year=%d", n, year), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/vacations/admin/holidays?done=filled&n=%d&year=%d", n, year), http.StatusSeeOther)
 }

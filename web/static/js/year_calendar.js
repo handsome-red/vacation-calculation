@@ -10,7 +10,7 @@
 
     el.innerHTML = '<p class="muted">Загрузка…</p>';
 
-    fetch(`/api/v1/calendar?year=${year}`, { headers: { Accept: "application/json" } })
+    fetch(`/vacations/api/v1/calendar?year=${year}`, { headers: { Accept: "application/json" } })
         .then((res) => {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             return res.json();

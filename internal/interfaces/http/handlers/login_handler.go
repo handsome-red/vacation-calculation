@@ -72,11 +72,11 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	h.limiter.Success(email)
 	if result.IsStaff {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		http.Redirect(w, r, "/vacations/", http.StatusSeeOther)
 		return
 	}
 
-	http.Redirect(w, r, "/users/"+result.UserID, http.StatusSeeOther)
+	http.Redirect(w, r, "/vacations/users/"+result.UserID, http.StatusSeeOther)
 }
 
 func (h *LoginHandler) Logout(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +85,7 @@ func (h *LoginHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.sessions.End(w, r)
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	http.Redirect(w, r, "/vacations/login", http.StatusSeeOther)
 }
 
 func sameOrigin(r *http.Request) bool { return middleware.IsSameOrigin(r) }

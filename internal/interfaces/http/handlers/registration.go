@@ -83,5 +83,5 @@ func (h *RegistrationHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	middleware.AuditTarget(r.Context(), created.UserID)
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/vacations/", http.StatusSeeOther)
 }

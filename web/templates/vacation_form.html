@@ -30,10 +30,10 @@
 
 {{ template "vacation_picker" . }}
 
-<p><a href="/users/{{ .Cmd.UserID }}">← К карточке сотрудника</a></p>
+<p><a href="/vacations/users/{{ .Cmd.UserID }}">← К карточке сотрудника</a></p>
 </div>
 
 <script id="app-data" type="application/json">{{ .AppDataJSON }}</script>
-<script src="/static/js/vacation_form.js" type="module"></script>
-<script src="/static/js/vacation_picker.js" defer></script>
+<script src="/vacations/static/js/vacation_form.js" type="module"></script>
+<script src="/vacations/static/js/vacation_picker.js" defer></script>
 {{ end }}

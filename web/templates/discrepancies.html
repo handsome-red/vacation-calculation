@@ -24,7 +24,7 @@
         <tbody>
             {{range .Rows}}
             <tr>
-                <td><a href="/users/{{.UserID}}">{{.FullName}}</a></td>
+                <td><a href="/vacations/users/{{.UserID}}">{{.FullName}}</a></td>
                 <td>{{.District}}</td>
                 <td>{{range .Messages}}<div>{{.}}</div>{{end}}</td>
             </tr>
@@ -35,6 +35,6 @@
     <p>Расхождений нет. Проверено сотрудников: {{.Checked}}.</p>
     {{end}}
 
-    <p><a href="/">← На главную</a></p>
+    <p><a href="/vacations/">← На главную</a></p>
 </div>
 {{end}}

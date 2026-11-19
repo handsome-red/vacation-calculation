@@ -35,7 +35,7 @@
                 <td>{{.Days}}</td>
                 <td>{{if .Manual}}вручную{{else if .Stored}}сохранены{{else}}расчёт{{end}}</td>
                 <td>
-                    <form id="year-{{.Number}}" method="POST" action="/users/{{$.UserID}}/work-years/{{.Number}}">
+                    <form id="year-{{.Number}}" method="POST" action="/vacations/users/{{$.UserID}}/work-years/{{.Number}}">
                         <button type="submit" class="btn">Сохранить</button>
                         {{if .Manual}}<button type="submit" class="btn" name="action" value="reset" formnovalidate>Вернуть расчёт</button>{{end}}
                     </form>
@@ -45,6 +45,6 @@
         </tbody>
     </table>
 
-    <p><a href="/users/{{.UserID}}">← К карточке сотрудника</a></p>
+    <p><a href="/vacations/users/{{.UserID}}">← К карточке сотрудника</a></p>
 </div>
 {{end}}

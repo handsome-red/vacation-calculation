@@ -60,7 +60,7 @@ func (h *WorkYearHandler) Set(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		admin, _ := authmiddleware.UserFromContext(r.Context())
 		h.logger.Info(r.Context(), "work year changed", "user_id", id, "number", number, "admin_id", admin.ID().String())
-		http.Redirect(w, r, "/users/"+id+"/work-years", http.StatusSeeOther)
+		http.Redirect(w, r, "/vacations/users/"+id+"/work-years", http.StatusSeeOther)
 		return
 	}
 	if !errors.Is(err, set_work_year.ErrInvalidInput) {

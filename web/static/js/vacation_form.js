@@ -30,7 +30,7 @@ window.addEventListener('periods-changed', async (e) => {
     let body;
     let ok = false;
     try {
-        const res = await fetch(`/api/v1/users/${userId}/vacations/preview`, {
+        const res = await fetch(`/vacations/api/v1/users/${userId}/vacations/preview`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({

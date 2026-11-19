@@ -127,7 +127,6 @@ func NewRouter(
 }
 
 func (r *Router) Build() (http.Handler, error) {
-	// Глобальный middleware для всего приложения
 	root := chi.NewRouter()
 	root.Use(middleware.RequestID)
 	root.Use(middleware.RealIP)
@@ -135,26 +134,27 @@ func (r *Router) Build() (http.Handler, error) {
 	root.Use(middleware.Recoverer)
 	root.Use(authmiddleware.SameOrigin)
 
-	// 1. Публичные маршруты (без аутентификации)
-	r.registerPublic(root)
+	root.Get("/health", r.healthHandler.Health)
 
-	// 2. API v1 (с аутентификацией)
-	root.Route("/api/v1", func(api chi.Router) {
-		if r.authMW != nil { // Middleware применяется ко всей группе /api/v1
-			api.Use(r.authMW)
-		}
-		api.Use(r.auditor.Middleware)
-		r.registerAPI(api)
-	})
+	root.Route("/vacations", func(app chi.Router) {
+		r.registerPublic(app)
 
-	// 3. Админка (аутентификация + проверка роли: администратор или руководитель)
-	root.Route("/admin", func(admin chi.Router) {
-		if r.authMW != nil {
-			admin.Use(r.authMW)
-		}
-		admin.Use(r.auditor.Middleware)
-		admin.Use(authmiddleware.RequireStaff)
-		r.registerAdmin(admin)
+		app.Route("/api/v1", func(api chi.Router) {
+			if r.authMW != nil {
+				api.Use(r.authMW)
+			}
+			api.Use(r.auditor.Middleware)
+			r.registerAPI(api)
+		})
+
+		app.Route("/admin", func(admin chi.Router) {
+			if r.authMW != nil {
+				admin.Use(r.authMW)
+			}
+			admin.Use(r.auditor.Middleware)
+			admin.Use(authmiddleware.RequireStaff)
+			r.registerAdmin(admin)
+		})
 	})
 
 	return root, nil
@@ -166,7 +166,7 @@ func (r *Router) registerPublic(mux chi.Router) {
 	if err != nil {
 		panic("router: static fs: " + err.Error())
 	}
-	mux.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+	mux.Handle("/static/*", http.StripPrefix("/vacations/static/", http.FileServer(http.FS(staticFS))))
 
 	// Public handlers (pre-initialized in NewRouter)
 	mux.Get("/health", r.healthHandler.Health)

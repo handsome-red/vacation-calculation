@@ -338,7 +338,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		admin, _ := authmiddleware.UserFromContext(r.Context())
 		h.logger.Info(r.Context(), "user profile updated", "user_id", id, "admin_id", admin.ID().String())
-		http.Redirect(w, r, "/users/"+id, http.StatusSeeOther)
+		http.Redirect(w, r, "/vacations/users/"+id, http.StatusSeeOther)
 		return
 	}
 	if !errors.Is(err, update_user.ErrInvalidInput) {

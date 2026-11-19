@@ -67,7 +67,7 @@
         async function load() {
             label.textContent = `${monthNames[month - 1]} ${year}`;
 
-            const url = `/api/v1/users/${userId}/calendar?year=${year}&month=${month}`;
+            const url = `/vacations/api/v1/users/${userId}/calendar?year=${year}&month=${month}`;
             try {
                 const res = await fetch(url);
                 if (!res.ok) {

@@ -38,7 +38,7 @@
 
     function loadYear(year) {
         if (!state.years.has(year)) {
-            const p = fetch(`/api/v1/users/${userId}/calendar?year=${year}`, {
+            const p = fetch(`/vacations/api/v1/users/${userId}/calendar?year=${year}`, {
                 headers: { Accept: "application/json" },
             })
             .then((res) => {
@@ -158,7 +158,7 @@
             return state.limit.promise;
         }
         const limit = { start, kind, value: null, error: null };
-        limit.promise = fetch(`/api/v1/users/${userId}/vacations/limit`, {
+        limit.promise = fetch(`/vacations/api/v1/users/${userId}/vacations/limit`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({
@@ -469,7 +469,7 @@
             };
 
             try {
-                const res = await fetch(`/api/v1/users/${userId}/vacations`, {
+                const res = await fetch(`/vacations/api/v1/users/${userId}/vacations`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
@@ -481,7 +481,7 @@
                     return;
                 }
 
-                window.location.href = `/users/${userId}`;
+                window.location.href = `/vacations/users/${userId}`;
             } catch (err) {
                 notify("Ошибка сети: " + err.message);
                 btn.disabled = false;

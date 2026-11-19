@@ -65,7 +65,7 @@ func (h *ShiftHandler) CreateShift(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/users/"+userID, http.StatusSeeOther)
+	http.Redirect(w, r, "/vacations/users/"+userID, http.StatusSeeOther)
 }
 
 func (h *ShiftHandler) NewShiftForm(w http.ResponseWriter, r *http.Request) {

@@ -93,5 +93,5 @@ func (h *TransferHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info(r.Context(), "vacation transferred",
 		"user_id", cmd.UserID, "vacation_id", cmd.VacationID, "transfer_id", result.TransferID,
 		"admin_id", caller.UserID.String(), "warnings", result.Warnings)
-	http.Redirect(w, r, "/api/v1/users/"+cmd.UserID+"/vacations", http.StatusSeeOther)
+	http.Redirect(w, r, "/vacations/api/v1/users/"+cmd.UserID+"/vacations", http.StatusSeeOther)
 }

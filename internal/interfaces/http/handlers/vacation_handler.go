@@ -146,7 +146,7 @@ func (h *VacationHandler) CreateVacation(w http.ResponseWriter, r *http.Request)
 	}
 	h.logger.Info(r.Context(), "vacation created successfully")
 	middleware.AuditDetail(r.Context(), describePeriods(cmd.Periods, result.Warnings))
-	http.Redirect(w, r, "/users/"+cmd.UserID, http.StatusSeeOther)
+	http.Redirect(w, r, "/vacations/users/"+cmd.UserID, http.StatusSeeOther)
 }
 
 // describePeriods — периоды нового отпуска для журнала изменений и обойдённые правила.
@@ -412,7 +412,7 @@ func (h *VacationHandler) ChangeVacationStatus(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	http.Redirect(w, r, "/api/v1/users/"+cmd.UserID+"/vacations", http.StatusSeeOther)
+	http.Redirect(w, r, "/vacations/api/v1/users/"+cmd.UserID+"/vacations", http.StatusSeeOther)
 }
 
 func (h *VacationHandler) ExportReport(w http.ResponseWriter, r *http.Request) {
@@ -453,5 +453,5 @@ func (h *VacationHandler) DeleteVacation(w http.ResponseWriter, r *http.Request)
 	}
 	middleware.AuditDetail(r.Context(), fmt.Sprintf("%s, %s–%s, статус: %s", v.Kind().Label(),
 		v.StartDate().Time().Format("02.01.2006"), v.EndDate().Time().Format("02.01.2006"), v.Status().String()))
-	http.Redirect(w, r, "/api/v1/users/"+cmd.UserID+"/vacations", http.StatusSeeOther)
+	http.Redirect(w, r, "/vacations/api/v1/users/"+cmd.UserID+"/vacations", http.StatusSeeOther)
 }

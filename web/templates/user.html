@@ -9,8 +9,8 @@
                 <div class="card-header">
                     <h2>Общая статистика</h2>
                     <div>
-                        {{if .CanManage}}<a class="btn" href="/users/{{.UserID}}/edit">Изменить данные</a>{{end}}
-                        <a class="btn" href="/api/v1/users/{{.UserID}}/vacations/new">Оформить отпуск</a>
+                        {{if .CanManage}}<a class="btn" href="/vacations/users/{{.UserID}}/edit">Изменить данные</a>{{end}}
+                        <a class="btn" href="/vacations/api/v1/users/{{.UserID}}/vacations/new">Оформить отпуск</a>
                     </div>
                 </div>  
                 <table>
@@ -79,9 +79,9 @@
                 <div class="card-header">
                     <h2>Статистика</h2>
                     {{if .CanManage}}
-                    <a class="btn" href="/api/v1/users/{{.UserID}}/shift/new">Добавить сдвиг</a>
-                    <a class="btn" href="/users/{{.UserID}}/work-years">Границы рабочих лет</a>
-                <a class="btn" href="/users/{{.UserID}}/history">Журнал изменений</a>
+                    <a class="btn" href="/vacations/api/v1/users/{{.UserID}}/shift/new">Добавить сдвиг</a>
+                    <a class="btn" href="/vacations/users/{{.UserID}}/work-years">Границы рабочих лет</a>
+                <a class="btn" href="/vacations/users/{{.UserID}}/history">Журнал изменений</a>
                     {{end}}
                 </div>
             <table>
@@ -189,8 +189,8 @@
     </div>
 
     <div class="container">
-        <a class="btn" href="/api/v1/users/{{.UserID}}/vacations">Посмотреть отпуска</a>
+        <a class="btn" href="/vacations/api/v1/users/{{.UserID}}/vacations">Посмотреть отпуска</a>
     </div>
-    <p><a href="/users">← К списку</a></p>
+    <p><a href="/vacations/users">← К списку</a></p>
 </div>
 {{end}}

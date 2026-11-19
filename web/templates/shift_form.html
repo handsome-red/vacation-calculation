@@ -8,7 +8,7 @@
 <p class="error">{{ .Error }}</p>
 {{ end }}
 
-<form method="POST" action="/api/v1/users/{{ .Cmd.UserID }}/shift">
+<form method="POST" action="/vacations/api/v1/users/{{ .Cmd.UserID }}/shift">
     <input type="hidden" name="user_id" value="{{ .Cmd.UserID }}">
 
     <label>
@@ -37,7 +37,7 @@
 
     <div class="actions">
         <button type="submit">Сохранить</button>
-        <a href="/users/{{ .Cmd.UserID }}">Отмена</a>
+        <a href="/vacations/users/{{ .Cmd.UserID }}">Отмена</a>
     </div>
 </form>
 </div>

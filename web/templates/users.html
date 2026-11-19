@@ -6,7 +6,7 @@
 
 <div class="container">
     <h1>Сотрудники</h1>
-    <form method="GET" action="/users" class="filters filters-grid">
+    <form method="GET" action="/vacations/users" class="filters filters-grid">
         <input type="text" name="last_name" value="{{.Filters.LastName}}" placeholder="Фамилия">
         <input type="text" name="first_name" value="{{.Filters.FirstName}}" placeholder="Имя">
         <input type="text" name="middle_name" value="{{.Filters.MiddleName}}" placeholder="Отчество">
@@ -51,7 +51,7 @@
 
         <div class="filters-actions">
             <button type="submit">Применить</button>
-            <a href="/users">Сбросить</a>
+            <a href="/vacations/users">Сбросить</a>
         </div>
     </form>
 </div>
@@ -75,10 +75,10 @@
         </thead>
         <tbody>
             {{range .Users}}
-            <tr data-href="/users/{{.ID}}">
+            <tr data-href="/vacations/users/{{.ID}}">
                 <td>{{.Status}}</td>
                 <td>
-                    <a href="/users/{{.ID}}" class="user-link">{{.LastName}}</a>
+                    <a href="/vacations/users/{{.ID}}" class="user-link">{{.LastName}}</a>
                 </td>
                 <td>{{.FirstName}}</td>
                 <td>{{.MiddleName}}</td>

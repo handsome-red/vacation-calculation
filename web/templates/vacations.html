@@ -6,7 +6,7 @@
 <div class="container">
     <div class="card-header">
         <h1>Список отпусков сотрудника</h1>
-        <a class="btn" href="/api/v1/users/{{.UserID}}/vacations/new">Добавить отпуск</a>
+        <a class="btn" href="/vacations/api/v1/users/{{.UserID}}/vacations/new">Добавить отпуск</a>
     </div>
     <table>
         <thead>
@@ -42,7 +42,7 @@
                 {{if $.CanManage}}
                 <td>
                     {{if ne .StatusCode "TRANSFERRED"}}
-                    <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/status">
+                    <form method="POST" action="/vacations/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/status">
                         <select name="status" aria-label="Новый статус отпуска" required>
                             <option value="" selected disabled>Выберите статус</option>
                             {{range $.Statuses}}
@@ -55,15 +55,15 @@
                 </td>
                 <td>
                     {{if eq .StatusCode "DRAFT"}}
-                    <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/approve"
+                    <form method="POST" action="/vacations/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/approve"
                         style="display:inline;">
                         <button type="submit" class="btn btn-sm">Утвердить</button>
                     </form>
                     {{end}}
                     {{if .IsActive}}
-                    <a class="btn btn-sm" href="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/transfer">Перенести</a>
+                    <a class="btn btn-sm" href="/vacations/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/transfer">Перенести</a>
                     {{end}}
-                    <form method="POST" action="/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/delete" style="display:inline;"
+                    <form method="POST" action="/vacations/api/v1/users/{{$.UserID}}/vacations/{{.ID}}/delete" style="display:inline;"
                         data-confirm="Удалить из базы отпуск {{.StartDate}} — {{.EndDate}} ({{.Kind}})? Запись и история её переносов будут удалены без возможности восстановления. Чтобы сохранить историю, вместо удаления смените статус на «Отменён»."
                         data-confirm-label="Удалить" data-danger>
                         <button type="submit" class="btn-link-danger">Удалить</button>
@@ -104,10 +104,10 @@
     {{end}}
     {{if .Hidden}}
     <p class="muted">Показаны отпуска за последние 3 года и запланированные. Скрыто более ранних: {{.Hidden}}.
-        <a href="/api/v1/users/{{.UserID}}/vacations?all=1">Показать все</a></p>
+        <a href="/vacations/api/v1/users/{{.UserID}}/vacations?all=1">Показать все</a></p>
     {{else if .ShowAll}}
-    <p class="muted"><a href="/api/v1/users/{{.UserID}}/vacations">Только последние 3 года</a></p>
+    <p class="muted"><a href="/vacations/api/v1/users/{{.UserID}}/vacations">Только последние 3 года</a></p>
     {{end}}
-    <p><a href="/users/{{.UserID}}">← К карточке сотрудника</a></p>
+    <p><a href="/vacations/users/{{.UserID}}">← К карточке сотрудника</a></p>
 </div>
 {{end}}

@@ -14,7 +14,7 @@
         Начальник территориального отдела управляет сотрудниками своего теротдела с правами администратора.
     </p>
 
-    <form method="POST" action="/users/{{.UserID}}/edit">
+    <form method="POST" action="/vacations/users/{{.UserID}}/edit">
         <p><label>Фамилия<br>
                 <input type="text" name="last_name" value="{{$form.LastName}}" required>
             </label></p>
@@ -82,7 +82,7 @@
         <p><button type="submit" class="btn">Сохранить</button></p>
     </form>
 
-    <p><a href="/users/{{.UserID}}">← К карточке сотрудника</a></p>
+    <p><a href="/vacations/users/{{.UserID}}">← К карточке сотрудника</a></p>
 </div>
 
 <script>

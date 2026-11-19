@@ -24,7 +24,7 @@
             <tr>
                 <td>{{.At}}</td>
                 <td>{{.ActorName}}</td>
-                {{if not $.UserID}}<td>{{if .TargetID}}<a href="/users/{{.TargetID}}">{{.TargetName}}</a>{{end}}</td>{{end}}
+                {{if not $.UserID}}<td>{{if .TargetID}}<a href="/vacations/users/{{.TargetID}}">{{.TargetName}}</a>{{end}}</td>{{end}}
                 <td>{{.Action}}</td>
                 <td>{{.Details}}</td>
             </tr>
@@ -36,9 +36,9 @@
     {{end}}
 
     {{if .UserID}}
-    <p><a href="/users/{{.UserID}}">← К карточке сотрудника</a></p>
+    <p><a href="/vacations/users/{{.UserID}}">← К карточке сотрудника</a></p>
     {{else}}
-    <p><a href="/">← На главную</a></p>
+    <p><a href="/vacations/">← На главную</a></p>
     {{end}}
 </div>
 {{end}}

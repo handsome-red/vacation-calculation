@@ -93,7 +93,7 @@ func (h *ScheduleHandler) Approve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.logger.Info(r.Context(), "schedule approved", "year", q.Year, "district", q.DistrictCode, "department", q.DepartmentCode, "vacations", res.Approved)
-	http.Redirect(w, r, fmt.Sprintf("/admin/schedule?year=%d&district=%s&department=%s&approved=%d", q.Year, url.QueryEscape(q.DistrictCode), url.QueryEscape(q.DepartmentCode), res.Approved), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/vacations/admin/schedule?year=%d&district=%s&department=%s&approved=%d", q.Year, url.QueryEscape(q.DistrictCode), url.QueryEscape(q.DepartmentCode), res.Approved), http.StatusSeeOther)
 }
 
 // Report — график отпусков на год в Word.

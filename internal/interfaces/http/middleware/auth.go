@@ -87,7 +87,7 @@ func (m *AuthMiddleware) Require(next http.Handler) http.Handler {
 			http.Error(w, "Необходим вход", http.StatusUnauthorized)
 			return
 		}
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/vacations/login", http.StatusSeeOther)
 	})
 }
 

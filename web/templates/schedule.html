@@ -6,10 +6,10 @@
     <h1>График отпусков на {{$s.Year}} год</h1>
     <p class="muted">Утвердить график нужно не позднее {{$s.Deadline}} (за две недели до начала года).</p>
 
-    <form method="GET" action="/admin/schedule" class="picker-nav">
-        <a class="btn btn-light" href="/admin/schedule?year={{.PrevYear}}&district={{$s.DistrictCode}}&department={{$s.DepartmentCode}}">← {{.PrevYear}}</a>
+    <form method="GET" action="/vacations/admin/schedule" class="picker-nav">
+        <a class="btn btn-light" href="/vacations/admin/schedule?year={{.PrevYear}}&district={{$s.DistrictCode}}&department={{$s.DepartmentCode}}">← {{.PrevYear}}</a>
         <strong class="picker-nav__year">{{$s.Year}}</strong>
-        <a class="btn btn-light" href="/admin/schedule?year={{.NextYear}}&district={{$s.DistrictCode}}&department={{$s.DepartmentCode}}">{{.NextYear}} →</a>
+        <a class="btn btn-light" href="/vacations/admin/schedule?year={{.NextYear}}&district={{$s.DistrictCode}}&department={{$s.DepartmentCode}}">{{.NextYear}} →</a>
         <input type="hidden" name="year" value="{{$s.Year}}">
         <select name="district" onchange="this.form.department.value=''; this.form.submit()" aria-label="Территориальный отдел">
             <option value="">Все территориальные отделы</option>
@@ -34,14 +34,14 @@
     </p>
 
     <div class="schedule-actions">
-        <form method="POST" action="/admin/schedule/approve"
+        <form method="POST" action="/vacations/admin/schedule/approve"
               {{if $s.WithIssues}}data-confirm="У {{$s.WithIssues}} сотрудников есть замечания к графику. Утвердить всё равно?" data-confirm-label="Утвердить"{{end}}>
             <input type="hidden" name="year" value="{{$s.Year}}">
             <input type="hidden" name="district" value="{{$s.DistrictCode}}">
             <input type="hidden" name="department" value="{{$s.DepartmentCode}}">
             <button type="submit" class="btn" {{if not $s.ToApprove}}disabled{{end}}>Утвердить график</button>
         </form>
-        <a class="btn" href="/admin/reports/schedule?year={{$s.Year}}&district={{$s.DistrictCode}}&department={{$s.DepartmentCode}}">Скачать график в Word</a>
+        <a class="btn" href="/vacations/admin/reports/schedule?year={{$s.Year}}&district={{$s.DistrictCode}}&department={{$s.DepartmentCode}}">Скачать график в Word</a>
     </div>
 
     <table class="schedule-table">
@@ -58,14 +58,14 @@
         <tbody>
             {{range $s.Rows}}
             <tr>
-                <td><a href="/users/{{.UserID}}" class="user-link">{{.FullName}}</a></td>
+                <td><a href="/vacations/users/{{.UserID}}" class="user-link">{{.FullName}}</a></td>
                 <td>{{.Position}}</td>
                 <td>{{.Department}}</td>
                 <td>
                     {{range .Parts}}
                     <div>{{.Period}} ({{.Days}} дн.){{if not .Approved}} <span class="muted">— черновик</span>{{end}}</div>
                     {{end}}
-                    <a class="small-link" href="/api/v1/users/{{.UserID}}/vacations/new?year={{$s.Year}}">запланировать</a>
+                    <a class="small-link" href="/vacations/api/v1/users/{{.UserID}}/vacations/new?year={{$s.Year}}">запланировать</a>
                 </td>
                 <td>{{.Planned}}</td>
                 <td>

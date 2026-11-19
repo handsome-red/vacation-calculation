@@ -15,7 +15,7 @@
     {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
 
     {{if .Vacation.Transferable}}
-    <form method="POST" action="/api/v1/users/{{.Vacation.UserID}}/vacations/{{.Vacation.VacationID}}/transfer" class="transfer-form">
+    <form method="POST" action="/vacations/api/v1/users/{{.Vacation.UserID}}/vacations/{{.Vacation.VacationID}}/transfer" class="transfer-form">
         <p>
             <label for="new_start">Новая дата начала</label>
             <input type="date" id="new_start" name="new_start" value="{{.NewStart}}" required>
@@ -37,6 +37,6 @@
     </form>
     {{end}}
 
-    <p><a href="/api/v1/users/{{.Vacation.UserID}}/vacations">← К списку отпусков</a></p>
+    <p><a href="/vacations/api/v1/users/{{.Vacation.UserID}}/vacations">← К списку отпусков</a></p>
 </div>
 {{end}}

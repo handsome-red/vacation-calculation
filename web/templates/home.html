@@ -10,10 +10,10 @@
     <div class="banner">
         {{if .IsStaff}}
         Пора сформировать график отпусков на {{.ScheduleYear}} год — утвердить его нужно не позднее {{.ScheduleDeadline}}.
-        <a href="/admin/schedule?year={{.ScheduleYear}}">Открыть график {{.ScheduleYear}}</a>
+        <a href="/vacations/admin/schedule?year={{.ScheduleYear}}">Открыть график {{.ScheduleYear}}</a>
         {{else}}
         Формируется график отпусков на {{.ScheduleYear}} год.
-        <a href="/api/v1/users/{{.UserID}}/vacations/new?year={{.ScheduleYear}}">Запланируйте свой отпуск на {{.ScheduleYear}} год</a>
+        <a href="/vacations/api/v1/users/{{.UserID}}/vacations/new?year={{.ScheduleYear}}">Запланируйте свой отпуск на {{.ScheduleYear}} год</a>
         {{end}}
     </div>
     {{end}}
@@ -21,17 +21,17 @@
     <nav>
         <ul>
             {{if .IsStaff}}
-            <li><a href="/users">Сотрудники</a></li>
-            <li><a href="/user/register">Добавить сотрудника</a></li>
-            <li><a href="/admin/schedule">График отпусков</a></li>
-            <li><a href="/admin/audit">Журнал изменений</a></li>
-            <li><a href="/admin/discrepancies">Расхождения в учёте</a></li>
+            <li><a href="/vacations/users">Сотрудники</a></li>
+            <li><a href="/vacations/user/register">Добавить сотрудника</a></li>
+            <li><a href="/vacations/admin/schedule">График отпусков</a></li>
+            <li><a href="/vacations/admin/audit">Журнал изменений</a></li>
+            <li><a href="/vacations/admin/discrepancies">Расхождения в учёте</a></li>
             {{end}}
             {{if .IsAdmin}}
-            <li><a href="/admin/holidays">Праздничные дни</a></li>
+            <li><a href="/vacations/admin/holidays">Праздничные дни</a></li>
             {{end}}
-            <li><a href="/users/{{.UserID}}">Моя карточка</a></li>
-            <li><a href="/calendar">Календарь</a></li>
+            <li><a href="/vacations/users/{{.UserID}}">Моя карточка</a></li>
+            <li><a href="/vacations/calendar">Календарь</a></li>
         </ul>
     </nav>
 
@@ -39,12 +39,12 @@
     {{if .IsStaff}}
     <p>
         Чтобы создать отпуск, откройте карточку сотрудника и перейдите в раздел отпусков.
-        Например: <a href="/users">список сотрудников</a>.
+        Например: <a href="/vacations/users">список сотрудников</a>.
     </p>
     {{else}}
     <p>
         Чтобы оформить отпуск (ежегодный или без сохранения заработной платы), откройте
-        <a href="/api/v1/users/{{.UserID}}/vacations/new">форму отпуска</a>.
+        <a href="/vacations/api/v1/users/{{.UserID}}/vacations/new">форму отпуска</a>.
     </p>
     {{end}}
 </div>
